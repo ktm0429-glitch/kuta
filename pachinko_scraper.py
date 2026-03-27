@@ -99,11 +99,13 @@ DEBUG_HTML_DIR = Path("debug_html")
 async def fetch_page(page, url: str) -> str:
     """ページを取得してHTMLを返す"""
     print(f"  → 取得中: {url}")
-    await page.goto(url, wait_until="networkidle", timeout=30000)
-    # ページが完全にロードされるまで少し待つ
-    await asyncio.sleep(2)
+    await page.goto(url, wait_until="networkidle", timeout=45000)
+    # Next.js等のSPAがデータをロードするまで待機
+    await asyncio.sleep(3)
     # スクロールして遅延読み込みをトリガー
     await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+    await asyncio.sleep(2)
+    await page.evaluate("window.scrollTo(0, 0)")
     await asyncio.sleep(1)
     return await page.content()
 
@@ -663,7 +665,7 @@ async def main():
                 "--no-sandbox",
                 "--disable-dev-shm-usage",
                 "--disable-blink-features=AutomationControlled",
-            ]
+            ],
         )
 
         # 人間っぽいブラウザコンテキスト
