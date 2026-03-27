@@ -115,66 +115,56 @@ async def fetch_page(page, url: str) -> str:
 # ─────────────────────────────────────────────
 def parse_ptown(html: str, shop_name: str) -> dict:
     """
-    p-town.dmm.com のHTMLを解析して機種データを返す
-    返り値: {カテゴリ名: [{"name": 機種名, "count": 台数, "is_smart": bool}]}
+    p-town.dmm.com のHTMLを解析して機種データを返す。
+    実際のHTML構造:
+      ul.list-machinesettings
+        └ li.unit
+            ├ h4.title  "[4] パチ"  ← カテゴリ (例: 4円パチンコ)
+            └ ul.list
+                └ li.item
+                    ├ div.text  "e エヴァ..."  ← 機種名 (e=スマパチ, S=スマスロ)
+                    └ div.number  "4 台"       ← 台数
     """
     soup = BeautifulSoup(html, "lxml")
     result = defaultdict(list)
 
-    # ── 戦略1: data-* 属性ベースのカテゴリ検出 ──
-    # p-townはReact製のため、カテゴリセクションをid/class/data属性で検索
-    # よく見られるパターン:
-    #   <section id="anc-pinball"> or <div class="*machine*">
+    for unit in soup.select("li.unit"):
+        h4 = unit.find("h4", class_="title")
+        if not h4:
+            continue
 
-    # パチンコセクション
-    pinball_section = (
-        soup.find(id="anc-pinball")
-        or soup.find(attrs={"data-type": "pachinko"})
-        or soup.find("section", class_=re.compile(r"pinball|pachinko", re.I))
-    )
-    # スロットセクション
-    slot_section = (
-        soup.find(id="anc-slot")
-        or soup.find(attrs={"data-type": "slot"})
-        or soup.find("section", class_=re.compile(r"slot", re.I))
-    )
+        title_text = h4.get_text(separator=" ", strip=True)
+        # "[4] パチ" / "[1] パチ" / "[20] スロ" / "[5] スロ" など
+        m = re.search(r'\[([0-9.]+)\]\s*(パチ|スロ)', title_text)
+        if not m:
+            continue
 
-    sections_to_parse = []
-    if pinball_section:
-        sections_to_parse.append(pinball_section)
-    if slot_section:
-        sections_to_parse.append(slot_section)
+        rate = m.group(1)
+        kind = m.group(2)
+        category = f"{rate}円パチンコ" if kind == "パチ" else f"{rate}円スロット"
 
-    # セクションが見つからない場合はページ全体を対象に
-    if not sections_to_parse:
-        sections_to_parse = [soup]
+        for item in unit.select("ul.list > li.item"):
+            name_div = item.find("div", class_="text")
+            count_div = item.find("div", class_="number")
+            if not name_div or not count_div:
+                continue
 
-    for section in sections_to_parse:
-        # カテゴリ見出しを探す（h2, h3, h4）
-        current_category = None
-        for elem in section.find_all(
-            ["h2", "h3", "h4", "dt", "div", "p"],
-            class_=re.compile(r"category|heading|title|tit|label", re.I)
-        ):
-            text = elem.get_text(strip=True)
-            normalized = _normalize_category(text)
-            if normalized:
-                current_category = normalized
+            name = name_div.get_text(strip=True)
+            count_text = count_div.get_text(strip=True)
+            count_m = re.search(r'\d+', count_text)
+            if not count_m or not name:
+                continue
 
-            # この見出しの後の機種リストを処理
-            machine_list = _find_next_machine_list(elem)
-            if machine_list and current_category:
-                machines = _extract_machines_from_list(machine_list)
-                if machines:
-                    result[current_category].extend(machines)
+            count = int(count_m.group())
+            # スマパチ: 機種名が "e " で始まる (スマートパチンコ)
+            # スマスロ: 機種名が "S " で始まる (スマートスロット/S機)
+            is_smart = name.startswith("e ") or name.startswith("S ")
 
-    # ── 戦略2: テーブル形式の検出 ──
-    if not any(result.values()):
-        result = _parse_table_format(soup)
-
-    # ── 戦略3: フラットなリスト形式の検出 ──
-    if not any(result.values()):
-        result = _parse_flat_list(soup)
+            result[category].append({
+                "name": name,
+                "count": count,
+                "is_smart": is_smart,
+            })
 
     # デバッグ: HTMLを保存
     DEBUG_HTML_DIR.mkdir(exist_ok=True)
@@ -183,23 +173,6 @@ def parse_ptown(html: str, shop_name: str) -> dict:
     print(f"    [DEBUG] HTML保存: debug_html/{safe_name}_ptown.html")
 
     return dict(result)
-
-
-def _normalize_category(text: str) -> str | None:
-    """カテゴリテキストを正規化"""
-    for key, normalized in CATEGORY_NORMALIZE.items():
-        if key in text:
-            return normalized
-    # パターンマッチ（例: "4円パチンコ(○台)"）
-    if re.search(r'[1-9０-９]\s*円\s*パチンコ', text):
-        m = re.search(r'([0-9.]+)\s*円\s*パチンコ', text)
-        if m:
-            return f"{m.group(1)}円パチンコ"
-    if re.search(r'[1-9０-９]\s*円\s*スロット', text):
-        m = re.search(r'([0-9.]+)\s*円\s*スロット', text)
-        if m:
-            return f"{m.group(1)}円スロット"
-    return None
 
 
 def _is_smart(text: str) -> bool:
@@ -212,52 +185,11 @@ def _extract_count(text: str) -> int:
     m = re.search(r'(\d+)\s*台', text)
     if m:
         return int(m.group(1))
-    m = re.search(r'(\d+)', text)
-    if m:
-        return int(m.group(1))
     return 0
 
 
-def _find_next_machine_list(elem):
-    """見出し要素の次にある機種リストを探す"""
-    next_sib = elem.find_next_sibling()
-    while next_sib:
-        if next_sib.name in ["ul", "ol", "table", "div"]:
-            # 機種らしき要素があるか確認
-            items = next_sib.find_all(["li", "tr", "div"])
-            if items:
-                return next_sib
-        # 次のカテゴリ見出しに達したら終了
-        if next_sib.name in ["h2", "h3", "h4"]:
-            break
-        next_sib = next_sib.find_next_sibling()
-    return None
-
-
-def _extract_machines_from_list(list_elem) -> list:
-    """リスト要素から機種情報を抽出"""
-    machines = []
-    for item in list_elem.find_all(["li", "tr"]):
-        text = item.get_text(separator=" ", strip=True)
-        count = _extract_count(text)
-        if count == 0:
-            continue
-
-        # 機種名の抽出（台数テキストを除いた部分）
-        name_text = re.sub(r'\d+台', '', text).strip()
-        name_text = re.sub(r'\s+', ' ', name_text).strip()
-
-        if name_text:
-            machines.append({
-                "name": name_text,
-                "count": count,
-                "is_smart": _is_smart(text),
-            })
-    return machines
-
-
 def _parse_table_format(soup) -> dict:
-    """テーブル形式のページを解析"""
+    """テーブル形式のページを解析（p-gabu等の汎用フォールバック）"""
     result = defaultdict(list)
     current_category = None
 
@@ -266,13 +198,11 @@ def _parse_table_format(soup) -> dict:
             cells = row.find_all(["th", "td"])
             if not cells:
                 continue
-
             row_text = " ".join(c.get_text(strip=True) for c in cells)
             norm = _normalize_category(row_text)
             if norm:
                 current_category = norm
                 continue
-
             if current_category and len(cells) >= 2:
                 name = cells[0].get_text(strip=True)
                 count = _extract_count(cells[-1].get_text(strip=True))
@@ -285,29 +215,20 @@ def _parse_table_format(soup) -> dict:
     return dict(result)
 
 
-def _parse_flat_list(soup) -> dict:
-    """フラットなリスト形式のページを解析"""
-    result = defaultdict(list)
-    current_category = None
-
-    for elem in soup.find_all(["h1", "h2", "h3", "h4", "h5", "li", "div", "tr"]):
-        text = elem.get_text(strip=True)
-        norm = _normalize_category(text)
-        if norm:
-            current_category = norm
-            continue
-
-        if current_category:
-            count = _extract_count(text)
-            if count > 0 and 2 <= len(text) <= 60:
-                name = re.sub(r'\d+台', '', text).strip()
-                if name:
-                    result[current_category].append({
-                        "name": name,
-                        "count": count,
-                        "is_smart": _is_smart(text),
-                    })
-    return dict(result)
+def _normalize_category(text: str) -> str | None:
+    """カテゴリテキストを正規化"""
+    for key, normalized in CATEGORY_NORMALIZE.items():
+        if key in text:
+            return normalized
+    if re.search(r'[0-9.]+\s*円\s*パチンコ', text):
+        m = re.search(r'([0-9.]+)\s*円\s*パチンコ', text)
+        if m:
+            return f"{m.group(1)}円パチンコ"
+    if re.search(r'[0-9.]+\s*円\s*スロット', text):
+        m = re.search(r'([0-9.]+)\s*円\s*スロット', text)
+        if m:
+            return f"{m.group(1)}円スロット"
+    return None
 
 
 # ─────────────────────────────────────────────
