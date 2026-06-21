@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PK CHALLENGE</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+JP:wght@400;700;900&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --gold: #f5c842;
+    --gold2: #e8a000;
+    --green: #2d7a3a;
+    --green2: #1a4f24;
+    --white: #ffffff;
+    --glow: 0 0 30px rgba(245,200,66,0.8);
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    font-family: 'Noto Sans JP', sans-serif;
+    background: #000;
+    color: #fff;
+  }
+
+  /* ===== STADIUM BACKGROUND ===== */
+  #bg {
+    position: fixed; inset: 0; z-index: 0;
+    background:
+      radial-gradient(ellipse 120% 60% at 50% 110%, #1a4f24 0%, #0a2010 60%, #000 100%);
+  }
+  #bg::before {
+    content: '';
+    position: absolute; inset: 0;
+    background:
+      repeating-linear-gradient(90deg, transparent 0, transparent 48px, rgba(255,255,255,0.03) 48px, rgba(255,255,255,0.03) 50px),
+      repeating-linear-gradient(0deg, transparent 0, transparent 48px, rgba(255,255,255,0.03) 48px, rgba(255,255,255,0.03) 50px);
+  }
+  /* Stadium lights */
+  #bg::after {
+    content: '';
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 40% 30% at 10% 0%, rgba(255,240,180,0.15) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 30% at 90% 0%, rgba(255,240,180,0.15) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 50% 0%, rgba(255,240,180,0.08) 0%, transparent 70%);
+  }
+
+  /* ===== CROWD SILHOUETTE ===== */
+  #crowd {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 1;
+    height: 18vh;
+    background: linear-gradient(to top, #000 0%, transparent 100%);
+    overflow: hidden;
+  }
+  #crowd svg { width: 100%; height: 100%; opacity: 0.5; }
+
+  /* ===== SCREENS ===== */
+  .screen {
+    position: fixed; inset: 0; z-index: 10;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.6s ease;
+  }
+  .screen.active { opacity: 1; pointer-events: all; }
+
+  /* ===== TITLE SCREEN ===== */
+  #screen-title { gap: 2vh; }
+
+  .title-badge {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(14px, 2vw, 20px);
+    letter-spacing: 0.4em;
+    color: var(--gold);
+    text-shadow: var(--glow);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  .title-main {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(70px, 14vw, 160px);
+    line-height: 0.9;
+    text-align: center;
+    background: linear-gradient(180deg, #fff 0%, #f5c842 50%, #e8a000 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 40px rgba(245,200,66,0.6));
+    animation: titleFloat 3s ease-in-out infinite;
+  }
+
+  .title-sub {
+    font-size: clamp(12px, 1.8vw, 18px);
+    font-weight: 700;
+    letter-spacing: 0.3em;
+    color: rgba(255,255,255,0.7);
+  }
+
+  .tap-start {
+    margin-top: 4vh;
+    font-size: clamp(16px, 2.5vw, 28px);
+    font-weight: 900;
+    letter-spacing: 0.2em;
+    color: #fff;
+    animation: blink 1.4s ease-in-out infinite;
+    cursor: pointer;
+    padding: 20px 60px;
+    border: 2px solid rgba(245,200,66,0.6);
+    border-radius: 50px;
+    background: rgba(245,200,66,0.1);
+    backdrop-filter: blur(10px);
+    transition: all 0.3s;
+  }
+  .tap-start:hover {
+    background: rgba(245,200,66,0.25);
+    border-color: var(--gold);
+    box-shadow: var(--glow), inset 0 0 30px rgba(245,200,66,0.1);
+    transform: scale(1.05);
+  }
+
+  /* ===== PLAY SCREEN ===== */
+  #screen-play { gap: 0; }
+
+  .play-header {
+    text-align: center;
+    margin-bottom: 2vh;
+  }
+  .play-header h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(24px, 4vw, 48px);
+    letter-spacing: 0.2em;
+    color: var(--gold);
+    text-shadow: var(--glow);
+  }
+  .play-header p {
+    font-size: clamp(11px, 1.5vw, 15px);
+    color: rgba(255,255,255,0.6);
+    letter-spacing: 0.15em;
+    margin-top: 4px;
+  }
+
+  /* Goal frame */
+  .goal-wrap {
+    position: relative;
+    width: min(80vw, 700px);
+    aspect-ratio: 7/4.5;
+  }
+
+  .goal-frame {
+    position: absolute; inset: 0;
+    border: 4px solid rgba(255,255,255,0.9);
+    border-bottom: none;
+    border-radius: 4px 4px 0 0;
+    box-shadow:
+      0 0 0 2px rgba(255,255,255,0.2),
+      0 0 40px rgba(255,255,255,0.1),
+      inset 0 0 60px rgba(0,0,0,0.4);
+    background: linear-gradient(180deg, rgba(0,0,100,0.3) 0%, rgba(0,50,0,0.2) 100%);
+  }
+
+  /* Net pattern */
+  .goal-net {
+    position: absolute; inset: 4px 4px 0;
+    background-image:
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.08) 0, rgba(255,255,255,0.08) 1px, transparent 1px, transparent 28px),
+      repeating-linear-gradient(90deg, rgba(255,255,255,0.08) 0, rgba(255,255,255,0.08) 1px, transparent 1px, transparent 28px);
+    pointer-events: none;
+  }
+
+  /* Crossbar highlight */
+  .goal-frame::before {
+    content: '';
+    position: absolute; top: -6px; left: -6px; right: -6px; height: 12px;
+    background: linear-gradient(to bottom, #ddd, #aaa);
+    border-radius: 3px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  }
+  /* Posts */
+  .goal-frame::after {
+    content: '';
+    position: absolute; top: 0; left: -6px; right: -6px; bottom: 0;
+    border-left: 12px solid #bbb;
+    border-right: 12px solid #bbb;
+    border-radius: 0;
+    pointer-events: none;
+  }
+
+  /* 9-grid zones */
+  .goal-grid {
+    position: absolute; inset: 4px 10px 0;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    gap: 2px;
+  }
+
+  .zone {
+    position: relative;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: background 0.2s;
+    overflow: hidden;
+  }
+  .zone::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: rgba(255,255,255,0);
+    transition: background 0.2s;
+    border-radius: 2px;
+  }
+  .zone:hover::before {
+    background: rgba(245,200,66,0.25);
+    box-shadow: inset 0 0 20px rgba(245,200,66,0.3);
+  }
+  .zone-label {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: clamp(8px, 1.2vw, 13px);
+    font-weight: 700;
+    color: rgba(255,255,255,0);
+    letter-spacing: 0.05em;
+    transition: color 0.2s;
+  }
+  .zone:hover .zone-label { color: rgba(255,255,255,0.7); }
+
+  /* GK */
+  #gk {
+    position: absolute;
+    bottom: 8%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 12%;
+    aspect-ratio: 1/2;
+    pointer-events: none;
+    transition: transform 0.15s ease;
+  }
+  #gk svg { width: 100%; height: 100%; }
+
+  /* Ball */
+  #ball {
+    position: absolute;
+    width: 5%;
+    aspect-ratio: 1;
+    bottom: 2%;
+    left: 50%;
+    transform: translateX(-50%);
+    pointer-events: none;
+    z-index: 20;
+    opacity: 0;
+  }
+  #ball svg { width: 100%; height: 100%; }
+
+  /* ===== RESULT SCREEN ===== */
+  #screen-result {
+    flex-direction: column;
+    gap: 2vh;
+    padding: 2vh;
+  }
+
+  .result-badge {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(60px, 15vw, 180px);
+    line-height: 1;
+    text-align: center;
+    animation: resultPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+  }
+  .result-badge.goal {
+    background: linear-gradient(135deg, #fff 0%, #f5c842 40%, #ff6b00 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 30px rgba(255,150,0,0.8));
+  }
+  .result-badge.save {
+    background: linear-gradient(135deg, #aaa 0%, #fff 50%, #aaa 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 20px rgba(255,255,255,0.4));
+  }
+
+  /* Fortune card */
+  .fortune-card {
+    width: min(90vw, 600px);
+    background: linear-gradient(135deg, rgba(20,15,5,0.95) 0%, rgba(40,30,0,0.95) 100%);
+    border: 1px solid rgba(245,200,66,0.4);
+    border-radius: 20px;
+    padding: clamp(20px, 3vw, 40px);
+    text-align: center;
+    box-shadow:
+      0 0 60px rgba(245,200,66,0.2),
+      inset 0 1px 0 rgba(255,255,255,0.1);
+    animation: cardSlide 0.6s 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+    position: relative;
+    overflow: hidden;
+  }
+  .fortune-card::before {
+    content: '';
+    position: absolute; top: -50%; left: -50%;
+    width: 200%; height: 200%;
+    background: conic-gradient(from 0deg, transparent 0deg, rgba(245,200,66,0.05) 60deg, transparent 120deg);
+    animation: spin 8s linear infinite;
+  }
+
+  .fortune-icon {
+    font-size: clamp(30px, 5vw, 56px);
+    margin-bottom: 1vh;
+    animation: iconBounce 1s 0.8s ease both;
+  }
+
+  .fortune-theme {
+    font-size: clamp(10px, 1.4vw, 14px);
+    letter-spacing: 0.3em;
+    color: var(--gold);
+    margin-bottom: 1vh;
+    text-transform: uppercase;
+  }
+
+  .fortune-title {
+    font-size: clamp(22px, 3.5vw, 42px);
+    font-weight: 900;
+    background: linear-gradient(135deg, #fff 0%, var(--gold) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    margin-bottom: 1.5vh;
+    line-height: 1.2;
+  }
+
+  .fortune-text {
+    font-size: clamp(13px, 1.8vw, 18px);
+    line-height: 1.8;
+    color: rgba(255,255,255,0.85);
+  }
+
+  .course-tag {
+    display: inline-block;
+    margin-top: 1.5vh;
+    padding: 6px 20px;
+    border: 1px solid rgba(245,200,66,0.4);
+    border-radius: 20px;
+    font-size: clamp(10px, 1.2vw, 13px);
+    color: rgba(245,200,66,0.8);
+    letter-spacing: 0.1em;
+  }
+
+  .replay-btn {
+    margin-top: 2vh;
+    padding: clamp(12px, 2vh, 20px) clamp(40px, 8vw, 80px);
+    font-size: clamp(14px, 2vw, 20px);
+    font-weight: 900;
+    letter-spacing: 0.2em;
+    color: #000;
+    background: linear-gradient(135deg, var(--gold) 0%, var(--gold2) 100%);
+    border: none; border-radius: 50px;
+    cursor: pointer;
+    box-shadow: 0 8px 30px rgba(245,200,66,0.5);
+    transition: all 0.3s;
+    animation: cardSlide 0.5s 0.6s both;
+  }
+  .replay-btn:hover {
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 12px 40px rgba(245,200,66,0.7);
+  }
+
+  /* ===== PARTICLE CANVAS ===== */
+  #particles {
+    position: fixed; inset: 0; z-index: 5;
+    pointer-events: none;
+  }
+
+  /* ===== FLASH OVERLAY ===== */
+  #flash {
+    position: fixed; inset: 0; z-index: 50;
+    background: white;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.1s;
+  }
+
+  /* ===== ANIMATIONS ===== */
+  @keyframes pulse {
+    0%, 100% { opacity: 0.7; }
+    50% { opacity: 1; text-shadow: 0 0 40px rgba(245,200,66,1); }
+  }
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+  @keyframes titleFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+  @keyframes resultPop {
+    0% { transform: scale(0.3) rotate(-5deg); opacity: 0; }
+    100% { transform: scale(1) rotate(0deg); opacity: 1; }
+  }
+  @keyframes cardSlide {
+    0% { transform: translateY(40px); opacity: 0; }
+    100% { transform: translateY(0); opacity: 1; }
+  }
+  @keyframes iconBounce {
+    0% { transform: scale(0); }
+    60% { transform: scale(1.3); }
+    100% { transform: scale(1); }
+  }
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  @keyframes ballKick {
+    0% { opacity: 1; transform: translateX(-50%) scale(1); }
+    100% { opacity: 0.8; }
+  }
+  @keyframes gkDive {
+    0% { transform: translateX(-50%) scaleX(1); }
+  }
+</style>
+</head>
+<body>
+
+<div id="bg"></div>
+<canvas id="particles"></canvas>
+<div id="flash"></div>
+
+<!-- Crowd silhouette -->
+<div id="crowd">
+  <svg viewBox="0 0 1200 120" preserveAspectRatio="none">
+    <path d="M0,80 Q30,60 60,75 Q90,90 120,65 Q150,40 180,70 Q210,95 240,60 Q270,30 300,65 Q330,95 360,55 Q390,20 420,60 Q450,95 480,65 Q510,40 540,70 Q570,95 600,60 Q630,30 660,65 Q690,95 720,60 Q750,30 780,70 Q810,100 840,65 Q870,35 900,70 Q930,100 960,65 Q990,35 1020,70 Q1050,100 1080,65 Q1110,35 1140,70 Q1170,100 1200,75 L1200,120 L0,120 Z"
+      fill="rgba(0,0,0,0.8)"/>
+    <!-- Head dots -->
+    <g fill="rgba(255,255,255,0.15)" font-size="8">
+      <circle cx="60" cy="68" r="5"/>
+      <circle cx="120" cy="58" r="6"/>
+      <circle cx="180" cy="63" r="5"/>
+      <circle cx="240" cy="53" r="6"/>
+      <circle cx="300" cy="58" r="5"/>
+      <circle cx="360" cy="48" r="6"/>
+      <circle cx="420" cy="53" r="5"/>
+      <circle cx="480" cy="58" r="6"/>
+      <circle cx="540" cy="63" r="5"/>
+      <circle cx="600" cy="53" r="6"/>
+      <circle cx="660" cy="58" r="5"/>
+      <circle cx="720" cy="53" r="6"/>
+      <circle cx="780" cy="63" r="5"/>
+      <circle cx="840" cy="58" r="6"/>
+      <circle cx="900" cy="63" r="5"/>
+      <circle cx="960" cy="58" r="6"/>
+      <circle cx="1020" cy="63" r="5"/>
+      <circle cx="1080" cy="58" r="6"/>
+      <circle cx="1140" cy="63" r="5"/>
+    </g>
+  </svg>
+</div>
+
+<!-- TITLE SCREEN -->
+<div id="screen-title" class="screen active">
+  <div class="title-badge">⚽ PACHINKO PARK PRESENTS ⚽</div>
+  <div class="title-main">PK<br>CHALLENGE</div>
+  <div class="title-sub">あなたの運命を蹴り込め</div>
+  <button class="tap-start" onclick="startGame()">TAP TO START</button>
+</div>
+
+<!-- PLAY SCREEN -->
+<div id="screen-play" class="screen">
+  <div class="play-header">
+    <h2>コースを選んで蹴れ！</h2>
+    <p>9つのゾーンからねらいを定めよ</p>
+  </div>
+
+  <div class="goal-wrap" id="goalWrap">
+    <div class="goal-frame">
+      <div class="goal-net"></div>
+      <!-- GK -->
+      <div id="gk">
+        <svg viewBox="0 0 60 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Body -->
+          <rect x="15" y="45" width="30" height="45" rx="6" fill="#FF6B35"/>
+          <rect x="15" y="45" width="30" height="45" rx="6" fill="url(#gkShirt)"/>
+          <!-- Head -->
+          <ellipse cx="30" cy="30" rx="16" ry="18" fill="#FDBCB4"/>
+          <!-- Hair -->
+          <ellipse cx="30" cy="16" rx="16" ry="10" fill="#2C1810"/>
+          <!-- Arms -->
+          <rect x="2" y="50" width="13" height="8" rx="4" fill="#FDBCB4"/>
+          <rect x="45" y="50" width="13" height="8" rx="4" fill="#FDBCB4"/>
+          <!-- Gloves -->
+          <ellipse cx="8" cy="54" rx="7" ry="6" fill="#FFE566"/>
+          <ellipse cx="52" cy="54" rx="7" ry="6" fill="#FFE566"/>
+          <!-- Legs -->
+          <rect x="16" y="88" width="12" height="28" rx="4" fill="#1a1a2e"/>
+          <rect x="32" y="88" width="12" height="28" rx="4" fill="#1a1a2e"/>
+          <!-- Shoes -->
+          <ellipse cx="22" cy="116" rx="10" ry="5" fill="#111"/>
+          <ellipse cx="38" cy="116" rx="10" ry="5" fill="#111"/>
+          <defs>
+            <linearGradient id="gkShirt" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#FF6B35"/>
+              <stop offset="50%" stop-color="#FF8C42"/>
+              <stop offset="100%" stop-color="#FF6B35"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <!-- Ball -->
+      <div id="ball">
+        <svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="30" cy="30" r="29" fill="white" stroke="#333" stroke-width="1"/>
+          <path d="M30,5 L38,18 L28,18 Z M30,5 L22,18 L28,18 Z" fill="#222"/>
+          <path d="M52,20 L42,25 L44,35 Z" fill="#222"/>
+          <path d="M8,20 L18,25 L16,35 Z" fill="#222"/>
+          <path d="M44,47 L38,36 L28,36 Z" fill="#222"/>
+          <path d="M16,47 L22,36 L28,36 Z" fill="#222"/>
+          <path d="M28,18 L38,18 L44,25 L42,35 L38,36 L28,36 L22,36 L18,25 Z" fill="#333"/>
+          <circle cx="30" cy="30" r="29" fill="none" stroke="rgba(0,0,0,0.1)" stroke-width="1"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- 9 zones -->
+    <div class="goal-grid" id="goalGrid">
+      <div class="zone" data-zone="0" onclick="shoot(0)"><div class="zone-label">左上</div></div>
+      <div class="zone" data-zone="1" onclick="shoot(1)"><div class="zone-label">上中</div></div>
+      <div class="zone" data-zone="2" onclick="shoot(2)"><div class="zone-label">右上</div></div>
+      <div class="zone" data-zone="3" onclick="shoot(3)"><div class="zone-label">左</div></div>
+      <div class="zone" data-zone="4" onclick="shoot(4)"><div class="zone-label">中央</div></div>
+      <div class="zone" data-zone="5" onclick="shoot(5)"><div class="zone-label">右</div></div>
+      <div class="zone" data-zone="6" onclick="shoot(6)"><div class="zone-label">左下</div></div>
+      <div class="zone" data-zone="7" onclick="shoot(7)"><div class="zone-label">下中</div></div>
+      <div class="zone" data-zone="8" onclick="shoot(8)"><div class="zone-label">右下</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- RESULT SCREEN -->
+<div id="screen-result" class="screen">
+  <div class="result-badge" id="resultBadge"></div>
+  <div class="fortune-card" id="fortuneCard">
+    <div class="fortune-icon" id="fortuneIcon"></div>
+    <div class="fortune-theme" id="fortuneTheme"></div>
+    <div class="fortune-title" id="fortuneTitle"></div>
+    <div class="fortune-text" id="fortuneText"></div>
+    <div class="course-tag" id="courseTag"></div>
+  </div>
+  <button class="replay-btn" onclick="replay()">▶ もう一度</button>
+</div>
+
+<script>
+// ===== FORTUNE DATA =====
+const ZONE_INFO = [
+  { name: '左上', dir: 'left', height: 'top' },
+  { name: '上中央', dir: 'center', height: 'top' },
+  { name: '右上', dir: 'right', height: 'top' },
+  { name: '左中段', dir: 'left', height: 'mid' },
+  { name: '中央', dir: 'center', height: 'mid' },
+  { name: '右中段', dir: 'right', height: 'mid' },
+  { name: '左下', dir: 'left', height: 'bot' },
+  { name: '下中央', dir: 'center', height: 'bot' },
+  { name: '右下', dir: 'right', height: 'bot' },
+];
+
+// [zone][isGoal] = fortune
+const FORTUNES = {
+  top: {
+    left: {
+      goal: { icon: '🌟', theme: '飛翔運', title: '大吉 — 頂点への道', text: '高みを狙う勇気があなたを成功へと導く。\n今日は大きな挑戦を恐れるな。\nその野心が新たな扉を開く。' },
+      save: { icon: '☁️', theme: '蓄積運', title: '中吉 — 雲の上の準備', text: '頂点はまだ先。しかし諦めるな。\n今日の失敗が明日の糧となる。\n地道な努力が未来の大逆転を生む。' }
+    },
+    center: {
+      goal: { icon: '🎯', theme: '直感運', title: '大吉 — 天才の閃き', text: '真上への直球こそ最高の一手。\n今日の直感を信じよ。\nあなたの判断は的中する。' },
+      save: { icon: '⭐', theme: '成長運', title: '吉 — 星への踏み台', text: '惜しい！しかし上を向く姿勢は正しい。\n今日は焦らず、着実に前進。\n次は必ず決まる。' }
+    },
+    right: {
+      goal: { icon: '🚀', theme: '飛躍運', title: '大吉 — 右肩上がりの未来', text: '右上への一撃が示す通り、今のあなたは飛躍期。\n新しい挑戦に今すぐ踏み出せ。\n追い風があなたを後押しする。' },
+      save: { icon: '🌙', theme: '準備運', title: '中吉 — 夜明け前の辛抱', text: '飛躍のタイミングはもう少し先。\n今日は情報収集と準備の日。\n焦りは禁物、機を待て。' }
+    }
+  },
+  mid: {
+    left: {
+      goal: { icon: '💎', theme: '安定運', title: '大吉 — 堅実な勝利', text: '左への鋭いシュート。安定と信頼の証。\n今日は人間関係が大きく動く。\n信頼できる仲間を大切にせよ。' },
+      save: { icon: '🎲', theme: '逆転運', title: '吉 — 逆転の兆し', text: 'あと一歩だった！\n今日は逆境をチャンスに変える力が宿る。\n諦めない姿勢が道を開く。' }
+    },
+    center: {
+      goal: { icon: '🏆', theme: '王者運', title: '大吉 — 王者の風格', text: 'あえて真ん中を突いた勝負師よ。\n今日のあなたに敵はない。\n自信を持って全力で進め。' },
+      save: { icon: '🔮', theme: '転機運', title: '小吉 — 転機の予感', text: '守りに入る必要はない日。\nリスクを恐れず一歩踏み出せば\n思わぬ幸運が待っている。' }
+    },
+    right: {
+      goal: { icon: '🌊', theme: '発展運', title: '大吉 — 新天地への進撃', text: '右へ—新しい出会いと発展の象徴。\n今日は積極的に行動せよ。\n初対面の人があなたの人生を変える。' },
+      save: { icon: '🌱', theme: '芽吹き運', title: '吉 — 可能性の種', text: '今日は種まきの日。\nすぐに結果が出なくても焦らずに。\n一週間後、驚くような変化が訪れる。' }
+    }
+  },
+  bot: {
+    left: {
+      goal: { icon: '💪', theme: '根性運', title: '大吉 — 地を這う強さ', text: '低く鋭いシュートは根性の証。\n今日のあなたは誰よりもタフだ。\n困難があるほど、あなたは輝く。' },
+      save: { icon: '🌿', theme: '堅実運', title: '中吉 — 大地の恵み', text: '地に足をつけて進む日。\n派手な成功より堅実な一歩を。\n積み重ねた努力が今週実を結ぶ。' }
+    },
+    center: {
+      goal: { icon: '🎪', theme: '縁起運', title: '大吉 — 絶好調の証', text: '下を攻める意外性—今日のあなたは読めない。\nその予測不能さが最大の武器。\n思いがけない幸運が舞い込む。' },
+      save: { icon: '🍀', theme: '幸運運', title: '吉 — 幸運は歩いてくる', text: '今日は動けば動くほど運が味方する。\n家にいるより外に出よ。\n偶然の出来事が素敵な縁を結ぶ。' }
+    },
+    right: {
+      goal: { icon: '🌈', theme: '縁結び運', title: '大吉 — 新たな縁の始まり', text: '右下の隅—見えないところに宝がある。\n今日は身近な人の言葉に耳を傾けよ。\n思わぬところから幸運が転がり込む。' },
+      save: { icon: '⚡', theme: '蓄電運', title: '中吉 — 嵐の前の静けさ', text: 'エネルギーは充電中。\n今日は守りを固め、次の爆発に備えよ。\n明日からの連戦に備えてよく休め。' }
+    }
+  }
+};
+
+// GK save rates per zone (0 = always save, 1 = always goal)
+const SAVE_RATE = [0.82, 0.70, 0.82, 0.65, 0.25, 0.65, 0.75, 0.60, 0.75];
+
+// GK dive target positions (% from center)
+const GK_DIVE = [
+  [-45, -60], [0, -60], [45, -60],
+  [-55, -10], [0, -10], [55, -10],
+  [-40, 30],  [0, 30],  [40, 30]
+];
+
+// Ball target positions inside goal (% of wrap)
+const BALL_TARGET = [
+  [20, 15], [50, 12], [80, 15],
+  [18, 45], [50, 43], [82, 45],
+  [22, 72], [50, 70], [78, 72]
+];
+
+// ===== PARTICLE SYSTEM =====
+const canvas = document.getElementById('particles');
+const ctx = canvas.getContext('2d');
+let particles = [];
+
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+class Particle {
+  constructor(x, y, type) {
+    this.x = x; this.y = y;
+    this.type = type; // 'goal' | 'ambient'
+    if (type === 'goal') {
+      this.vx = (Math.random() - 0.5) * 18;
+      this.vy = (Math.random() - 0.5) * 18 - 8;
+      this.size = Math.random() * 10 + 4;
+      this.color = ['#f5c842','#ff6b00','#fff','#ff4444','#44ff88'][Math.floor(Math.random() * 5)];
+      this.life = 1;
+      this.decay = Math.random() * 0.015 + 0.01;
+      this.gravity = 0.4;
+      this.shape = Math.random() > 0.5 ? 'circle' : 'rect';
+      this.rotation = Math.random() * Math.PI * 2;
+      this.rotSpeed = (Math.random() - 0.5) * 0.2;
+    } else {
+      this.vx = (Math.random() - 0.5) * 0.5;
+      this.vy = -Math.random() * 0.5 - 0.2;
+      this.size = Math.random() * 2 + 0.5;
+      this.color = `rgba(245,200,66,${Math.random() * 0.3 + 0.1})`;
+      this.life = 1;
+      this.decay = Math.random() * 0.003 + 0.001;
+    }
+  }
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    if (this.type === 'goal') {
+      this.vy += this.gravity;
+      this.vx *= 0.98;
+      this.rotation += this.rotSpeed;
+    }
+    this.life -= this.decay;
+  }
+  draw() {
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, this.life);
+    if (this.type === 'goal') {
+      ctx.translate(this.x, this.y);
+      ctx.rotate(this.rotation);
+      ctx.fillStyle = this.color;
+      if (this.shape === 'circle') {
+        ctx.beginPath();
+        ctx.arc(0, 0, this.size, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        ctx.fillRect(-this.size/2, -this.size/2, this.size, this.size * 0.6);
+      }
+    } else {
+      ctx.fillStyle = this.color;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
+// Ambient particles
+function spawnAmbient() {
+  if (Math.random() < 0.3) {
+    particles.push(new Particle(
+      Math.random() * canvas.width,
+      canvas.height + 10,
+      'ambient'
+    ));
+  }
+}
+
+function burstGoal(x, y) {
+  for (let i = 0; i < 120; i++) {
+    particles.push(new Particle(x, y, 'goal'));
+  }
+}
+
+function animParticles() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  spawnAmbient();
+  particles = particles.filter(p => p.life > 0);
+  particles.forEach(p => { p.update(); p.draw(); });
+  requestAnimationFrame(animParticles);
+}
+animParticles();
+
+// ===== SCREEN MANAGEMENT =====
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => {
+    s.classList.remove('active');
+  });
+  document.getElementById('screen-' + id).classList.add('active');
+}
+
+// ===== GAME LOGIC =====
+let shooting = false;
+
+function startGame() {
+  showScreen('play');
+  resetGoalGrid();
+}
+
+function resetGoalGrid() {
+  shooting = false;
+  const gk = document.getElementById('gk');
+  gk.style.transition = 'transform 0.15s ease';
+  gk.style.transform = 'translateX(-50%)';
+  const ball = document.getElementById('ball');
+  ball.style.transition = 'none';
+  ball.style.opacity = '0';
+  ball.style.left = '50%';
+  ball.style.bottom = '2%';
+  ball.style.transform = 'translateX(-50%) scale(1)';
+
+  document.querySelectorAll('.zone').forEach(z => {
+    z.style.pointerEvents = 'all';
+    z.style.background = '';
+  });
+
+  // GK subtle sway
+  startGKSway();
+}
+
+let swayInterval;
+function startGKSway() {
+  clearInterval(swayInterval);
+  let t = 0;
+  swayInterval = setInterval(() => {
+    if (shooting) return;
+    t += 0.06;
+    const x = Math.sin(t) * 8;
+    const gk = document.getElementById('gk');
+    gk.style.transform = `translateX(calc(-50% + ${x}px))`;
+  }, 30);
+}
+
+function flash() {
+  const el = document.getElementById('flash');
+  el.style.opacity = '1';
+  setTimeout(() => { el.style.opacity = '0'; }, 80);
+}
+
+function shoot(zone) {
+  if (shooting) return;
+  shooting = true;
+  clearInterval(swayInterval);
+
+  const wrap = document.getElementById('goalWrap');
+  const wRect = wrap.getBoundingClientRect();
+
+  // Disable all zones
+  document.querySelectorAll('.zone').forEach(z => z.style.pointerEvents = 'none');
+
+  // Highlight chosen zone
+  document.querySelector(`[data-zone="${zone}"]`).style.background = 'rgba(245,200,66,0.2)';
+
+  const isGoal = Math.random() < SAVE_RATE[zone];
+  const zInfo = ZONE_INFO[zone];
+  const fortune = FORTUNES[zInfo.height][zInfo.dir][isGoal ? 'goal' : 'save'];
+
+  const bt = BALL_TARGET[zone];
+  const gd = GK_DIVE[zone];
+
+  // Ball animation
+  const ball = document.getElementById('ball');
+  ball.style.opacity = '1';
+
+  // Determine final ball position relative to wrap
+  const targetLeft = bt[0]; // %
+  const targetBottom = 100 - bt[1]; // % from bottom
+
+  setTimeout(() => {
+    ball.style.transition = 'all 0.55s cubic-bezier(0.2, 0.8, 0.3, 1)';
+    ball.style.left = targetLeft + '%';
+    ball.style.bottom = targetBottom + '%';
+    ball.style.transform = `translateX(-50%) scale(${isGoal ? 0.6 : 0.7})`;
+  }, 50);
+
+  // GK dive
+  const gk = document.getElementById('gk');
+  const diveDelay = isGoal ? 120 : 80;
+
+  setTimeout(() => {
+    gk.style.transition = `transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)`;
+    const rotDeg = gd[0] > 0 ? 25 : gd[0] < 0 ? -25 : 0;
+    gk.style.transform = `translateX(calc(-50% + ${gd[0]}px)) translateY(${gd[1]}px) rotate(${rotDeg}deg)`;
+  }, diveDelay);
+
+  // Result
+  setTimeout(() => {
+    flash();
+    if (isGoal) {
+      // Burst particles at ball position
+      const bLeft = wRect.left + (wRect.width * bt[0] / 100);
+      const bTop = wRect.top + (wRect.height * bt[1] / 100);
+      burstGoal(bLeft, bTop);
+    }
+    setTimeout(() => showResult(isGoal, zone, fortune, zInfo), 300);
+  }, 900);
+}
+
+function showResult(isGoal, zone, fortune, zInfo) {
+  const badge = document.getElementById('resultBadge');
+  badge.textContent = isGoal ? 'GOAL!' : 'SAVE...';
+  badge.className = 'result-badge ' + (isGoal ? 'goal' : 'save');
+
+  document.getElementById('fortuneIcon').textContent = fortune.icon;
+  document.getElementById('fortuneTheme').textContent = fortune.theme;
+  document.getElementById('fortuneTitle').textContent = fortune.title;
+  document.getElementById('fortuneText').textContent = fortune.text;
+  document.getElementById('courseTag').textContent =
+    `狙いコース：${zInfo.name}　|　${isGoal ? '成功' : '惜しい！'}`;
+
+  // Reset card animations
+  const card = document.getElementById('fortuneCard');
+  card.style.animation = 'none';
+  badge.style.animation = 'none';
+  void card.offsetWidth;
+  card.style.animation = '';
+  badge.style.animation = '';
+
+  showScreen('result');
+}
+
+function replay() {
+  showScreen('play');
+  setTimeout(resetGoalGrid, 100);
+}
+</script>
+</body>
+</html>
