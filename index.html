@@ -3,414 +3,444 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PK CHALLENGE</title>
+<title>SAMURAI BLUE PK CHALLENGE</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+JP:wght@400;700;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+JP:wght@400;700;900&display=swap');
 
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  :root {
-    --gold: #f5c842;
-    --gold2: #e8a000;
-    --green: #2d7a3a;
-    --green2: #1a4f24;
-    --white: #ffffff;
-    --glow: 0 0 30px rgba(245,200,66,0.8);
-  }
+:root {
+  --blue: #003087;
+  --blue2: #0050c8;
+  --gold: #f5c842;
+  --gold2: #e8a000;
+  --red: #e8003c;
+  --white: #ffffff;
+}
 
-  html, body {
-    width: 100%; height: 100%;
-    overflow: hidden;
-    font-family: 'Noto Sans JP', sans-serif;
-    background: #000;
-    color: #fff;
-  }
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  font-family: 'Noto Sans JP', sans-serif;
+  background: #000;
+  color: #fff;
+  user-select: none;
+}
 
-  /* ===== STADIUM BACKGROUND ===== */
-  #bg {
-    position: fixed; inset: 0; z-index: 0;
-    background:
-      radial-gradient(ellipse 120% 60% at 50% 110%, #1a4f24 0%, #0a2010 60%, #000 100%);
-  }
-  #bg::before {
-    content: '';
-    position: absolute; inset: 0;
-    background:
-      repeating-linear-gradient(90deg, transparent 0, transparent 48px, rgba(255,255,255,0.03) 48px, rgba(255,255,255,0.03) 50px),
-      repeating-linear-gradient(0deg, transparent 0, transparent 48px, rgba(255,255,255,0.03) 48px, rgba(255,255,255,0.03) 50px);
-  }
-  /* Stadium lights */
-  #bg::after {
-    content: '';
-    position: absolute; inset: 0;
-    background:
-      radial-gradient(ellipse 40% 30% at 10% 0%, rgba(255,240,180,0.15) 0%, transparent 60%),
-      radial-gradient(ellipse 40% 30% at 90% 0%, rgba(255,240,180,0.15) 0%, transparent 60%),
-      radial-gradient(ellipse 60% 40% at 50% 0%, rgba(255,240,180,0.08) 0%, transparent 70%);
-  }
+/* ===== STADIUM BG ===== */
+#bg {
+  position: fixed; inset: 0; z-index: 0;
+  background: radial-gradient(ellipse 120% 60% at 50% 110%, #1a3a6b 0%, #05101f 60%, #000 100%);
+}
+#bg::before {
+  content: '';
+  position: absolute; inset: 0;
+  background:
+    repeating-linear-gradient(90deg, transparent 0, transparent 58px, rgba(255,255,255,0.02) 58px, rgba(255,255,255,0.02) 60px),
+    repeating-linear-gradient(0deg, transparent 0, transparent 58px, rgba(255,255,255,0.02) 58px, rgba(255,255,255,0.02) 60px);
+}
+#bg::after {
+  content: '';
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 35% 25% at 8% 0%, rgba(200,220,255,0.12) 0%, transparent 60%),
+    radial-gradient(ellipse 35% 25% at 92% 0%, rgba(200,220,255,0.12) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 35% at 50% 0%, rgba(200,220,255,0.06) 0%, transparent 70%);
+}
 
-  /* ===== CROWD SILHOUETTE ===== */
-  #crowd {
-    position: fixed; bottom: 0; left: 0; right: 0; z-index: 1;
-    height: 18vh;
-    background: linear-gradient(to top, #000 0%, transparent 100%);
-    overflow: hidden;
-  }
-  #crowd svg { width: 100%; height: 100%; opacity: 0.5; }
+/* ===== CROWD ===== */
+#crowd {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 1;
+  height: 16vh;
+  pointer-events: none;
+}
+#crowd svg { width: 100%; height: 100%; }
 
-  /* ===== SCREENS ===== */
-  .screen {
-    position: fixed; inset: 0; z-index: 10;
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    opacity: 0; pointer-events: none;
-    transition: opacity 0.6s ease;
-  }
-  .screen.active { opacity: 1; pointer-events: all; }
+/* ===== PARTICLE CANVAS ===== */
+#particles { position: fixed; inset: 0; z-index: 5; pointer-events: none; }
 
-  /* ===== TITLE SCREEN ===== */
-  #screen-title { gap: 2vh; }
+/* ===== FLASH ===== */
+#flash {
+  position: fixed; inset: 0; z-index: 200;
+  background: white; opacity: 0; pointer-events: none;
+  transition: opacity 0.08s;
+}
 
-  .title-badge {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: clamp(14px, 2vw, 20px);
-    letter-spacing: 0.4em;
-    color: var(--gold);
-    text-shadow: var(--glow);
-    animation: pulse 2s ease-in-out infinite;
-  }
+/* ===== SCREENS ===== */
+.screen {
+  position: fixed; inset: 0; z-index: 10;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.5s ease;
+}
+.screen.active { opacity: 1; pointer-events: all; }
 
-  .title-main {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: clamp(70px, 14vw, 160px);
-    line-height: 0.9;
-    text-align: center;
-    background: linear-gradient(180deg, #fff 0%, #f5c842 50%, #e8a000 100%);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-    filter: drop-shadow(0 0 40px rgba(245,200,66,0.6));
-    animation: titleFloat 3s ease-in-out infinite;
-  }
+/* ===== TITLE ===== */
+#screen-title { gap: 2vh; }
 
-  .title-sub {
-    font-size: clamp(12px, 1.8vw, 18px);
-    font-weight: 700;
-    letter-spacing: 0.3em;
-    color: rgba(255,255,255,0.7);
-  }
+.title-emblem {
+  width: clamp(60px, 10vw, 100px);
+  height: clamp(60px, 10vw, 100px);
+  margin-bottom: 1vh;
+  animation: emblemSpin 6s linear infinite;
+  filter: drop-shadow(0 0 20px rgba(245,200,66,0.8));
+}
 
-  .tap-start {
-    margin-top: 4vh;
-    font-size: clamp(16px, 2.5vw, 28px);
-    font-weight: 900;
-    letter-spacing: 0.2em;
-    color: #fff;
-    animation: blink 1.4s ease-in-out infinite;
-    cursor: pointer;
-    padding: 20px 60px;
-    border: 2px solid rgba(245,200,66,0.6);
-    border-radius: 50px;
-    background: rgba(245,200,66,0.1);
-    backdrop-filter: blur(10px);
-    transition: all 0.3s;
-  }
-  .tap-start:hover {
-    background: rgba(245,200,66,0.25);
-    border-color: var(--gold);
-    box-shadow: var(--glow), inset 0 0 30px rgba(245,200,66,0.1);
-    transform: scale(1.05);
-  }
+.title-badge {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(12px, 1.8vw, 18px);
+  letter-spacing: 0.5em;
+  color: var(--gold);
+  text-shadow: 0 0 20px rgba(245,200,66,0.6);
+}
 
-  /* ===== PLAY SCREEN ===== */
-  #screen-play { gap: 0; }
+.title-main {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(50px, 10vw, 120px);
+  line-height: 0.85;
+  text-align: center;
+  background: linear-gradient(180deg, #fff 0%, #7ab0ff 40%, #003087 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 30px rgba(0,80,200,0.8));
+  animation: titlePulse 3s ease-in-out infinite;
+}
 
-  .play-header {
-    text-align: center;
-    margin-bottom: 2vh;
-  }
-  .play-header h2 {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: clamp(24px, 4vw, 48px);
-    letter-spacing: 0.2em;
-    color: var(--gold);
-    text-shadow: var(--glow);
-  }
-  .play-header p {
-    font-size: clamp(11px, 1.5vw, 15px);
-    color: rgba(255,255,255,0.6);
-    letter-spacing: 0.15em;
-    margin-top: 4px;
-  }
+.title-red {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(18px, 3vw, 36px);
+  letter-spacing: 0.3em;
+  color: var(--red);
+  text-shadow: 0 0 20px rgba(232,0,60,0.8);
+}
 
-  /* Goal frame */
-  .goal-wrap {
-    position: relative;
-    width: min(80vw, 700px);
-    aspect-ratio: 7/4.5;
-  }
+.tap-start {
+  margin-top: 3vh;
+  padding: clamp(14px,2vh,22px) clamp(50px,8vw,90px);
+  font-size: clamp(15px, 2.2vw, 24px);
+  font-weight: 900; letter-spacing: 0.25em;
+  color: #fff;
+  background: linear-gradient(135deg, var(--blue) 0%, var(--blue2) 100%);
+  border: 2px solid rgba(120,160,255,0.5);
+  border-radius: 50px; cursor: pointer;
+  box-shadow: 0 0 30px rgba(0,80,200,0.5), inset 0 1px 0 rgba(255,255,255,0.2);
+  animation: tapBlink 1.6s ease-in-out infinite;
+  transition: all 0.3s;
+}
+.tap-start:hover {
+  transform: scale(1.06);
+  box-shadow: 0 0 50px rgba(0,80,200,0.8), inset 0 1px 0 rgba(255,255,255,0.3);
+}
 
-  .goal-frame {
-    position: absolute; inset: 0;
-    border: 4px solid rgba(255,255,255,0.9);
-    border-bottom: none;
-    border-radius: 4px 4px 0 0;
-    box-shadow:
-      0 0 0 2px rgba(255,255,255,0.2),
-      0 0 40px rgba(255,255,255,0.1),
-      inset 0 0 60px rgba(0,0,0,0.4);
-    background: linear-gradient(180deg, rgba(0,0,100,0.3) 0%, rgba(0,50,0,0.2) 100%);
-  }
+/* ===== PLAY SCREEN ===== */
+#screen-play { gap: 0; }
 
-  /* Net pattern */
-  .goal-net {
-    position: absolute; inset: 4px 4px 0;
-    background-image:
-      repeating-linear-gradient(0deg, rgba(255,255,255,0.08) 0, rgba(255,255,255,0.08) 1px, transparent 1px, transparent 28px),
-      repeating-linear-gradient(90deg, rgba(255,255,255,0.08) 0, rgba(255,255,255,0.08) 1px, transparent 1px, transparent 28px);
-    pointer-events: none;
-  }
+.play-header {
+  text-align: center; margin-bottom: 2vh;
+}
+.play-header h2 {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(22px, 3.5vw, 44px);
+  letter-spacing: 0.2em; color: var(--gold);
+  text-shadow: 0 0 20px rgba(245,200,66,0.6);
+}
+.play-header p {
+  font-size: clamp(10px, 1.4vw, 14px);
+  color: rgba(255,255,255,0.55); letter-spacing: 0.15em;
+  margin-top: 4px;
+}
 
-  /* Crossbar highlight */
-  .goal-frame::before {
-    content: '';
-    position: absolute; top: -6px; left: -6px; right: -6px; height: 12px;
-    background: linear-gradient(to bottom, #ddd, #aaa);
-    border-radius: 3px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-  }
-  /* Posts */
-  .goal-frame::after {
-    content: '';
-    position: absolute; top: 0; left: -6px; right: -6px; bottom: 0;
-    border-left: 12px solid #bbb;
-    border-right: 12px solid #bbb;
-    border-radius: 0;
-    pointer-events: none;
-  }
+/* Goal wrap */
+.goal-wrap {
+  position: relative;
+  width: min(82vw, 720px);
+  aspect-ratio: 7/4.5;
+}
 
-  /* 9-grid zones */
-  .goal-grid {
-    position: absolute; inset: 4px 10px 0;
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    grid-template-rows: repeat(3, 1fr);
-    gap: 2px;
-  }
+.goal-frame {
+  position: absolute; inset: 0;
+  border: 5px solid rgba(255,255,255,0.92);
+  border-bottom: none; border-radius: 4px 4px 0 0;
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.15), 0 0 50px rgba(255,255,255,0.08), inset 0 0 80px rgba(0,0,30,0.5);
+  background: linear-gradient(180deg, rgba(0,20,60,0.4) 0%, rgba(0,40,10,0.2) 100%);
+}
+.goal-frame::before {
+  content: ''; position: absolute; top: -7px; left: -7px; right: -7px; height: 14px;
+  background: linear-gradient(to bottom, #e8e8e8, #aaa);
+  border-radius: 4px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.6);
+}
+.goal-frame::after {
+  content: ''; position: absolute; top: 0; bottom: 0; left: -8px; right: -8px;
+  border-left: 14px solid rgba(200,200,200,0.85);
+  border-right: 14px solid rgba(200,200,200,0.85);
+  pointer-events: none;
+}
 
-  .zone {
-    position: relative;
-    cursor: pointer;
-    border-radius: 2px;
-    transition: background 0.2s;
-    overflow: hidden;
-  }
-  .zone::before {
-    content: '';
-    position: absolute; inset: 0;
-    background: rgba(255,255,255,0);
-    transition: background 0.2s;
-    border-radius: 2px;
-  }
-  .zone:hover::before {
-    background: rgba(245,200,66,0.25);
-    box-shadow: inset 0 0 20px rgba(245,200,66,0.3);
-  }
-  .zone-label {
-    position: absolute; inset: 0;
-    display: flex; align-items: center; justify-content: center;
-    font-size: clamp(8px, 1.2vw, 13px);
-    font-weight: 700;
-    color: rgba(255,255,255,0);
-    letter-spacing: 0.05em;
-    transition: color 0.2s;
-  }
-  .zone:hover .zone-label { color: rgba(255,255,255,0.7); }
+.goal-net {
+  position: absolute; inset: 5px 5px 0;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(255,255,255,0.07) 0, rgba(255,255,255,0.07) 1px, transparent 1px, transparent 30px),
+    repeating-linear-gradient(90deg, rgba(255,255,255,0.07) 0, rgba(255,255,255,0.07) 1px, transparent 1px, transparent 30px);
+  pointer-events: none;
+}
 
-  /* GK */
-  #gk {
-    position: absolute;
-    bottom: 8%;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 12%;
-    aspect-ratio: 1/2;
-    pointer-events: none;
-    transition: transform 0.15s ease;
-  }
-  #gk svg { width: 100%; height: 100%; }
+/* GK */
+#gk {
+  position: absolute; bottom: 6%; left: 50%;
+  transform: translateX(-50%);
+  width: 13%; aspect-ratio: 0.55/1;
+  pointer-events: none; z-index: 3;
+}
 
-  /* Ball */
-  #ball {
-    position: absolute;
-    width: 5%;
-    aspect-ratio: 1;
-    bottom: 2%;
-    left: 50%;
-    transform: translateX(-50%);
-    pointer-events: none;
-    z-index: 20;
-    opacity: 0;
-  }
-  #ball svg { width: 100%; height: 100%; }
+/* Ball */
+#ball {
+  position: absolute; width: 6%; aspect-ratio: 1;
+  bottom: 1%; left: 50%;
+  transform: translateX(-50%);
+  pointer-events: none; z-index: 4; opacity: 0;
+}
 
-  /* ===== RESULT SCREEN ===== */
-  #screen-result {
-    flex-direction: column;
-    gap: 2vh;
-    padding: 2vh;
-  }
+/* 9 zones */
+.goal-grid {
+  position: absolute; inset: 5px 12px 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: 3px; z-index: 5;
+}
+.zone {
+  position: relative; cursor: pointer; border-radius: 2px;
+  overflow: hidden;
+  transition: background 0.2s;
+}
+.zone::before {
+  content: ''; position: absolute; inset: 0;
+  background: transparent; transition: all 0.2s; border-radius: 2px;
+}
+.zone:hover::before {
+  background: rgba(245,200,66,0.22);
+  box-shadow: inset 0 0 25px rgba(245,200,66,0.25);
+}
+.zone-label {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: clamp(7px, 1vw, 12px); font-weight: 700;
+  color: rgba(255,255,255,0); transition: color 0.2s;
+  letter-spacing: 0.05em;
+}
+.zone:hover .zone-label { color: rgba(255,255,255,0.75); }
 
-  .result-badge {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: clamp(60px, 15vw, 180px);
-    line-height: 1;
-    text-align: center;
-    animation: resultPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
-  }
-  .result-badge.goal {
-    background: linear-gradient(135deg, #fff 0%, #f5c842 40%, #ff6b00 100%);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-    filter: drop-shadow(0 0 30px rgba(255,150,0,0.8));
-  }
-  .result-badge.save {
-    background: linear-gradient(135deg, #aaa 0%, #fff 50%, #aaa 100%);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-    filter: drop-shadow(0 0 20px rgba(255,255,255,0.4));
-  }
+/* ===== CUT-IN OVERLAY ===== */
+#cutin {
+  position: fixed; inset: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: none; overflow: hidden;
+  opacity: 0;
+}
+#cutin.active { opacity: 1; }
 
-  /* Fortune card */
-  .fortune-card {
-    width: min(90vw, 600px);
-    background: linear-gradient(135deg, rgba(20,15,5,0.95) 0%, rgba(40,30,0,0.95) 100%);
-    border: 1px solid rgba(245,200,66,0.4);
-    border-radius: 20px;
-    padding: clamp(20px, 3vw, 40px);
-    text-align: center;
-    box-shadow:
-      0 0 60px rgba(245,200,66,0.2),
-      inset 0 1px 0 rgba(255,255,255,0.1);
-    animation: cardSlide 0.6s 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
-    position: relative;
-    overflow: hidden;
-  }
-  .fortune-card::before {
-    content: '';
-    position: absolute; top: -50%; left: -50%;
-    width: 200%; height: 200%;
-    background: conic-gradient(from 0deg, transparent 0deg, rgba(245,200,66,0.05) 60deg, transparent 120deg);
-    animation: spin 8s linear infinite;
-  }
+/* Speed lines */
+.speedlines {
+  position: absolute; inset: -50%;
+  width: 200%; height: 200%;
+  pointer-events: none;
+}
 
-  .fortune-icon {
-    font-size: clamp(30px, 5vw, 56px);
-    margin-bottom: 1vh;
-    animation: iconBounce 1s 0.8s ease both;
-  }
+/* Cut-in panels */
+.cutin-panels {
+  position: absolute; inset: 0;
+  display: flex;
+}
+.panel-left {
+  flex: 1;
+  clip-path: polygon(0 0, 100% 0, 85% 100%, 0 100%);
+  position: relative; overflow: hidden;
+}
+.panel-right {
+  flex: 1;
+  clip-path: polygon(15% 0, 100% 0, 100% 100%, 0% 100%);
+  position: relative; overflow: hidden;
+}
 
-  .fortune-theme {
-    font-size: clamp(10px, 1.4vw, 14px);
-    letter-spacing: 0.3em;
-    color: var(--gold);
-    margin-bottom: 1vh;
-    text-transform: uppercase;
-  }
+/* Character art container */
+.char-art {
+  position: absolute; inset: 0;
+  display: flex; align-items: flex-end; justify-content: center;
+  overflow: hidden;
+}
+.char-art svg { height: 90%; width: auto; }
 
-  .fortune-title {
-    font-size: clamp(22px, 3.5vw, 42px);
-    font-weight: 900;
-    background: linear-gradient(135deg, #fff 0%, var(--gold) 100%);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-    margin-bottom: 1.5vh;
-    line-height: 1.2;
-  }
+/* Cut-in text */
+.cutin-text {
+  position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center; z-index: 10;
+  white-space: nowrap;
+}
+.cutin-text .line1 {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(30px, 6vw, 80px);
+  letter-spacing: 0.15em;
+  display: block;
+  text-shadow: 0 0 40px currentColor, 3px 3px 0 rgba(0,0,0,0.5);
+}
+.cutin-text .line2 {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(50px, 10vw, 130px);
+  letter-spacing: 0.08em;
+  display: block;
+  text-shadow: 0 0 60px currentColor, 4px 4px 0 rgba(0,0,0,0.5);
+  line-height: 0.9;
+}
 
-  .fortune-text {
-    font-size: clamp(13px, 1.8vw, 18px);
-    line-height: 1.8;
-    color: rgba(255,255,255,0.85);
-  }
+/* SUPER SHOT style */
+.cutin-super .panel-left { background: linear-gradient(135deg, #001a5e, #003087); }
+.cutin-super .panel-right { background: linear-gradient(225deg, #001a5e, #003087); }
+.cutin-super .line1 { color: var(--gold); }
+.cutin-super .line2 { color: #fff; filter: drop-shadow(0 0 20px #7ab0ff); }
 
-  .course-tag {
-    display: inline-block;
-    margin-top: 1.5vh;
-    padding: 6px 20px;
-    border: 1px solid rgba(245,200,66,0.4);
-    border-radius: 20px;
-    font-size: clamp(10px, 1.2vw, 13px);
-    color: rgba(245,200,66,0.8);
-    letter-spacing: 0.1em;
-  }
+/* NORMAL SHOT style */
+.cutin-normal .panel-left { background: linear-gradient(135deg, #001530, #002560); }
+.cutin-normal .panel-right { background: linear-gradient(225deg, #001530, #002560); }
+.cutin-normal .line1 { color: rgba(255,255,255,0.7); }
+.cutin-normal .line2 { color: var(--gold); }
 
-  .replay-btn {
-    margin-top: 2vh;
-    padding: clamp(12px, 2vh, 20px) clamp(40px, 8vw, 80px);
-    font-size: clamp(14px, 2vw, 20px);
-    font-weight: 900;
-    letter-spacing: 0.2em;
-    color: #000;
-    background: linear-gradient(135deg, var(--gold) 0%, var(--gold2) 100%);
-    border: none; border-radius: 50px;
-    cursor: pointer;
-    box-shadow: 0 8px 30px rgba(245,200,66,0.5);
-    transition: all 0.3s;
-    animation: cardSlide 0.5s 0.6s both;
-  }
-  .replay-btn:hover {
-    transform: translateY(-3px) scale(1.05);
-    box-shadow: 0 12px 40px rgba(245,200,66,0.7);
-  }
+/* KEEPER style */
+.cutin-keeper .panel-left { background: linear-gradient(135deg, #1a0000, #500010); }
+.cutin-keeper .panel-right { background: linear-gradient(225deg, #1a0000, #500010); }
+.cutin-keeper .line1 { color: rgba(255,200,200,0.9); }
+.cutin-keeper .line2 { color: #ff4466; filter: drop-shadow(0 0 20px #ff4466); }
 
-  /* ===== PARTICLE CANVAS ===== */
-  #particles {
-    position: fixed; inset: 0; z-index: 5;
-    pointer-events: none;
-  }
+/* ===== RESULT SCREEN ===== */
+#screen-result { gap: 2vh; padding: 2vh; }
 
-  /* ===== FLASH OVERLAY ===== */
-  #flash {
-    position: fixed; inset: 0; z-index: 50;
-    background: white;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.1s;
-  }
+.result-badge {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(65px, 14vw, 170px);
+  line-height: 1; text-align: center;
+  animation: resultPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+}
+.result-badge.goal {
+  background: linear-gradient(135deg, #fff 0%, var(--gold) 50%, #ff8800 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 35px rgba(255,150,0,0.9));
+}
+.result-badge.supergoal {
+  background: linear-gradient(135deg, var(--gold) 0%, #fff 40%, var(--gold) 80%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 50px rgba(245,200,66,1));
+  animation: resultPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) both, superPulse 0.8s 0.5s ease-in-out infinite alternate;
+}
+.result-badge.save {
+  background: linear-gradient(135deg, #888 0%, #fff 50%, #888 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 20px rgba(255,255,255,0.4));
+}
 
-  /* ===== ANIMATIONS ===== */
-  @keyframes pulse {
-    0%, 100% { opacity: 0.7; }
-    50% { opacity: 1; text-shadow: 0 0 40px rgba(245,200,66,1); }
-  }
-  @keyframes blink {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.3; }
-  }
-  @keyframes titleFloat {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-10px); }
-  }
-  @keyframes resultPop {
-    0% { transform: scale(0.3) rotate(-5deg); opacity: 0; }
-    100% { transform: scale(1) rotate(0deg); opacity: 1; }
-  }
-  @keyframes cardSlide {
-    0% { transform: translateY(40px); opacity: 0; }
-    100% { transform: translateY(0); opacity: 1; }
-  }
-  @keyframes iconBounce {
-    0% { transform: scale(0); }
-    60% { transform: scale(1.3); }
-    100% { transform: scale(1); }
-  }
-  @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-  }
-  @keyframes ballKick {
-    0% { opacity: 1; transform: translateX(-50%) scale(1); }
-    100% { opacity: 0.8; }
-  }
-  @keyframes gkDive {
-    0% { transform: translateX(-50%) scaleX(1); }
-  }
+.super-label {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(18px, 3vw, 36px);
+  letter-spacing: 0.4em;
+  color: var(--gold);
+  text-shadow: 0 0 30px rgba(245,200,66,0.8);
+  animation: cardSlide 0.4s 0.1s both;
+  display: none;
+}
+.super-label.show { display: block; }
+
+.fortune-card {
+  width: min(92vw, 620px);
+  background: linear-gradient(135deg, rgba(0,10,30,0.96) 0%, rgba(0,30,70,0.96) 100%);
+  border: 1px solid rgba(120,160,255,0.35);
+  border-radius: 20px;
+  padding: clamp(18px,3vw,38px);
+  text-align: center;
+  box-shadow: 0 0 60px rgba(0,80,200,0.25), inset 0 1px 0 rgba(255,255,255,0.08);
+  animation: cardSlide 0.6s 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+  position: relative; overflow: hidden;
+}
+.fortune-card::before {
+  content: ''; position: absolute; top: -50%; left: -50%;
+  width: 200%; height: 200%;
+  background: conic-gradient(from 0deg, transparent 0deg, rgba(0,80,200,0.06) 60deg, transparent 120deg);
+  animation: spin 10s linear infinite;
+}
+
+.fortune-icon { font-size: clamp(28px,4.5vw,52px); margin-bottom: 1vh; animation: iconBounce 0.8s 0.8s ease both; }
+.fortune-theme { font-size: clamp(9px,1.3vw,13px); letter-spacing: 0.35em; color: var(--gold); margin-bottom: 0.8vh; }
+.fortune-title {
+  font-size: clamp(20px,3.2vw,40px); font-weight: 900; margin-bottom: 1.2vh; line-height: 1.2;
+  background: linear-gradient(135deg, #fff 0%, #7ab0ff 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.fortune-text { font-size: clamp(12px,1.6vw,17px); line-height: 1.85; color: rgba(255,255,255,0.85); }
+.course-tag {
+  display: inline-block; margin-top: 1.5vh;
+  padding: 5px 18px;
+  border: 1px solid rgba(120,160,255,0.4); border-radius: 20px;
+  font-size: clamp(9px,1.1vw,12px); color: rgba(120,160,255,0.85); letter-spacing: 0.1em;
+}
+
+.replay-btn {
+  margin-top: 2vh;
+  padding: clamp(12px,1.8vh,20px) clamp(40px,7vw,75px);
+  font-size: clamp(14px,1.9vw,20px); font-weight: 900; letter-spacing: 0.2em;
+  color: #fff;
+  background: linear-gradient(135deg, var(--blue) 0%, var(--blue2) 100%);
+  border: none; border-radius: 50px; cursor: pointer;
+  box-shadow: 0 8px 30px rgba(0,80,200,0.5);
+  transition: all 0.3s;
+  animation: cardSlide 0.5s 0.6s both;
+}
+.replay-btn:hover { transform: translateY(-3px) scale(1.05); box-shadow: 0 12px 40px rgba(0,80,200,0.8); }
+
+/* ===== ANIMATIONS ===== */
+@keyframes emblemSpin { 0%{transform:rotate(0)} 100%{transform:rotate(360deg)} }
+@keyframes titlePulse { 0%,100%{filter:drop-shadow(0 0 20px rgba(0,80,200,0.6))} 50%{filter:drop-shadow(0 0 50px rgba(0,80,200,1))} }
+@keyframes tapBlink { 0%,100%{opacity:1} 50%{opacity:0.5} }
+@keyframes resultPop { 0%{transform:scale(0.2) rotate(-8deg);opacity:0} 100%{transform:scale(1) rotate(0);opacity:1} }
+@keyframes superPulse { 0%{filter:drop-shadow(0 0 30px rgba(245,200,66,0.8))} 100%{filter:drop-shadow(0 0 70px rgba(245,200,66,1))} }
+@keyframes cardSlide { 0%{transform:translateY(40px);opacity:0} 100%{transform:translateY(0);opacity:1} }
+@keyframes iconBounce { 0%{transform:scale(0)} 60%{transform:scale(1.3)} 100%{transform:scale(1)} }
+@keyframes spin { from{transform:rotate(0)} to{transform:rotate(360deg)} }
+
+/* Cut-in anims */
+@keyframes cutinEnter {
+  0%   { opacity:0; transform:scaleX(0.05); }
+  30%  { opacity:1; transform:scaleX(1.04); }
+  50%  { transform:scaleX(0.98); }
+  100% { opacity:1; transform:scaleX(1); }
+}
+@keyframes cutinExit {
+  0%   { opacity:1; transform:scaleX(1); }
+  100% { opacity:0; transform:scaleX(1.08); }
+}
+@keyframes panelSlideLeft {
+  0%  { transform:translateX(-120%); }
+  60% { transform:translateX(4%); }
+  100%{ transform:translateX(0); }
+}
+@keyframes panelSlideRight {
+  0%  { transform:translateX(120%); }
+  60% { transform:translateX(-4%); }
+  100%{ transform:translateX(0); }
+}
+@keyframes cutinText {
+  0%  { transform:translate(-50%,-50%) scale(2.5); opacity:0; }
+  40% { transform:translate(-50%,-50%) scale(0.95); opacity:1; }
+  100%{ transform:translate(-50%,-50%) scale(1); opacity:1; }
+}
+@keyframes speedLine {
+  0%  { transform:rotate(var(--r)) scaleX(0); opacity:0.8; }
+  50% { transform:rotate(var(--r)) scaleX(1); opacity:0.6; }
+  100%{ transform:rotate(var(--r)) scaleX(1.5); opacity:0; }
+}
+@keyframes charSlideIn {
+  0%  { transform:translateX(var(--slide)) scale(0.85); opacity:0; }
+  70% { transform:translateX(0) scale(1.03); opacity:1; }
+  100%{ transform:translateX(0) scale(1); opacity:1; }
+}
 </style>
 </head>
 <body>
@@ -419,117 +449,146 @@
 <canvas id="particles"></canvas>
 <div id="flash"></div>
 
-<!-- Crowd silhouette -->
+<!-- Crowd -->
 <div id="crowd">
-  <svg viewBox="0 0 1200 120" preserveAspectRatio="none">
-    <path d="M0,80 Q30,60 60,75 Q90,90 120,65 Q150,40 180,70 Q210,95 240,60 Q270,30 300,65 Q330,95 360,55 Q390,20 420,60 Q450,95 480,65 Q510,40 540,70 Q570,95 600,60 Q630,30 660,65 Q690,95 720,60 Q750,30 780,70 Q810,100 840,65 Q870,35 900,70 Q930,100 960,65 Q990,35 1020,70 Q1050,100 1080,65 Q1110,35 1140,70 Q1170,100 1200,75 L1200,120 L0,120 Z"
-      fill="rgba(0,0,0,0.8)"/>
-    <!-- Head dots -->
-    <g fill="rgba(255,255,255,0.15)" font-size="8">
-      <circle cx="60" cy="68" r="5"/>
-      <circle cx="120" cy="58" r="6"/>
-      <circle cx="180" cy="63" r="5"/>
-      <circle cx="240" cy="53" r="6"/>
-      <circle cx="300" cy="58" r="5"/>
-      <circle cx="360" cy="48" r="6"/>
-      <circle cx="420" cy="53" r="5"/>
-      <circle cx="480" cy="58" r="6"/>
-      <circle cx="540" cy="63" r="5"/>
-      <circle cx="600" cy="53" r="6"/>
-      <circle cx="660" cy="58" r="5"/>
-      <circle cx="720" cy="53" r="6"/>
-      <circle cx="780" cy="63" r="5"/>
-      <circle cx="840" cy="58" r="6"/>
-      <circle cx="900" cy="63" r="5"/>
-      <circle cx="960" cy="58" r="6"/>
-      <circle cx="1020" cy="63" r="5"/>
-      <circle cx="1080" cy="58" r="6"/>
-      <circle cx="1140" cy="63" r="5"/>
+  <svg viewBox="0 0 1400 140" preserveAspectRatio="none">
+    <defs>
+      <linearGradient id="crowdFade" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="rgba(0,0,0,0)"/>
+        <stop offset="100%" stop-color="rgba(0,0,0,0.95)"/>
+      </linearGradient>
+    </defs>
+    <path d="M0,90 Q35,65 70,82 Q105,100 140,72 Q175,44 210,78 Q245,108 280,68 Q315,32 350,72 Q385,108 420,70 Q455,36 490,75 Q525,110 560,72 Q595,38 630,75 Q665,108 700,68 Q735,32 770,75 Q805,110 840,72 Q875,38 910,78 Q945,110 980,72 Q1015,38 1050,78 Q1085,110 1120,72 Q1155,38 1190,78 Q1225,110 1260,75 Q1295,42 1330,80 Q1365,110 1400,88 L1400,140 L0,140 Z" fill="#0a0a1a"/>
+    <g fill="rgba(0,48,135,0.6)">
+      <circle cx="70" cy="76" r="6"/><circle cx="140" cy="66" r="7"/><circle cx="210" cy="72" r="6"/>
+      <circle cx="280" cy="62" r="7"/><circle cx="350" cy="66" r="6"/><circle cx="420" cy="64" r="7"/>
+      <circle cx="490" cy="69" r="6"/><circle cx="560" cy="66" r="7"/><circle cx="630" cy="69" r="6"/>
+      <circle cx="700" cy="62" r="7"/><circle cx="770" cy="69" r="6"/><circle cx="840" cy="66" r="7"/>
+      <circle cx="910" cy="72" r="6"/><circle cx="980" cy="66" r="7"/><circle cx="1050" cy="72" r="6"/>
+      <circle cx="1120" cy="66" r="7"/><circle cx="1190" cy="72" r="6"/><circle cx="1260" cy="69" r="7"/>
+      <circle cx="1330" cy="74" r="6"/>
     </g>
+    <!-- Japan flags tiny -->
+    <g opacity="0.4">
+      <rect x="60" y="58" width="12" height="8" fill="white"/><circle cx="66" cy="62" r="2.5" fill="#BC002D"/>
+      <rect x="270" y="50" width="12" height="8" fill="white"/><circle cx="276" cy="54" r="2.5" fill="#BC002D"/>
+      <rect x="550" y="54" width="12" height="8" fill="white"/><circle cx="556" cy="58" r="2.5" fill="#BC002D"/>
+      <rect x="840" y="52" width="12" height="8" fill="white"/><circle cx="846" cy="56" r="2.5" fill="#BC002D"/>
+      <rect x="1120" y="54" width="12" height="8" fill="white"/><circle cx="1126" cy="58" r="2.5" fill="#BC002D"/>
+    </g>
+    <rect x="0" y="0" width="1400" height="140" fill="url(#crowdFade)"/>
   </svg>
+</div>
+
+<!-- CUT-IN OVERLAY -->
+<div id="cutin">
+  <canvas id="speedCanvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;"></canvas>
+  <div class="cutin-panels" id="cutinPanels">
+    <div class="panel-left" id="panelLeft">
+      <div class="char-art" id="charLeft"></div>
+    </div>
+    <div class="panel-right" id="panelRight">
+      <div class="char-art" id="charRight"></div>
+    </div>
+  </div>
+  <div class="cutin-text" id="cutinText">
+    <span class="line1" id="cutinLine1"></span>
+    <span class="line2" id="cutinLine2"></span>
+  </div>
 </div>
 
 <!-- TITLE SCREEN -->
 <div id="screen-title" class="screen active">
-  <div class="title-badge">⚽ PACHINKO PARK PRESENTS ⚽</div>
+  <svg class="title-emblem" viewBox="0 0 100 100">
+    <polygon points="50,5 61,35 95,35 68,57 79,91 50,70 21,91 32,57 5,35 39,35" fill="none" stroke="#f5c842" stroke-width="3"/>
+    <circle cx="50" cy="50" r="20" fill="none" stroke="#003087" stroke-width="6"/>
+    <text x="50" y="57" text-anchor="middle" font-size="22" fill="#fff" font-family="serif">⚽</text>
+  </svg>
+  <div class="title-badge">SAMURAI BLUE PRESENTS</div>
   <div class="title-main">PK<br>CHALLENGE</div>
-  <div class="title-sub">あなたの運命を蹴り込め</div>
-  <button class="tap-start" onclick="startGame()">TAP TO START</button>
+  <div class="title-red">JAPAN NATIONAL TEAM</div>
+  <button class="tap-start" onclick="startGame()">⚽ TAP TO START</button>
 </div>
 
 <!-- PLAY SCREEN -->
 <div id="screen-play" class="screen">
   <div class="play-header">
-    <h2>コースを選んで蹴れ！</h2>
-    <p>9つのゾーンからねらいを定めよ</p>
+    <h2>コースを選べ！</h2>
+    <p>9つのゾーンから狙いを定めよ — SAMURAI BLUE</p>
   </div>
-
   <div class="goal-wrap" id="goalWrap">
     <div class="goal-frame">
       <div class="goal-net"></div>
-      <!-- GK -->
+      <!-- GK (Japan GK: blue gloves, orange jersey) -->
       <div id="gk">
-        <svg viewBox="0 0 60 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <!-- Body -->
-          <rect x="15" y="45" width="30" height="45" rx="6" fill="#FF6B35"/>
-          <rect x="15" y="45" width="30" height="45" rx="6" fill="url(#gkShirt)"/>
-          <!-- Head -->
-          <ellipse cx="30" cy="30" rx="16" ry="18" fill="#FDBCB4"/>
-          <!-- Hair -->
-          <ellipse cx="30" cy="16" rx="16" ry="10" fill="#2C1810"/>
+        <svg viewBox="0 0 70 130" xmlns="http://www.w3.org/2000/svg">
+          <!-- Body: orange GK jersey -->
+          <rect x="16" y="48" width="38" height="48" rx="7" fill="#FF6B00"/>
+          <rect x="22" y="48" width="26" height="8" fill="#cc5500"/>
+          <!-- Number -->
+          <text x="35" y="80" text-anchor="middle" font-size="14" fill="rgba(255,255,255,0.8)" font-family="Bebas Neue,sans-serif">1</text>
           <!-- Arms -->
-          <rect x="2" y="50" width="13" height="8" rx="4" fill="#FDBCB4"/>
-          <rect x="45" y="50" width="13" height="8" rx="4" fill="#FDBCB4"/>
-          <!-- Gloves -->
-          <ellipse cx="8" cy="54" rx="7" ry="6" fill="#FFE566"/>
-          <ellipse cx="52" cy="54" rx="7" ry="6" fill="#FFE566"/>
-          <!-- Legs -->
-          <rect x="16" y="88" width="12" height="28" rx="4" fill="#1a1a2e"/>
-          <rect x="32" y="88" width="12" height="28" rx="4" fill="#1a1a2e"/>
-          <!-- Shoes -->
-          <ellipse cx="22" cy="116" rx="10" ry="5" fill="#111"/>
-          <ellipse cx="38" cy="116" rx="10" ry="5" fill="#111"/>
-          <defs>
-            <linearGradient id="gkShirt" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stop-color="#FF6B35"/>
-              <stop offset="50%" stop-color="#FF8C42"/>
-              <stop offset="100%" stop-color="#FF6B35"/>
-            </linearGradient>
-          </defs>
+          <rect x="2" y="54" width="16" height="9" rx="4" fill="#FF6B00"/>
+          <rect x="52" y="54" width="16" height="9" rx="4" fill="#FF6B00"/>
+          <!-- Gloves: bright yellow -->
+          <ellipse cx="9" cy="58" rx="8" ry="7" fill="#FFE000"/>
+          <ellipse cx="61" cy="58" rx="8" ry="7" fill="#FFE000"/>
+          <ellipse cx="9" cy="58" rx="5" ry="4" fill="#FFD700" opacity="0.5"/>
+          <ellipse cx="61" cy="58" rx="5" ry="4" fill="#FFD700" opacity="0.5"/>
+          <!-- Head -->
+          <ellipse cx="35" cy="32" rx="18" ry="20" fill="#F5C5A3"/>
+          <!-- Hair: dark -->
+          <path d="M17,26 Q18,10 35,10 Q52,10 53,26 Q50,18 35,17 Q20,18 17,26Z" fill="#1a1008"/>
+          <!-- Eyes -->
+          <ellipse cx="28" cy="32" rx="4" ry="4.5" fill="white"/>
+          <ellipse cx="42" cy="32" rx="4" ry="4.5" fill="white"/>
+          <ellipse cx="28" cy="33" rx="2.5" ry="3" fill="#1a1008"/>
+          <ellipse cx="42" cy="33" rx="2.5" ry="3" fill="#1a1008"/>
+          <!-- Determined brow -->
+          <line x1="24" y1="26" x2="32" y2="28" stroke="#1a1008" stroke-width="2.5" stroke-linecap="round"/>
+          <line x1="38" y1="28" x2="46" y2="26" stroke="#1a1008" stroke-width="2.5" stroke-linecap="round"/>
+          <!-- Shorts: navy -->
+          <rect x="17" y="94" width="16" height="26" rx="4" fill="#001f5e"/>
+          <rect x="37" y="94" width="16" height="26" rx="4" fill="#001f5e"/>
+          <!-- Socks + shoes -->
+          <rect x="17" y="115" width="16" height="10" rx="2" fill="#fff"/>
+          <rect x="37" y="115" width="16" height="10" rx="2" fill="#fff"/>
+          <ellipse cx="25" cy="126" rx="12" ry="5" fill="#111"/>
+          <ellipse cx="45" cy="126" rx="12" ry="5" fill="#111"/>
         </svg>
       </div>
       <!-- Ball -->
       <div id="ball">
         <svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="30" cy="30" r="29" fill="white" stroke="#333" stroke-width="1"/>
-          <path d="M30,5 L38,18 L28,18 Z M30,5 L22,18 L28,18 Z" fill="#222"/>
-          <path d="M52,20 L42,25 L44,35 Z" fill="#222"/>
-          <path d="M8,20 L18,25 L16,35 Z" fill="#222"/>
-          <path d="M44,47 L38,36 L28,36 Z" fill="#222"/>
-          <path d="M16,47 L22,36 L28,36 Z" fill="#222"/>
-          <path d="M28,18 L38,18 L44,25 L42,35 L38,36 L28,36 L22,36 L18,25 Z" fill="#333"/>
-          <circle cx="30" cy="30" r="29" fill="none" stroke="rgba(0,0,0,0.1)" stroke-width="1"/>
+          <circle cx="30" cy="30" r="29" fill="white" stroke="#ccc" stroke-width="1"/>
+          <path d="M30,3 L38.5,17 L27,17Z M30,3 L21.5,17 L27,17Z" fill="#111"/>
+          <path d="M55,22 L43,27 L45,37Z" fill="#111"/>
+          <path d="M5,22 L17,27 L15,37Z" fill="#111"/>
+          <path d="M45,50 L38.5,38 L27,38Z" fill="#111"/>
+          <path d="M15,50 L21.5,38 L27,38Z" fill="#111"/>
+          <path d="M27,17 L38.5,17 L43,27 L38.5,38 L27,38 L21.5,38 L17,27Z" fill="#222"/>
+          <circle cx="30" cy="30" r="29" fill="none" stroke="rgba(0,0,0,0.08)" stroke-width="1"/>
         </svg>
       </div>
     </div>
-
     <!-- 9 zones -->
     <div class="goal-grid" id="goalGrid">
-      <div class="zone" data-zone="0" onclick="shoot(0)"><div class="zone-label">左上</div></div>
-      <div class="zone" data-zone="1" onclick="shoot(1)"><div class="zone-label">上中</div></div>
-      <div class="zone" data-zone="2" onclick="shoot(2)"><div class="zone-label">右上</div></div>
-      <div class="zone" data-zone="3" onclick="shoot(3)"><div class="zone-label">左</div></div>
-      <div class="zone" data-zone="4" onclick="shoot(4)"><div class="zone-label">中央</div></div>
-      <div class="zone" data-zone="5" onclick="shoot(5)"><div class="zone-label">右</div></div>
-      <div class="zone" data-zone="6" onclick="shoot(6)"><div class="zone-label">左下</div></div>
-      <div class="zone" data-zone="7" onclick="shoot(7)"><div class="zone-label">下中</div></div>
-      <div class="zone" data-zone="8" onclick="shoot(8)"><div class="zone-label">右下</div></div>
+      <div class="zone" data-zone="0" onclick="onZoneClick(0)"><div class="zone-label">左上</div></div>
+      <div class="zone" data-zone="1" onclick="onZoneClick(1)"><div class="zone-label">上中</div></div>
+      <div class="zone" data-zone="2" onclick="onZoneClick(2)"><div class="zone-label">右上</div></div>
+      <div class="zone" data-zone="3" onclick="onZoneClick(3)"><div class="zone-label">左</div></div>
+      <div class="zone" data-zone="4" onclick="onZoneClick(4)"><div class="zone-label">中央</div></div>
+      <div class="zone" data-zone="5" onclick="onZoneClick(5)"><div class="zone-label">右</div></div>
+      <div class="zone" data-zone="6" onclick="onZoneClick(6)"><div class="zone-label">左下</div></div>
+      <div class="zone" data-zone="7" onclick="onZoneClick(7)"><div class="zone-label">下中</div></div>
+      <div class="zone" data-zone="8" onclick="onZoneClick(8)"><div class="zone-label">右下</div></div>
     </div>
   </div>
 </div>
 
 <!-- RESULT SCREEN -->
 <div id="screen-result" class="screen">
+  <div class="super-label" id="superLabel">⚡ SUPER SHOT ⚡</div>
   <div class="result-badge" id="resultBadge"></div>
   <div class="fortune-card" id="fortuneCard">
     <div class="fortune-icon" id="fortuneIcon"></div>
@@ -542,195 +601,372 @@
 </div>
 
 <script>
-// ===== FORTUNE DATA =====
+// ===== ZONE CONFIG =====
 const ZONE_INFO = [
-  { name: '左上', dir: 'left', height: 'top' },
-  { name: '上中央', dir: 'center', height: 'top' },
-  { name: '右上', dir: 'right', height: 'top' },
-  { name: '左中段', dir: 'left', height: 'mid' },
-  { name: '中央', dir: 'center', height: 'mid' },
-  { name: '右中段', dir: 'right', height: 'mid' },
-  { name: '左下', dir: 'left', height: 'bot' },
-  { name: '下中央', dir: 'center', height: 'bot' },
-  { name: '右下', dir: 'right', height: 'bot' },
+  {name:'左上',   dir:'left',   height:'top'},
+  {name:'上中央', dir:'center', height:'top'},
+  {name:'右上',   dir:'right',  height:'top'},
+  {name:'左中段', dir:'left',   height:'mid'},
+  {name:'中央',   dir:'center', height:'mid'},
+  {name:'右中段', dir:'right',  height:'mid'},
+  {name:'左下',   dir:'left',   height:'bot'},
+  {name:'下中央', dir:'center', height:'bot'},
+  {name:'右下',   dir:'right',  height:'bot'},
 ];
 
-// [zone][isGoal] = fortune
+// Base goal chance (normal shot)
+const BASE_RATE = [0.82,0.70,0.82,0.65,0.25,0.65,0.75,0.60,0.75];
+
+// Ball target [left%, top%] inside goal area
+const BALL_TARGET = [
+  [20,14],[50,11],[80,14],
+  [17,44],[50,42],[83,44],
+  [21,73],[50,71],[79,73]
+];
+
+// GK dive [translateX px, translateY px, rotateDeg] from center
+const GK_DIVE = [
+  [-52,-55, -30],[0,-55,0],[52,-55,30],
+  [-62,-8,-20],[0,-8,0],[62,-8,20],
+  [-45,25,-15],[0,25,0],[45,25,15]
+];
+
+// ===== FORTUNES =====
 const FORTUNES = {
-  top: {
-    left: {
-      goal: { icon: '🌟', theme: '飛翔運', title: '大吉 — 頂点への道', text: '高みを狙う勇気があなたを成功へと導く。\n今日は大きな挑戦を恐れるな。\nその野心が新たな扉を開く。' },
-      save: { icon: '☁️', theme: '蓄積運', title: '中吉 — 雲の上の準備', text: '頂点はまだ先。しかし諦めるな。\n今日の失敗が明日の糧となる。\n地道な努力が未来の大逆転を生む。' }
+  top:{
+    left:{
+      goal:{icon:'🌟',theme:'飛翔運',title:'大吉 — 頂点への蹴り込み',text:'左上の隅を突く果敢な一撃。\n高みを狙う勇気があなたを成功へと導く。\n今日は大きな決断を恐れるな。'},
+      save:{icon:'☁️',theme:'蓄積運',title:'中吉 — 雲の上の準備',text:'頂点はまだ先。されど諦めるな。\n今日の挑戦が明日の糧となる。\n地道な努力が未来の大逆転を生む。'}
     },
-    center: {
-      goal: { icon: '🎯', theme: '直感運', title: '大吉 — 天才の閃き', text: '真上への直球こそ最高の一手。\n今日の直感を信じよ。\nあなたの判断は的中する。' },
-      save: { icon: '⭐', theme: '成長運', title: '吉 — 星への踏み台', text: '惜しい！しかし上を向く姿勢は正しい。\n今日は焦らず、着実に前進。\n次は必ず決まる。' }
+    center:{
+      goal:{icon:'🎯',theme:'直感運',title:'大吉 — 天才の閃き',text:'真上への直球。今日の直感を信じよ。\nあなたの判断はすべて的中する。\n迷わず行動に移せ。'},
+      save:{icon:'⭐',theme:'成長運',title:'吉 — 星への踏み台',text:'惜しい！しかし上を向く姿勢は正しい。\n今日は焦らず着実に前進せよ。\n次の挑戦で必ず花開く。'}
     },
-    right: {
-      goal: { icon: '🚀', theme: '飛躍運', title: '大吉 — 右肩上がりの未来', text: '右上への一撃が示す通り、今のあなたは飛躍期。\n新しい挑戦に今すぐ踏み出せ。\n追い風があなたを後押しする。' },
-      save: { icon: '🌙', theme: '準備運', title: '中吉 — 夜明け前の辛抱', text: '飛躍のタイミングはもう少し先。\n今日は情報収集と準備の日。\n焦りは禁物、機を待て。' }
+    right:{
+      goal:{icon:'🚀',theme:'飛躍運',title:'大吉 — 右肩上がりの未来',text:'右上への一撃が示す通り、今は飛躍期。\n新しい挑戦に今すぐ踏み出せ。\n追い風があなたを全力で後押しする。'},
+      save:{icon:'🌙',theme:'準備運',title:'中吉 — 夜明け前の辛抱',text:'飛躍のタイミングはもう少し先。\n今日は情報収集と準備の日。\n焦りは禁物、機を静かに待て。'}
     }
   },
-  mid: {
-    left: {
-      goal: { icon: '💎', theme: '安定運', title: '大吉 — 堅実な勝利', text: '左への鋭いシュート。安定と信頼の証。\n今日は人間関係が大きく動く。\n信頼できる仲間を大切にせよ。' },
-      save: { icon: '🎲', theme: '逆転運', title: '吉 — 逆転の兆し', text: 'あと一歩だった！\n今日は逆境をチャンスに変える力が宿る。\n諦めない姿勢が道を開く。' }
+  mid:{
+    left:{
+      goal:{icon:'💎',theme:'安定運',title:'大吉 — 堅実な勝者',text:'左への鋭いシュート。安定と信頼の証。\n今日は人間関係が大きく動く日。\n信頼できる仲間を大切にせよ。'},
+      save:{icon:'🎲',theme:'逆転運',title:'吉 — 逆転の兆し',text:'あと一歩だった！\n今日は逆境をチャンスに変える力が宿る。\n諦めない姿勢こそが道を開く鍵だ。'}
     },
-    center: {
-      goal: { icon: '🏆', theme: '王者運', title: '大吉 — 王者の風格', text: 'あえて真ん中を突いた勝負師よ。\n今日のあなたに敵はない。\n自信を持って全力で進め。' },
-      save: { icon: '🔮', theme: '転機運', title: '小吉 — 転機の予感', text: '守りに入る必要はない日。\nリスクを恐れず一歩踏み出せば\n思わぬ幸運が待っている。' }
+    center:{
+      goal:{icon:'🏆',theme:'王者運',title:'大吉 — 王者の風格',text:'真ん中を堂々と突いた勝負師よ。\n今日のあなたに恐れるものは何もない。\n自信を持って全力で突き進め。'},
+      save:{icon:'🔮',theme:'転機運',title:'小吉 — 転機の予感',text:'今日は守りに入る必要はない。\nリスクを恐れず一歩踏み出せば\n思わぬ幸運が扉の向こうで待っている。'}
     },
-    right: {
-      goal: { icon: '🌊', theme: '発展運', title: '大吉 — 新天地への進撃', text: '右へ—新しい出会いと発展の象徴。\n今日は積極的に行動せよ。\n初対面の人があなたの人生を変える。' },
-      save: { icon: '🌱', theme: '芽吹き運', title: '吉 — 可能性の種', text: '今日は種まきの日。\nすぐに結果が出なくても焦らずに。\n一週間後、驚くような変化が訪れる。' }
+    right:{
+      goal:{icon:'🌊',theme:'発展運',title:'大吉 — 新天地への進撃',text:'右へ—新しい出会いと発展の象徴。\n今日は積極的に行動せよ。\n初対面の人があなたの人生を変える。'},
+      save:{icon:'🌱',theme:'芽吹き運',title:'吉 — 可能性の種',text:'今日は種まきの日。\nすぐに結果が出なくても焦らずに。\n一週間後、驚くような変化が訪れる。'}
     }
   },
-  bot: {
-    left: {
-      goal: { icon: '💪', theme: '根性運', title: '大吉 — 地を這う強さ', text: '低く鋭いシュートは根性の証。\n今日のあなたは誰よりもタフだ。\n困難があるほど、あなたは輝く。' },
-      save: { icon: '🌿', theme: '堅実運', title: '中吉 — 大地の恵み', text: '地に足をつけて進む日。\n派手な成功より堅実な一歩を。\n積み重ねた努力が今週実を結ぶ。' }
+  bot:{
+    left:{
+      goal:{icon:'💪',theme:'根性運',title:'大吉 — 地を這う強さ',text:'低く鋭いシュートは根性の証。\n今日のあなたは誰よりもタフだ。\n困難があるほど、あなたは輝く。'},
+      save:{icon:'🌿',theme:'堅実運',title:'中吉 — 大地の恵み',text:'地に足をつけて進む日。\n派手な成功より堅実な一歩を選べ。\n積み重ねた努力が今週ついに実を結ぶ。'}
     },
-    center: {
-      goal: { icon: '🎪', theme: '縁起運', title: '大吉 — 絶好調の証', text: '下を攻める意外性—今日のあなたは読めない。\nその予測不能さが最大の武器。\n思いがけない幸運が舞い込む。' },
-      save: { icon: '🍀', theme: '幸運運', title: '吉 — 幸運は歩いてくる', text: '今日は動けば動くほど運が味方する。\n家にいるより外に出よ。\n偶然の出来事が素敵な縁を結ぶ。' }
+    center:{
+      goal:{icon:'🎪',theme:'縁起運',title:'大吉 — 絶好調の証明',text:'下を攻める意外性—今日のあなたは読めない。\nその予測不能さが最大の武器。\n思いがけない幸運が次々と舞い込む。'},
+      save:{icon:'🍀',theme:'幸運運',title:'吉 — 幸運は歩いてくる',text:'今日は動けば動くほど運が味方する。\n家にいるより外へ出よ。\n偶然の出来事が素敵な縁を結ぶ。'}
     },
-    right: {
-      goal: { icon: '🌈', theme: '縁結び運', title: '大吉 — 新たな縁の始まり', text: '右下の隅—見えないところに宝がある。\n今日は身近な人の言葉に耳を傾けよ。\n思わぬところから幸運が転がり込む。' },
-      save: { icon: '⚡', theme: '蓄電運', title: '中吉 — 嵐の前の静けさ', text: 'エネルギーは充電中。\n今日は守りを固め、次の爆発に備えよ。\n明日からの連戦に備えてよく休め。' }
+    right:{
+      goal:{icon:'🌈',theme:'縁結び運',title:'大吉 — 新たな縁の始まり',text:'右下の隅—見えないところに宝がある。\n今日は身近な人の言葉に耳を傾けよ。\n思わぬところから幸運が転がり込む。'},
+      save:{icon:'⚡',theme:'蓄電運',title:'中吉 — 嵐の前の静けさ',text:'エネルギーは充電中。\n今日は守りを固め、次の爆発に備えよ。\n明日からの連戦に備えてしっかり休め。'}
     }
   }
 };
 
-// GK save rates per zone (0 = always save, 1 = always goal)
-const SAVE_RATE = [0.82, 0.70, 0.82, 0.65, 0.25, 0.65, 0.75, 0.60, 0.75];
-
-// GK dive target positions (% from center)
-const GK_DIVE = [
-  [-45, -60], [0, -60], [45, -60],
-  [-55, -10], [0, -10], [55, -10],
-  [-40, 30],  [0, 30],  [40, 30]
-];
-
-// Ball target positions inside goal (% of wrap)
-const BALL_TARGET = [
-  [20, 15], [50, 12], [80, 15],
-  [18, 45], [50, 43], [82, 45],
-  [22, 72], [50, 70], [78, 72]
-];
-
-// ===== PARTICLE SYSTEM =====
+// ===== PARTICLES =====
 const canvas = document.getElementById('particles');
 const ctx = canvas.getContext('2d');
 let particles = [];
 
-function resizeCanvas() {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-}
-resizeCanvas();
-window.addEventListener('resize', resizeCanvas);
+function resizeCanvas() { canvas.width = innerWidth; canvas.height = innerHeight; }
+resizeCanvas(); window.addEventListener('resize', resizeCanvas);
 
 class Particle {
-  constructor(x, y, type) {
-    this.x = x; this.y = y;
-    this.type = type; // 'goal' | 'ambient'
-    if (type === 'goal') {
-      this.vx = (Math.random() - 0.5) * 18;
-      this.vy = (Math.random() - 0.5) * 18 - 8;
-      this.size = Math.random() * 10 + 4;
-      this.color = ['#f5c842','#ff6b00','#fff','#ff4444','#44ff88'][Math.floor(Math.random() * 5)];
-      this.life = 1;
-      this.decay = Math.random() * 0.015 + 0.01;
-      this.gravity = 0.4;
-      this.shape = Math.random() > 0.5 ? 'circle' : 'rect';
-      this.rotation = Math.random() * Math.PI * 2;
-      this.rotSpeed = (Math.random() - 0.5) * 0.2;
+  constructor(x,y,type){
+    this.x=x; this.y=y; this.type=type;
+    if(type==='goal'||type==='super'){
+      const power = type==='super'?2:1;
+      this.vx=(Math.random()-0.5)*20*power;
+      this.vy=(Math.random()-0.5)*20*power-10*power;
+      this.size=Math.random()*12*power+4;
+      this.color=type==='super'
+        ?['#f5c842','#fff','#ffcc00','#ffe566','#ff8800'][Math.floor(Math.random()*5)]
+        :['#f5c842','#ff6600','#fff','#ff4444','#44ffaa'][Math.floor(Math.random()*5)];
+      this.life=1; this.decay=Math.random()*0.012+0.008;
+      this.gravity=0.35; this.shape=Math.random()>0.5?'circle':'rect';
+      this.rotation=Math.random()*Math.PI*2; this.rotSpeed=(Math.random()-0.5)*0.25;
     } else {
-      this.vx = (Math.random() - 0.5) * 0.5;
-      this.vy = -Math.random() * 0.5 - 0.2;
-      this.size = Math.random() * 2 + 0.5;
-      this.color = `rgba(245,200,66,${Math.random() * 0.3 + 0.1})`;
-      this.life = 1;
-      this.decay = Math.random() * 0.003 + 0.001;
+      this.vx=(Math.random()-0.5)*0.4; this.vy=-Math.random()*0.4-0.1;
+      this.size=Math.random()*1.5+0.5;
+      this.color=`rgba(0,80,200,${Math.random()*0.2+0.05})`;
+      this.life=1; this.decay=Math.random()*0.002+0.001;
     }
   }
-  update() {
-    this.x += this.vx;
-    this.y += this.vy;
-    if (this.type === 'goal') {
-      this.vy += this.gravity;
-      this.vx *= 0.98;
-      this.rotation += this.rotSpeed;
-    }
-    this.life -= this.decay;
+  update(){
+    this.x+=this.vx; this.y+=this.vy;
+    if(this.type==='goal'||this.type==='super'){ this.vy+=this.gravity; this.vx*=0.98; this.rotation+=this.rotSpeed; }
+    this.life-=this.decay;
   }
-  draw() {
-    ctx.save();
-    ctx.globalAlpha = Math.max(0, this.life);
-    if (this.type === 'goal') {
-      ctx.translate(this.x, this.y);
-      ctx.rotate(this.rotation);
-      ctx.fillStyle = this.color;
-      if (this.shape === 'circle') {
-        ctx.beginPath();
-        ctx.arc(0, 0, this.size, 0, Math.PI * 2);
-        ctx.fill();
-      } else {
-        ctx.fillRect(-this.size/2, -this.size/2, this.size, this.size * 0.6);
-      }
+  draw(){
+    ctx.save(); ctx.globalAlpha=Math.max(0,this.life);
+    if(this.type==='goal'||this.type==='super'){
+      ctx.translate(this.x,this.y); ctx.rotate(this.rotation); ctx.fillStyle=this.color;
+      if(this.shape==='circle'){ ctx.beginPath(); ctx.arc(0,0,this.size,0,Math.PI*2); ctx.fill(); }
+      else { ctx.fillRect(-this.size/2,-this.size/2,this.size,this.size*0.55); }
     } else {
-      ctx.fillStyle = this.color;
-      ctx.beginPath();
-      ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.fillStyle=this.color; ctx.beginPath(); ctx.arc(this.x,this.y,this.size,0,Math.PI*2); ctx.fill();
     }
     ctx.restore();
   }
 }
 
-// Ambient particles
-function spawnAmbient() {
-  if (Math.random() < 0.3) {
-    particles.push(new Particle(
-      Math.random() * canvas.width,
-      canvas.height + 10,
-      'ambient'
-    ));
-  }
+function burst(x,y,type='goal'){
+  const count = type==='super'?200:120;
+  for(let i=0;i<count;i++) particles.push(new Particle(x,y,type));
 }
 
-function burstGoal(x, y) {
-  for (let i = 0; i < 120; i++) {
-    particles.push(new Particle(x, y, 'goal'));
-  }
-}
-
-function animParticles() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  spawnAmbient();
-  particles = particles.filter(p => p.life > 0);
-  particles.forEach(p => { p.update(); p.draw(); });
+function animParticles(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  if(Math.random()<0.2) particles.push(new Particle(Math.random()*canvas.width,canvas.height+5,'ambient'));
+  particles=particles.filter(p=>p.life>0);
+  particles.forEach(p=>{p.update();p.draw();});
   requestAnimationFrame(animParticles);
 }
 animParticles();
 
+// ===== SPEED LINES =====
+const speedCanvas = document.getElementById('speedCanvas');
+const sCtx = speedCanvas.getContext('2d');
+function resizeSpeed(){ speedCanvas.width=innerWidth; speedCanvas.height=innerHeight; }
+resizeSpeed(); window.addEventListener('resize',resizeSpeed);
+
+function drawSpeedLines(color='rgba(255,220,0,0.25)'){
+  sCtx.clearRect(0,0,speedCanvas.width,speedCanvas.height);
+  const cx=speedCanvas.width/2, cy=speedCanvas.height/2;
+  const n=80;
+  for(let i=0;i<n;i++){
+    const angle=(i/n)*Math.PI*2;
+    const inner=Math.random()*80+60;
+    const outer=Math.random()*600+300;
+    const width=Math.random()*3+0.5;
+    sCtx.beginPath();
+    sCtx.moveTo(cx+Math.cos(angle)*inner, cy+Math.sin(angle)*inner);
+    sCtx.lineTo(cx+Math.cos(angle)*outer, cy+Math.sin(angle)*outer);
+    sCtx.strokeStyle=color;
+    sCtx.lineWidth=width;
+    sCtx.stroke();
+  }
+}
+
 // ===== SCREEN MANAGEMENT =====
-function showScreen(id) {
-  document.querySelectorAll('.screen').forEach(s => {
-    s.classList.remove('active');
-  });
-  document.getElementById('screen-' + id).classList.add('active');
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+id).classList.add('active');
 }
 
-// ===== GAME LOGIC =====
+// ===== SVG CHARACTERS =====
+function getShooterSVG(isSuper){
+  // Japan outfield player (blue jersey) in shooting pose
+  if(isSuper){
+    // Wind-up, power pose
+    return `<svg viewBox="0 0 120 240" xmlns="http://www.w3.org/2000/svg">
+      <!-- Aura glow -->
+      <ellipse cx="60" cy="120" rx="55" ry="110" fill="rgba(245,200,66,0.08)"/>
+      <!-- Body: Japan blue #003087 -->
+      <rect x="35" y="90" width="50" height="65" rx="10" fill="#003087"/>
+      <rect x="40" y="90" width="40" height="12" fill="#0050c8"/>
+      <text x="60" y="128" text-anchor="middle" font-size="22" fill="rgba(255,255,255,0.9)" font-family="Bebas Neue,sans-serif" font-weight="bold">10</text>
+      <!-- Left arm raised for power -->
+      <rect x="10" y="88" width="28" height="12" rx="5" fill="#003087" transform="rotate(-35 10 88)"/>
+      <!-- Right arm back for kick -->
+      <rect x="82" y="95" width="28" height="12" rx="5" fill="#003087" transform="rotate(20 82 95)"/>
+      <!-- Head -->
+      <ellipse cx="60" cy="58" rx="26" ry="28" fill="#F5C5A3"/>
+      <!-- Hair -->
+      <path d="M34,52 Q36,28 60,26 Q84,28 86,52 Q82,36 60,35 Q38,36 34,52Z" fill="#1a1008"/>
+      <!-- Eyes determined -->
+      <ellipse cx="50" cy="58" rx="5" ry="6" fill="white"/>
+      <ellipse cx="70" cy="58" rx="5" ry="6" fill="white"/>
+      <ellipse cx="50" cy="59" rx="3.5" ry="4" fill="#111"/>
+      <ellipse cx="70" cy="59" rx="3.5" ry="4" fill="#111"/>
+      <!-- Power brow -->
+      <line x1="44" y1="50" x2="56" y2="53" stroke="#1a1008" stroke-width="3" stroke-linecap="round"/>
+      <line x1="64" y1="53" x2="76" y2="50" stroke="#1a1008" stroke-width="3" stroke-linecap="round"/>
+      <!-- Mouth open, fierce -->
+      <path d="M50,70 Q60,78 70,70" stroke="#c0846a" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <!-- Shorts: white -->
+      <rect x="36" y="153" width="22" height="38" rx="6" fill="white"/>
+      <rect x="62" y="153" width="22" height="38" rx="6" fill="white"/>
+      <!-- Socks blue -->
+      <rect x="36" y="185" width="22" height="30" rx="3" fill="#003087"/>
+      <rect x="62" y="185" width="22" height="30" rx="3" fill="#003087"/>
+      <!-- Shoe kick pose: right leg raised -->
+      <ellipse cx="47" cy="220" rx="16" ry="7" fill="#111"/>
+      <!-- Raised kick leg -->
+      <rect x="60" y="148" width="22" height="35" rx="6" fill="white" transform="rotate(-45 60 148)"/>
+      <rect x="60" y="178" width="22" height="30" rx="3" fill="#003087" transform="rotate(-45 60 178)"/>
+      <ellipse cx="95" cy="130" rx="16" ry="7" fill="#111" transform="rotate(-45 95 130)"/>
+      <!-- Energy lines -->
+      <line x1="96" y1="128" x2="118" y2="110" stroke="rgba(245,200,66,0.7)" stroke-width="2"/>
+      <line x1="100" y1="135" x2="120" y2="125" stroke="rgba(245,200,66,0.5)" stroke-width="1.5"/>
+      <line x1="98" y1="122" x2="118" y2="100" stroke="rgba(245,200,66,0.4)" stroke-width="1"/>
+    </svg>`;
+  } else {
+    // Normal shooting pose
+    return `<svg viewBox="0 0 110 230" xmlns="http://www.w3.org/2000/svg">
+      <rect x="30" y="88" width="50" height="62" rx="10" fill="#003087"/>
+      <rect x="36" y="88" width="38" height="11" fill="#0050c8"/>
+      <text x="55" y="122" text-anchor="middle" font-size="20" fill="rgba(255,255,255,0.9)" font-family="Bebas Neue,sans-serif">10</text>
+      <rect x="6" y="92" width="26" height="11" rx="5" fill="#003087" transform="rotate(-20 6 92)"/>
+      <rect x="78" y="96" width="26" height="11" rx="5" fill="#003087" transform="rotate(15 78 96)"/>
+      <ellipse cx="55" cy="56" rx="24" ry="27" fill="#F5C5A3"/>
+      <path d="M31,50 Q33,27 55,25 Q77,27 79,50 Q75,34 55,33 Q35,34 31,50Z" fill="#1a1008"/>
+      <ellipse cx="46" cy="56" rx="5" ry="5.5" fill="white"/>
+      <ellipse cx="64" cy="56" rx="5" ry="5.5" fill="white"/>
+      <ellipse cx="46" cy="57" rx="3" ry="3.5" fill="#111"/>
+      <ellipse cx="64" cy="57" rx="3" ry="3.5" fill="#111"/>
+      <line x1="40" y1="49" x2="51" y2="52" stroke="#1a1008" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="59" y1="52" x2="70" y2="49" stroke="#1a1008" stroke-width="2.5" stroke-linecap="round"/>
+      <rect x="31" y="148" width="21" height="36" rx="6" fill="white"/>
+      <rect x="58" y="148" width="21" height="36" rx="6" fill="white"/>
+      <rect x="31" y="178" width="21" height="28" rx="3" fill="#003087"/>
+      <rect x="58" y="178" width="21" height="28" rx="3" fill="#003087"/>
+      <ellipse cx="41" cy="210" rx="15" ry="6" fill="#111"/>
+      <rect x="57" y="144" width="21" height="32" rx="6" fill="white" transform="rotate(-35 57 144)"/>
+      <rect x="57" y="172" width="21" height="27" rx="3" fill="#003087" transform="rotate(-35 57 172)"/>
+      <ellipse cx="88" cy="122" rx="14" ry="6" fill="#111" transform="rotate(-35 88 122)"/>
+    </svg>`;
+  }
+}
+
+function getKeeperSVG(){
+  return `<svg viewBox="0 0 110 230" xmlns="http://www.w3.org/2000/svg">
+    <!-- GK in dive-ready stance -->
+    <rect x="28" y="88" width="54" height="62" rx="10" fill="#FF6B00"/>
+    <rect x="35" y="88" width="40" height="11" fill="#cc5500"/>
+    <text x="55" y="122" text-anchor="middle" font-size="20" fill="rgba(255,255,255,0.9)" font-family="Bebas Neue,sans-serif">1</text>
+    <!-- Arms wide spread -->
+    <rect x="0" y="84" width="32" height="12" rx="5" fill="#FF6B00" transform="rotate(-15 0 84)"/>
+    <rect x="78" y="84" width="32" height="12" rx="5" fill="#FF6B00" transform="rotate(15 78 84)"/>
+    <!-- Gloves -->
+    <ellipse cx="8" cy="86" rx="10" ry="9" fill="#FFE000"/>
+    <ellipse cx="102" cy="86" rx="10" ry="9" fill="#FFE000"/>
+    <!-- Head -->
+    <ellipse cx="55" cy="56" rx="24" ry="27" fill="#F5C5A3"/>
+    <path d="M31,50 Q33,27 55,25 Q77,27 79,50 Q75,34 55,33 Q35,34 31,50Z" fill="#1a1008"/>
+    <!-- Intense eyes -->
+    <ellipse cx="45" cy="56" rx="6" ry="7" fill="white"/>
+    <ellipse cx="65" cy="56" rx="6" ry="7" fill="white"/>
+    <ellipse cx="45" cy="57" rx="4" ry="5" fill="#111"/>
+    <ellipse cx="65" cy="57" rx="4" ry="5" fill="#111"/>
+    <!-- Fierce brows -->
+    <line x1="38" y1="47" x2="51" y2="50" stroke="#1a1008" stroke-width="3.5" stroke-linecap="round"/>
+    <line x1="59" y1="50" x2="72" y2="47" stroke="#1a1008" stroke-width="3.5" stroke-linecap="round"/>
+    <!-- Gritted teeth -->
+    <path d="M44,69 Q55,76 66,69" stroke="#c0846a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    <rect x="31" y="148" width="22" height="36" rx="6" fill="#001f5e"/>
+    <rect x="57" y="148" width="22" height="36" rx="6" fill="#001f5e"/>
+    <rect x="31" y="178" width="22" height="28" rx="3" fill="white"/>
+    <rect x="57" y="178" width="22" height="28" rx="3" fill="white"/>
+    <ellipse cx="42" cy="210" rx="15" ry="6" fill="#111"/>
+    <ellipse cx="68" cy="210" rx="15" ry="6" fill="#111"/>
+    <!-- Sweat drop -->
+    <path d="M80,42 Q83,36 86,42 Q83,48 80,42Z" fill="rgba(100,200,255,0.8)"/>
+  </svg>`;
+}
+
+// ===== CUT-IN ENGINE =====
+function showCutin(type, onDone){
+  const overlay = document.getElementById('cutin');
+  const panels  = document.getElementById('cutinPanels');
+  const charL   = document.getElementById('charLeft');
+  const charR   = document.getElementById('charRight');
+  const line1   = document.getElementById('cutinLine1');
+  const line2   = document.getElementById('cutinLine2');
+  const pL      = document.getElementById('panelLeft');
+  const pR      = document.getElementById('panelRight');
+
+  // Reset
+  overlay.className = 'active';
+  panels.style.animation = 'none';
+  pL.style.animation = 'none';
+  pR.style.animation = 'none';
+  line1.style.animation = 'none';
+  line2.style.animation = 'none';
+  document.getElementById('cutinText').style.animation = 'none';
+  void overlay.offsetWidth;
+
+  if(type==='super'){
+    overlay.classList.add('cutin-super'); overlay.classList.remove('cutin-normal','cutin-keeper');
+    pL.style.background = 'linear-gradient(135deg,#001a5e,#003087)';
+    pR.style.background = 'linear-gradient(225deg,#001a5e,#003087)';
+    charL.innerHTML = getShooterSVG(true);
+    charR.innerHTML = '';
+    charL.querySelector('svg').style.cssText = '--slide:-80px';
+    charL.querySelector('svg').style.animation = 'charSlideIn 0.4s cubic-bezier(.2,.8,.3,1) both';
+    line1.textContent = '⚡ SAMURAI BLUE ⚡';
+    line2.textContent = 'SUPER SHOT!!';
+    line1.style.color = 'var(--gold)';
+    line2.style.color = '#fff';
+    drawSpeedLines('rgba(245,200,66,0.3)');
+  } else if(type==='normal'){
+    overlay.classList.add('cutin-normal'); overlay.classList.remove('cutin-super','cutin-keeper');
+    pL.style.background = 'linear-gradient(135deg,#001530,#002560)';
+    pR.style.background = 'linear-gradient(225deg,#001530,#002560)';
+    charL.innerHTML = getShooterSVG(false);
+    charR.innerHTML = '';
+    charL.querySelector('svg').style.cssText = '--slide:-60px';
+    charL.querySelector('svg').style.animation = 'charSlideIn 0.35s cubic-bezier(.2,.8,.3,1) both';
+    line1.textContent = 'JAPAN NO.10';
+    line2.textContent = 'SHOOT!';
+    line1.style.color = 'rgba(255,255,255,0.7)';
+    line2.style.color = 'var(--gold)';
+    drawSpeedLines('rgba(100,150,255,0.2)');
+  } else { // keeper
+    overlay.classList.add('cutin-keeper'); overlay.classList.remove('cutin-super','cutin-normal');
+    pL.style.background = 'linear-gradient(135deg,#1a0000,#500010)';
+    pR.style.background = 'linear-gradient(225deg,#1a0000,#500010)';
+    charR.innerHTML = getKeeperSVG();
+    charL.innerHTML = '';
+    charR.querySelector('svg').style.cssText = '--slide:80px';
+    charR.querySelector('svg').style.animation = 'charSlideIn 0.35s cubic-bezier(.2,.8,.3,1) both';
+    line1.textContent = 'KEEPER BLOCKS!';
+    line2.textContent = 'スーパーセーブ';
+    line1.style.color = 'rgba(255,200,200,0.9)';
+    line2.style.color = '#ff4466';
+    drawSpeedLines('rgba(255,50,80,0.25)');
+  }
+
+  // Panel slide
+  pL.style.animation = 'panelSlideLeft 0.35s cubic-bezier(.2,.8,.3,1) both';
+  pR.style.animation = 'panelSlideRight 0.35s cubic-bezier(.2,.8,.3,1) both';
+  document.getElementById('cutinText').style.animation = 'cutinText 0.4s 0.1s cubic-bezier(.2,.8,.3,1) both';
+
+  const holdTime = type==='super' ? 1800 : 1200;
+  setTimeout(()=>{
+    overlay.style.transition = 'opacity 0.3s';
+    overlay.style.opacity = '0';
+    setTimeout(()=>{
+      overlay.style.opacity = '1';
+      overlay.style.transition = '';
+      overlay.className = '';
+      sCtx.clearRect(0,0,speedCanvas.width,speedCanvas.height);
+      onDone();
+    }, 300);
+  }, holdTime);
+}
+
+// ===== GAME STATE =====
 let shooting = false;
+let swayTimer = null;
 
-function startGame() {
-  showScreen('play');
-  resetGoalGrid();
-}
+function startGame(){ showScreen('play'); resetGoalGrid(); }
 
-function resetGoalGrid() {
+function resetGoalGrid(){
   shooting = false;
   const gk = document.getElementById('gk');
   gk.style.transition = 'transform 0.15s ease';
@@ -738,123 +974,144 @@ function resetGoalGrid() {
   const ball = document.getElementById('ball');
   ball.style.transition = 'none';
   ball.style.opacity = '0';
-  ball.style.left = '50%';
-  ball.style.bottom = '2%';
+  ball.style.left = '50%'; ball.style.bottom = '1%';
   ball.style.transform = 'translateX(-50%) scale(1)';
-
-  document.querySelectorAll('.zone').forEach(z => {
-    z.style.pointerEvents = 'all';
-    z.style.background = '';
+  document.querySelectorAll('.zone').forEach(z=>{
+    z.style.pointerEvents='all'; z.style.background='';
   });
-
-  // GK subtle sway
   startGKSway();
 }
 
-let swayInterval;
-function startGKSway() {
-  clearInterval(swayInterval);
-  let t = 0;
-  swayInterval = setInterval(() => {
-    if (shooting) return;
-    t += 0.06;
-    const x = Math.sin(t) * 8;
-    const gk = document.getElementById('gk');
-    gk.style.transform = `translateX(calc(-50% + ${x}px))`;
-  }, 30);
+function startGKSway(){
+  clearInterval(swayTimer);
+  let t=0;
+  swayTimer = setInterval(()=>{
+    if(shooting) return;
+    t+=0.055;
+    const x=Math.sin(t)*9;
+    document.getElementById('gk').style.transform=`translateX(calc(-50% + ${x}px))`;
+  },30);
 }
 
-function flash() {
-  const el = document.getElementById('flash');
-  el.style.opacity = '1';
-  setTimeout(() => { el.style.opacity = '0'; }, 80);
+function flash(){
+  const el=document.getElementById('flash');
+  el.style.opacity='1';
+  setTimeout(()=>{ el.style.opacity='0'; },90);
 }
 
-function shoot(zone) {
-  if (shooting) return;
+function onZoneClick(zone){
+  if(shooting) return;
   shooting = true;
-  clearInterval(swayInterval);
+  clearInterval(swayTimer);
 
+  document.querySelectorAll('.zone').forEach(z=>z.style.pointerEvents='none');
+  document.querySelector(`[data-zone="${zone}"]`).style.background='rgba(245,200,66,0.18)';
+
+  const zInfo = ZONE_INFO[zone];
+
+  // Decide: super shot (~35%), normal shot, or keeper cutin (on save)
+  const isSuperShot = Math.random() < 0.35;
+
+  let isGoal;
+  if(isSuperShot){
+    isGoal = Math.random() < 0.92; // almost always goal
+  } else {
+    isGoal = Math.random() < BASE_RATE[zone];
+  }
+
+  // Pick cut-in type
+  // - super shot → show super cut-in
+  // - normal shot + save → show keeper cut-in
+  // - normal shot + goal → show normal shot cut-in
+  let cutinType;
+  if(isSuperShot){
+    cutinType = 'super';
+  } else if(!isGoal){
+    cutinType = 'keeper';
+  } else {
+    cutinType = 'normal';
+  }
+
+  showCutin(cutinType, ()=>{
+    executeShot(zone, isGoal, isSuperShot, zInfo);
+  });
+}
+
+function executeShot(zone, isGoal, isSuperShot, zInfo){
   const wrap = document.getElementById('goalWrap');
   const wRect = wrap.getBoundingClientRect();
-
-  // Disable all zones
-  document.querySelectorAll('.zone').forEach(z => z.style.pointerEvents = 'none');
-
-  // Highlight chosen zone
-  document.querySelector(`[data-zone="${zone}"]`).style.background = 'rgba(245,200,66,0.2)';
-
-  const isGoal = Math.random() < SAVE_RATE[zone];
-  const zInfo = ZONE_INFO[zone];
-  const fortune = FORTUNES[zInfo.height][zInfo.dir][isGoal ? 'goal' : 'save'];
-
   const bt = BALL_TARGET[zone];
   const gd = GK_DIVE[zone];
 
-  // Ball animation
+  // Ball animate
   const ball = document.getElementById('ball');
   ball.style.opacity = '1';
 
-  // Determine final ball position relative to wrap
-  const targetLeft = bt[0]; // %
-  const targetBottom = 100 - bt[1]; // % from bottom
-
-  setTimeout(() => {
-    ball.style.transition = 'all 0.55s cubic-bezier(0.2, 0.8, 0.3, 1)';
-    ball.style.left = targetLeft + '%';
-    ball.style.bottom = targetBottom + '%';
-    ball.style.transform = `translateX(-50%) scale(${isGoal ? 0.6 : 0.7})`;
-  }, 50);
+  const duration = isSuperShot ? 0.38 : 0.55;
+  setTimeout(()=>{
+    ball.style.transition = `all ${duration}s cubic-bezier(0.15,0.85,0.25,1)`;
+    ball.style.left = bt[0]+'%';
+    ball.style.bottom = (100-bt[1])+'%';
+    ball.style.transform = `translateX(-50%) scale(${isGoal?0.55:0.65})`;
+  }, 40);
 
   // GK dive
   const gk = document.getElementById('gk');
-  const diveDelay = isGoal ? 120 : 80;
-
-  setTimeout(() => {
-    gk.style.transition = `transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)`;
-    const rotDeg = gd[0] > 0 ? 25 : gd[0] < 0 ? -25 : 0;
-    gk.style.transform = `translateX(calc(-50% + ${gd[0]}px)) translateY(${gd[1]}px) rotate(${rotDeg}deg)`;
+  const diveDelay = isSuperShot ? 300 : (isGoal ? 100 : 60);
+  setTimeout(()=>{
+    gk.style.transition = `transform ${isSuperShot?0.6:0.4}s cubic-bezier(0.4,0,0.2,1)`;
+    gk.style.transform = `translateX(calc(-50% + ${gd[0]}px)) translateY(${gd[1]}px) rotate(${gd[2]}deg)`;
   }, diveDelay);
 
   // Result
-  setTimeout(() => {
+  const resultDelay = isSuperShot ? 550 : 750;
+  setTimeout(()=>{
     flash();
-    if (isGoal) {
-      // Burst particles at ball position
-      const bLeft = wRect.left + (wRect.width * bt[0] / 100);
-      const bTop = wRect.top + (wRect.height * bt[1] / 100);
-      burstGoal(bLeft, bTop);
+    if(isGoal){
+      const bx = wRect.left+(wRect.width*bt[0]/100);
+      const by = wRect.top+(wRect.height*bt[1]/100);
+      burst(bx,by, isSuperShot?'super':'goal');
     }
-    setTimeout(() => showResult(isGoal, zone, fortune, zInfo), 300);
-  }, 900);
+    setTimeout(()=>showResult(isGoal, isSuperShot, zone, zInfo), 350);
+  }, resultDelay+duration*1000);
 }
 
-function showResult(isGoal, zone, fortune, zInfo) {
+function showResult(isGoal, isSuperShot, zone, zInfo){
   const badge = document.getElementById('resultBadge');
-  badge.textContent = isGoal ? 'GOAL!' : 'SAVE...';
-  badge.className = 'result-badge ' + (isGoal ? 'goal' : 'save');
+  const superLabel = document.getElementById('superLabel');
 
+  if(isGoal && isSuperShot){
+    badge.textContent = 'GOAL!!';
+    badge.className = 'result-badge supergoal';
+    superLabel.className = 'super-label show';
+  } else if(isGoal){
+    badge.textContent = 'GOAL!';
+    badge.className = 'result-badge goal';
+    superLabel.className = 'super-label';
+  } else {
+    badge.textContent = isSuperShot ? 'SUPER SAVE...' : 'SAVE...';
+    badge.className = 'result-badge save';
+    superLabel.className = 'super-label';
+  }
+
+  const fortune = FORTUNES[zInfo.height][zInfo.dir][isGoal?'goal':'save'];
   document.getElementById('fortuneIcon').textContent = fortune.icon;
   document.getElementById('fortuneTheme').textContent = fortune.theme;
   document.getElementById('fortuneTitle').textContent = fortune.title;
   document.getElementById('fortuneText').textContent = fortune.text;
   document.getElementById('courseTag').textContent =
-    `狙いコース：${zInfo.name}　|　${isGoal ? '成功' : '惜しい！'}`;
+    `狙いコース：${zInfo.name}　|　${isSuperShot?'⚡スーパーシュート':'通常シュート'}　|　${isGoal?'成功':'惜しい！'}`;
 
-  // Reset card animations
+  // Reset animations
   const card = document.getElementById('fortuneCard');
-  card.style.animation = 'none';
-  badge.style.animation = 'none';
-  void card.offsetWidth;
-  card.style.animation = '';
-  badge.style.animation = '';
+  [badge,card].forEach(el=>{ el.style.animation='none'; void el.offsetWidth; el.style.animation=''; });
 
   showScreen('result');
 }
 
-function replay() {
+function replay(){
   showScreen('play');
-  setTimeout(resetGoalGrid, 100);
+  setTimeout(resetGoalGrid,100);
 }
 </script>
 </body>
