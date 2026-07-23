@@ -35,7 +35,7 @@
     盤面をドラッグしてバットの位置（横方向）を合わせよう。指/クリックを離すとスイング！<br>
     球種はランダム（ストレート・カーブ・シュート）。芯を外さずタイミングよく振れば長打に。10球勝負でホームラン数を競おう。
   </div>
-  <div class="note">※本ページはゲームの仕組み（変化球・ミート判定・遠近法によるフェンス判定など）を独自コードで再実装したオリジナル素材版のミニゲームです。実在の画像・音声・キャラクター意匠は使用していません（キャラクターは顔なしの簡易図形、効果音・BGMなし）。</div>
+  <div class="note">※本ページはゲームの仕組み（変化球・ミート判定・遠近法によるフェンス判定など）を独自コードで再実装したオリジナル素材版のミニゲームです。実在の画像・音声・キャラクター意匠は使用していません（キャラクターは実在の意匠を使わない独自デザインのちびキャラ、効果音・BGMなし）。</div>
 </div>
 <script>
 (function(){
@@ -363,30 +363,59 @@ function drawHomeScene(){
   ctx.closePath(); ctx.fill();
 }
 
-// 顔なしキャラクター（頭は無地の円。目・口は一切描かない）
-function drawFigure(x, y, scale, bodyColor, armAngleDeg, legSpread){
+// ちびキャラ風（頭身を大きく・丸みのある体・目は小さな点のみのシンプル顔）
+function drawFigure(x, y, scale, bodyColor, capColor, armAngleDeg, legSpread){
   ctx.save();
   ctx.translate(x,y);
   ctx.scale(scale,scale);
-  // legs
-  ctx.strokeStyle = '#2b2b2b'; ctx.lineWidth = 6; ctx.lineCap='round';
-  ctx.beginPath(); ctx.moveTo(0,20); ctx.lineTo(-8-legSpread,44); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(0,20); ctx.lineTo(8+legSpread,44); ctx.stroke();
-  // body
+
+  const headR = 15, headY = -21, bodyBottomY = 17;
+
+  // legs (short & stubby, with little round shoes)
+  ctx.strokeStyle = '#4a4038'; ctx.lineWidth = 7; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(-4,bodyBottomY-2); ctx.lineTo(-6-legSpread,bodyBottomY+14); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(4,bodyBottomY-2); ctx.lineTo(6+legSpread,bodyBottomY+14); ctx.stroke();
+  ctx.fillStyle = '#4a4038';
+  ctx.beginPath(); ctx.ellipse(-6-legSpread,bodyBottomY+15,5,3,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(6+legSpread,bodyBottomY+15,5,3,0,0,Math.PI*2); ctx.fill();
+
+  // body: rounded chibi torso
   ctx.fillStyle = bodyColor;
   ctx.beginPath();
-  ctx.moveTo(-11,20); ctx.lineTo(11,20); ctx.lineTo(8,-16); ctx.lineTo(-8,-16);
+  ctx.moveTo(-11,bodyBottomY);
+  ctx.quadraticCurveTo(-14,-8,0,-10);
+  ctx.quadraticCurveTo(14,-8,11,bodyBottomY);
+  ctx.quadraticCurveTo(0,bodyBottomY+7,-11,bodyBottomY);
   ctx.closePath(); ctx.fill();
-  // arm (single stylised arm, angle drives throw/swing motion)
-  ctx.strokeStyle = bodyColor; ctx.lineWidth = 7;
+
+  // arm with a small round hand/mitt tip (angle drives throw / swing motion)
+  ctx.strokeStyle = bodyColor; ctx.lineWidth = 8; ctx.lineCap = 'round';
   const rad = deg2rad(armAngleDeg);
+  const armLen = 24;
+  const handX = 3+Math.cos(rad)*armLen, handY = -8+Math.sin(rad)*armLen;
+  ctx.beginPath(); ctx.moveTo(3,-8); ctx.lineTo(handX,handY); ctx.stroke();
+  ctx.fillStyle = '#ffe3c4';
+  ctx.beginPath(); ctx.arc(handX,handY,5,0,Math.PI*2); ctx.fill();
+
+  // head
+  ctx.fillStyle = '#ffe3c4';
+  ctx.beginPath(); ctx.arc(0,headY,headR,0,Math.PI*2); ctx.fill();
+
+  // simple cute face: two small dot eyes + rosy cheeks (no specific character likeness)
+  ctx.fillStyle = '#4a3a2c';
+  ctx.beginPath(); ctx.arc(-5,headY-1,1.8,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(5,headY-1,1.8,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle = 'rgba(255,130,130,0.5)';
+  ctx.beginPath(); ctx.ellipse(-9,headY+5,3.2,2,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(9,headY+5,3.2,2,0,0,Math.PI*2); ctx.fill();
+
+  // little cap for personality
+  ctx.fillStyle = capColor;
   ctx.beginPath();
-  ctx.moveTo(4,-10);
-  ctx.lineTo(4+Math.cos(rad)*26, -10+Math.sin(rad)*26);
-  ctx.stroke();
-  // head: 無地の円のみ（顔パーツなし）
-  ctx.fillStyle = '#f2c79a';
-  ctx.beginPath(); ctx.arc(0,-24,10,0,Math.PI*2); ctx.fill();
+  ctx.arc(0,headY-2,headR-1,Math.PI,Math.PI*2);
+  ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(8,headY-3,6,3,-0.2,0,Math.PI*2); ctx.fill();
+
   ctx.restore();
 }
 
@@ -402,32 +431,37 @@ function drawPitcher(){
   } else {
     arm = 100;
   }
-  drawFigure(PLATE_X, 128, 1.4, '#4a6fa5', arm, 4);
+  drawFigure(PLATE_X, 128, 1.5, '#8fc1ee', '#3f6fb0', arm, 4);
 }
 
 function drawBatter(){
   const bx = batContactX();
   const visX = (box===1) ? (bx - 55) : (bx + 55);
   const visY = 300;
-  let arm = (box===1) ? -150 : -30;
+  let arm = (box===1) ? -100 : -80;
   if(swingElapsed < 260){
     const p = swingElapsed/260;
-    const start = (box===1) ? -150 : -30;
+    const start = (box===1) ? -100 : -80;
     const end   = (box===1) ? 40 : -220;
     arm = start + (end-start)*Math.sin(p*Math.PI*0.5);
   }
-  drawFigure(visX, visY, 1.5, '#c0473a', arm, 6);
+  drawFigure(visX, visY, 1.6, '#ff9a8d', '#e6584a', arm, 6);
 
-  // bat: from hand toward the current contact point (visualises the drag-to-aim mechanic)
+  // bat: a simple toy-bat extension held in the swinging hand (stays out of the face)
   ctx.save();
-  ctx.strokeStyle = '#8a5a2b';
+  ctx.strokeStyle = '#c9975a';
   ctx.lineWidth = 5; ctx.lineCap='round';
-  const handX = visX + Math.cos(deg2rad(arm))*1.5*26;
-  const handY = visY-10 + Math.sin(deg2rad(arm))*1.5*26;
+  const scaleV = 1.6, rad = deg2rad(arm);
+  const handX = visX + 3*scaleV + Math.cos(rad)*24*scaleV;
+  const handY = visY - 8*scaleV + Math.sin(rad)*24*scaleV;
+  const batTipX = handX + Math.cos(rad)*20*scaleV;
+  const batTipY = handY + Math.sin(rad)*20*scaleV;
   ctx.beginPath();
   ctx.moveTo(handX,handY);
-  ctx.lineTo(bx, BAT_Y);
+  ctx.lineTo(batTipX,batTipY);
   ctx.stroke();
+  ctx.fillStyle = '#c9975a';
+  ctx.beginPath(); ctx.arc(batTipX,batTipY,4,0,Math.PI*2); ctx.fill();
   ctx.restore();
 }
 
