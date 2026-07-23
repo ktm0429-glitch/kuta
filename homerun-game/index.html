@@ -1,0 +1,1048 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<title>ホームラン きょうそう</title>
+<style>
+  :root{
+    --sky-top:#4fa8e0;
+    --sky-bottom:#cdeeff;
+    --grass:#3c9d4a;
+    --grass-dark:#2f7d3b;
+    --dirt:#c98a4b;
+    --dirt-dark:#a86a34;
+    --accent:#ff6b35;
+    --accent-deep:#d84f1e;
+    --accent-ink:#3a1200;
+    --ink:#1c2b1f;
+    --ink-soft:#4a5c4c;
+    --panel:#fff8ec;
+    --panel-border:#e8d9b8;
+    --line:#ffffff;
+    --shadow:0 10px 30px rgba(20,30,20,.25);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --sky-top:#0b1e3d;
+      --sky-bottom:#1c3a63;
+      --grass:#1f4d2a;
+      --grass-dark:#173b20;
+      --dirt:#6b4423;
+      --dirt-dark:#4d2f18;
+      --accent:#ff8a5c;
+      --accent-deep:#e0663a;
+      --accent-ink:#2a0e00;
+      --ink:#f2ead9;
+      --ink-soft:#c9c2ac;
+      --panel:#16202b;
+      --panel-border:#2b3a48;
+      --line:#e9f4ff;
+      --shadow:0 10px 30px rgba(0,0,0,.5);
+    }
+  }
+  :root[data-theme="dark"]{
+    --sky-top:#0b1e3d;
+    --sky-bottom:#1c3a63;
+    --grass:#1f4d2a;
+    --grass-dark:#173b20;
+    --dirt:#6b4423;
+    --dirt-dark:#4d2f18;
+    --accent:#ff8a5c;
+    --accent-deep:#e0663a;
+    --accent-ink:#2a0e00;
+    --ink:#f2ead9;
+    --ink-soft:#c9c2ac;
+    --panel:#16202b;
+    --panel-border:#2b3a48;
+    --line:#e9f4ff;
+    --shadow:0 10px 30px rgba(0,0,0,.5);
+  }
+  :root[data-theme="light"]{
+    --sky-top:#4fa8e0;
+    --sky-bottom:#cdeeff;
+    --grass:#3c9d4a;
+    --grass-dark:#2f7d3b;
+    --dirt:#c98a4b;
+    --dirt-dark:#a86a34;
+    --accent:#ff6b35;
+    --accent-deep:#d84f1e;
+    --accent-ink:#3a1200;
+    --ink:#1c2b1f;
+    --ink-soft:#4a5c4c;
+    --panel:#fff8ec;
+    --panel-border:#e8d9b8;
+    --line:#ffffff;
+    --shadow:0 10px 30px rgba(20,30,20,.25);
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{
+    margin:0; padding:0; height:100%;
+    background:var(--sky-bottom);
+    font-family:"Hiragino Maru Gothic ProN","Hiragino Sans","Yu Gothic",system-ui,-apple-system,"Segoe UI",sans-serif;
+    color:var(--ink);
+    overflow:hidden;
+    -webkit-tap-highlight-color:transparent;
+    touch-action:none;
+  }
+  #stage{
+    position:fixed; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    background:linear-gradient(var(--sky-top),var(--sky-bottom));
+  }
+  #frame{
+    position:relative;
+    width:min(100vw, 178vh);
+    height:min(100vh, 56.22vw);
+    aspect-ratio: 900 / 560;
+    max-width:1100px;
+  }
+  @media (orientation: portrait){
+    #frame{
+      width:96vw;
+      height:90vh;
+      aspect-ratio:auto;
+      max-width:900px;
+    }
+  }
+  canvas#game{
+    width:100%; height:100%; display:block;
+    border-radius:0;
+    touch-action:none;
+    cursor:pointer;
+  }
+
+  .hud{
+    position:absolute; top:0; left:0; right:0;
+    display:flex; justify-content:space-between; align-items:flex-start;
+    padding:clamp(8px,1.6vw,18px) clamp(10px,2vw,22px);
+    pointer-events:none;
+    font-variant-numeric: tabular-nums;
+  }
+  .badge{
+    background:rgba(10,14,10,.42);
+    backdrop-filter:blur(3px);
+    color:#fff;
+    border-radius:10px;
+    padding:.4em .8em;
+    font-weight:700;
+    font-size:clamp(11px,1.6vw,15px);
+    letter-spacing:.02em;
+    line-height:1.5;
+    box-shadow:0 4px 12px rgba(0,0,0,.2);
+  }
+  .badge b{ color:var(--accent); font-size:1.15em; margin-left:.15em; }
+  .badge .lbl{ opacity:.8; font-weight:600; }
+
+  .hint{
+    position:absolute; left:50%; bottom:clamp(10px,2.4vh,26px);
+    transform:translateX(-50%);
+    color:#fff;
+    font-size:clamp(11px,1.7vw,15px);
+    font-weight:700;
+    background:rgba(10,14,10,.38);
+    padding:.5em 1em;
+    border-radius:999px;
+    pointer-events:none;
+    text-shadow:0 1px 2px rgba(0,0,0,.4);
+    white-space:nowrap;
+    transition:opacity .3s;
+  }
+
+  .overlay{
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    padding:4%;
+  }
+  .card{
+    background:var(--panel);
+    border:1px solid var(--panel-border);
+    border-radius:20px;
+    box-shadow:var(--shadow);
+    padding:clamp(16px,3.4vw,34px) clamp(18px,4vw,40px);
+    max-width:520px;
+    width:100%;
+    text-align:center;
+  }
+  .title{
+    font-size:clamp(22px,4.6vw,40px);
+    font-weight:900;
+    margin:0 0 .1em;
+    letter-spacing:.03em;
+    color:var(--ink);
+    text-wrap:balance;
+  }
+  .title .sun{ color:var(--accent); }
+  .subtitle{
+    margin:0 0 1.1em;
+    font-size:clamp(11px,1.9vw,14px);
+    color:var(--ink-soft);
+    font-weight:600;
+    letter-spacing:.04em;
+  }
+
+  .batter-pick{
+    display:flex; align-items:center; justify-content:center;
+    gap:clamp(10px,2.4vw,20px);
+    margin:1em 0 1.3em;
+  }
+  .arrow-btn{
+    width:clamp(34px,6vw,44px); height:clamp(34px,6vw,44px);
+    border-radius:50%;
+    border:1px solid var(--panel-border);
+    background:transparent;
+    color:var(--ink);
+    font-size:1.2em;
+    font-weight:900;
+    cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    transition:background .15s, transform .1s;
+  }
+  .arrow-btn:hover{ background:rgba(255,107,53,.12); }
+  .arrow-btn:active{ transform:scale(.92); }
+
+  .batter-preview{
+    width:clamp(96px,20vw,140px);
+    height:clamp(96px,20vw,140px);
+    border-radius:16px;
+    background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(0,0,0,.05));
+    border:2px solid var(--panel-border);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .batter-name{
+    font-weight:800;
+    font-size:clamp(13px,2.2vw,17px);
+    margin-top:.6em;
+    letter-spacing:.05em;
+  }
+
+  .btn-row{ display:flex; gap:.7em; justify-content:center; margin-top:1.2em; flex-wrap:wrap; }
+  .btn{
+    appearance:none; border:none; cursor:pointer;
+    font-family:inherit; font-weight:800;
+    font-size:clamp(13px,2.2vw,16px);
+    letter-spacing:.06em;
+    padding:.85em 1.6em;
+    border-radius:999px;
+    transition:transform .1s, filter .15s, box-shadow .15s;
+  }
+  .btn:active{ transform:scale(.95); }
+  .btn-primary{
+    background:linear-gradient(180deg, var(--accent), var(--accent-deep));
+    color:#fff8ec;
+    box-shadow:0 6px 16px rgba(216,79,30,.35), inset 0 1px 0 rgba(255,255,255,.3);
+  }
+  .btn-primary:hover{ filter:brightness(1.06); }
+  .btn-secondary{
+    background:transparent;
+    border:1px solid var(--panel-border);
+    color:var(--ink);
+  }
+  .btn-secondary:hover{ background:rgba(120,120,120,.08); }
+
+  .howto{
+    margin-top:1em;
+    font-size:clamp(10.5px,1.7vw,12.5px);
+    color:var(--ink-soft);
+    line-height:1.6;
+  }
+
+  .result-lines{ margin:1em 0 1.4em; display:flex; flex-direction:column; gap:.5em; }
+  .result-row{
+    display:flex; justify-content:space-between;
+    font-size:clamp(13px,2.4vw,17px);
+    font-weight:700;
+    border-bottom:1px dashed var(--panel-border);
+    padding-bottom:.4em;
+  }
+  .result-row .val{ color:var(--accent); font-variant-numeric:tabular-nums; }
+  .result-row.best .val{ color:var(--ink); }
+  .new-best{
+    display:inline-block; margin-top:.3em;
+    font-size:clamp(11px,1.9vw,13px);
+    color:var(--accent-deep);
+    font-weight:900;
+    letter-spacing:.05em;
+  }
+
+  .hidden{ display:none !important; }
+
+  .top-fade{
+    position:absolute; top:0; left:0; right:0; height:0;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration:.001ms !important; transition-duration:.001ms !important; }
+  }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="frame">
+    <canvas id="game"></canvas>
+
+    <div class="hud" id="hud">
+      <div class="badge"><span class="lbl">HR</span><b id="hudHr">0</b></div>
+      <div class="badge"><span class="lbl">のこり</span><b id="hudPitch">10</b></div>
+      <div class="badge"><span class="lbl">さいこう</span><b id="hudBest">0</b></div>
+    </div>
+    <div class="hint" id="hint">たまが きたら ゆびを はなして スイング!</div>
+
+    <div class="overlay" id="selectOverlay">
+      <div class="card">
+        <h1 class="title">ホームラン<span class="sun">きょうそう</span></h1>
+        <p class="subtitle">タップ &amp; リリースで スイング!</p>
+
+        <div class="batter-pick">
+          <button class="arrow-btn" id="prevBtn" aria-label="まえのバッター">‹</button>
+          <div>
+            <div class="batter-preview"><canvas id="batterPreview" width="140" height="140" style="width:100%;height:100%;"></canvas></div>
+            <div class="batter-name" id="batterName">ブルー</div>
+          </div>
+          <button class="arrow-btn" id="nextBtn" aria-label="つぎのバッター">›</button>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn btn-secondary" id="changeBatterBtn">バッター交代</button>
+          <button class="btn btn-primary" id="startBtn">スタート</button>
+        </div>
+
+        <p class="howto">画面を おす → はなす タイミングで スイング。<br>10球のうち 何本 ホームランを 打てるか きょうそう しよう!</p>
+      </div>
+    </div>
+
+    <div class="overlay hidden" id="resultOverlay">
+      <div class="card">
+        <h1 class="title">けっか<span class="sun">はっぴょう</span></h1>
+        <div class="result-lines">
+          <div class="result-row"><span>ホームラン</span><span class="val"><b id="resHr">0</b> 本</span></div>
+          <div class="result-row"><span>ヒット</span><span class="val"><b id="resHit">0</b> 本</span></div>
+          <div class="result-row best"><span>じこ さいこう記録</span><span class="val"><b id="resBest">0</b> 本</span></div>
+        </div>
+        <div id="newBestWrap" class="hidden"><span class="new-best">🎉 新記録たっせい!</span></div>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="retryBtn">もういちど</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  const root = document.documentElement;
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function readColors(){
+    const cs = getComputedStyle(root);
+    const g = (n) => cs.getPropertyValue(n).trim();
+    return {
+      skyTop:g('--sky-top'), skyBottom:g('--sky-bottom'),
+      grass:g('--grass'), grassDark:g('--grass-dark'),
+      dirt:g('--dirt'), dirtDark:g('--dirt-dark'),
+      accent:g('--accent'), accentDeep:g('--accent-deep'),
+      ink:g('--ink'), line:g('--line')
+    };
+  }
+  let COL = readColors();
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => COL = readColors());
+  new MutationObserver(() => COL = readColors())
+    .observe(root, { attributes:true, attributeFilter:['data-theme'] });
+
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const frame = document.getElementById('frame');
+  const LW = 900;
+  let LH = 560;
+
+  function resize(){
+    const dpr = Math.max(1, Math.min(2.5, window.devicePixelRatio || 1));
+    const rect = frame.getBoundingClientRect();
+    LH = Math.round(clamp(LW * (rect.height / rect.width), 480, 2200));
+    layoutField();
+    canvas.width = Math.round(rect.width * dpr);
+    canvas.height = Math.round(rect.height * dpr);
+    ctx.setTransform(dpr * (rect.width / LW), 0, 0, dpr * (rect.height / LH), 0, 0);
+  }
+  window.addEventListener('resize', resize);
+
+  const AudioCtor = window.AudioContext || window.webkitAudioContext;
+  let actx = null;
+  function ensureAudio(){ if(!actx && AudioCtor) actx = new AudioCtor(); if(actx && actx.state==='suspended') actx.resume(); }
+  function tone(freq, dur, type, gainV, delay, glideTo){
+    if(!actx) return;
+    const t0 = actx.currentTime + (delay||0);
+    const osc = actx.createOscillator();
+    const gain = actx.createGain();
+    osc.type = type || 'sine';
+    osc.frequency.setValueAtTime(freq, t0);
+    if(glideTo) osc.frequency.exponentialRampToValueAtTime(Math.max(20,glideTo), t0+dur);
+    gain.gain.setValueAtTime(0, t0);
+    gain.gain.linearRampToValueAtTime(gainV, t0 + 0.012);
+    gain.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+    osc.connect(gain).connect(actx.destination);
+    osc.start(t0); osc.stop(t0+dur+0.02);
+  }
+  function noiseBurst(dur, gainV, delay, freqStart){
+    if(!actx) return;
+    const t0 = actx.currentTime + (delay||0);
+    const bufSize = Math.floor(actx.sampleRate * dur);
+    const buf = actx.createBuffer(1, bufSize, actx.sampleRate);
+    const data = buf.getChannelData(0);
+    for(let i=0;i<bufSize;i++) data[i] = (Math.random()*2-1) * (1 - i/bufSize);
+    const src = actx.createBufferSource();
+    src.buffer = buf;
+    const filt = actx.createBiquadFilter();
+    filt.type = 'lowpass';
+    filt.frequency.setValueAtTime(freqStart||3000, t0);
+    filt.frequency.exponentialRampToValueAtTime(300, t0+dur);
+    const gain = actx.createGain();
+    gain.gain.setValueAtTime(gainV, t0);
+    gain.gain.exponentialRampToValueAtTime(0.001, t0+dur);
+    src.connect(filt).connect(gain).connect(actx.destination);
+    src.start(t0);
+  }
+  const SFX = {
+    swing(){ noiseBurst(0.14, 0.25, 0, 4000); },
+    hit(){ tone(520,0.09,'square',0.18,0,180); noiseBurst(0.08,0.3,0,5000); },
+    homerun(){
+      [523.25,659.25,783.99,1046.5].forEach((f,i)=> tone(f,0.5,'triangle',0.16,i*0.08));
+      noiseBurst(0.9,0.18,0.05,2200);
+    },
+    foul(){ tone(300,0.12,'sawtooth',0.14,0,120); },
+    out(){ tone(150,0.16,'sine',0.16,0,70); noiseBurst(0.15,0.15,0,900); },
+    miss(){ tone(200,0.1,'sine',0.1,0,90); },
+    ui(){ tone(700,0.06,'sine',0.12,0,900); }
+  };
+
+  const BATTERS = [
+    { name:'ブルー',   cap:'#2f6fd6', shirt:'#e9eef7', pants:'#274b8a', skin:'#f2c29a' },
+    { name:'レッド',   cap:'#d6392f', shirt:'#fff2ee', pants:'#8a2723', skin:'#e6ac7a' },
+    { name:'イエロー', cap:'#e0b12a', shirt:'#fffaf0', pants:'#8a6a1c', skin:'#f2c29a' },
+    { name:'グリーン', cap:'#2f9e52', shirt:'#eefaf0', pants:'#1f6636', skin:'#d99a72' },
+  ];
+
+  let FIELD;
+  function layoutField(){
+    const r = LH / 560;
+    FIELD = {
+      horizon: 168*r, fenceTop: 150*r, fenceBottom: 190*r,
+      mound: { x: 450, y: 246*r },
+      homeX: 452, homeY: 486*r,
+      foulLeft: { x: 30, y: 190*r },
+      foulRight: { x: 870, y: 190*r },
+    };
+  }
+  layoutField();
+
+  const PITCHES_PER_TURN = 10;
+  const BEST_KEY = 'homerun_derby_best_v1';
+
+  const G = {
+    state: 'select',
+    batterIndex: 0,
+    pitchIndex: 0,
+    hrCount: 0,
+    hitCount: 0,
+    best: Number(localStorage.getItem(BEST_KEY) || 0),
+    sub: null,
+    pitch: null,
+    swingAnim: 0,
+    swingActive: false,
+    ballFlight: null,
+    particles: [],
+    popup: null,
+    shake: 0,
+    t: 0,
+  };
+
+  function lerp(a,b,t){ return a+(b-a)*t; }
+  function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+  function easeIn(t){ return t*t; }
+  function easeOut(t){ return 1-(1-t)*(1-t); }
+
+  function updateHud(){
+    document.getElementById('hudHr').textContent = G.hrCount;
+    document.getElementById('hudPitch').textContent = (PITCHES_PER_TURN - G.pitchIndex);
+    document.getElementById('hudBest').textContent = G.best;
+  }
+
+  function showOverlay(id){
+    ['selectOverlay','resultOverlay'].forEach(x => {
+      document.getElementById(x).classList.toggle('hidden', x !== id);
+    });
+    document.getElementById('hud').style.display = (id ? 'none' : 'flex');
+    document.getElementById('hint').style.display = (id ? 'none' : 'block');
+  }
+
+  function drawBatterFigure(g, x, y, scale, batter, swingT, mirrored){
+    g.save();
+    g.translate(x,y);
+    g.scale(scale * (mirrored?-1:1), scale);
+
+    g.fillStyle = 'rgba(10,20,10,.18)';
+    g.beginPath(); g.ellipse(0, 4, 26, 7, 0, 0, Math.PI*2); g.fill();
+
+    const lean = Math.sin(swingT * Math.PI) * 10;
+    g.save();
+    g.translate(0,-4);
+    g.rotate((lean * Math.PI/180) * 0.35);
+
+    g.fillStyle = batter.pants;
+    g.beginPath();
+    g.roundRect(-11,-30,10,32,4);
+    g.roundRect(1,-30,10,32,4);
+    g.fill();
+
+    g.fillStyle = batter.shirt;
+    g.beginPath();
+    g.roundRect(-16,-64,32,38,10);
+    g.fill();
+
+    g.fillStyle = batter.skin;
+    g.beginPath(); g.arc(0,-76,12,0,Math.PI*2); g.fill();
+
+    g.fillStyle = batter.cap;
+    g.beginPath();
+    g.arc(0,-80,12.5,Math.PI,0);
+    g.fill();
+    g.beginPath();
+    g.roundRect(-13,-80,26,5,2);
+    g.fill();
+    g.fillRect(-4,-80,16,4);
+
+    const armSwing = easeOut(clamp(swingT,0,1));
+    const shoulderX = -14, shoulderY = -56;
+    g.strokeStyle = batter.skin;
+    g.lineWidth = 7;
+    g.lineCap = 'round';
+
+    const bx = lerp(18, -30, armSwing);
+    const by = lerp(-70, -40, Math.sin(armSwing*Math.PI));
+    g.beginPath();
+    g.moveTo(shoulderX, shoulderY);
+    g.lineTo(bx, by);
+    g.stroke();
+    g.beginPath();
+    g.moveTo(-shoulderX-4, shoulderY);
+    g.lineTo(bx-6, by+4);
+    g.stroke();
+
+    const batAngle = lerp(-0.15, 2.6, armSwing) * (Math.PI/1.2/2.2);
+    const realAngle = lerp(-0.35, 2.15, armSwing);
+    g.save();
+    g.translate(bx-6, by+4);
+    g.rotate(realAngle);
+    g.strokeStyle = '#caa46b';
+    g.lineWidth = 5;
+    g.lineCap = 'round';
+    g.beginPath();
+    g.moveTo(0,0);
+    g.lineTo(0,-46);
+    g.stroke();
+    g.strokeStyle = '#7a5230';
+    g.lineWidth = 5.5;
+    g.beginPath();
+    g.moveTo(0,-30);
+    g.lineTo(0,-46);
+    g.stroke();
+    g.restore();
+
+    g.restore();
+    g.restore();
+  }
+
+  function drawPitcherFigure(g, x, y, windT){
+    g.save();
+    g.translate(x,y);
+    g.fillStyle = 'rgba(10,20,10,.2)';
+    g.beginPath(); g.ellipse(0,3,16,4.5,0,0,Math.PI*2); g.fill();
+
+    const kick = Math.sin(windT*Math.PI);
+    g.fillStyle = '#8a8f98';
+    g.beginPath(); g.roundRect(-7,-20,6,20,3); g.fill();
+    g.beginPath(); g.roundRect(1,-20-kick*4,6,20+kick*4,3); g.fill();
+
+    g.fillStyle = '#e8ebee';
+    g.beginPath(); g.roundRect(-9,-40,18,22,7); g.fill();
+
+    g.fillStyle = '#e3b489';
+    g.beginPath(); g.arc(0,-46,7,0,Math.PI*2); g.fill();
+    g.fillStyle = '#3a4652';
+    g.beginPath(); g.arc(0,-49,7.2,Math.PI,0); g.fill();
+
+    const arm = 1-kick;
+    g.strokeStyle = '#e3b489';
+    g.lineWidth = 4.5; g.lineCap='round';
+    g.beginPath();
+    g.moveTo(-8,-38);
+    g.lineTo(-8 - arm*10, -38 - arm*14);
+    g.stroke();
+    g.beginPath();
+    g.moveTo(8,-38);
+    g.lineTo(8 + (1-arm)*8, -30 + (1-arm)*10);
+    g.stroke();
+
+    g.restore();
+  }
+
+  function drawField(g, t){
+    g.clearRect(0,0,LW,LH);
+
+    const sky = g.createLinearGradient(0,0,0,FIELD.horizon+30);
+    sky.addColorStop(0, COL.skyTop);
+    sky.addColorStop(1, COL.skyBottom);
+    g.fillStyle = sky;
+    g.fillRect(0,0,LW,FIELD.horizon+30);
+
+    g.fillStyle = 'rgba(255,255,255,.55)';
+    for(let i=0;i<3;i++){
+      const cx = ((t*0.008 + i*260) % (LW+200)) - 100;
+      const cy = 40 + i*22;
+      g.beginPath();
+      g.ellipse(cx,cy,34,12,0,0,Math.PI*2);
+      g.ellipse(cx+26,cy+4,24,10,0,0,Math.PI*2);
+      g.ellipse(cx-24,cy+5,22,9,0,0,Math.PI*2);
+      g.fill();
+    }
+
+    g.fillStyle = COL.grassDark;
+    g.fillRect(0, FIELD.horizon, LW, FIELD.fenceBottom - FIELD.horizon);
+    g.fillStyle = COL.accent;
+    for(let i=0;i<LW;i+=44){
+      g.fillRect(i, FIELD.fenceTop, 22, FIELD.fenceBottom-FIELD.fenceTop);
+    }
+    g.fillStyle = 'rgba(255,255,255,.85)';
+    g.font = '700 11px sans-serif';
+    g.textAlign = 'center';
+    g.fillText('95m', 150, FIELD.fenceTop+14);
+    g.fillText('100m', 450, FIELD.fenceTop+14);
+    g.fillText('95m', 750, FIELD.fenceTop+14);
+
+    const grassGrad = g.createLinearGradient(0,FIELD.fenceBottom,0,LH);
+    grassGrad.addColorStop(0, COL.grass);
+    grassGrad.addColorStop(1, COL.grassDark);
+    g.fillStyle = grassGrad;
+    g.fillRect(0, FIELD.fenceBottom, LW, LH-FIELD.fenceBottom);
+
+    g.fillStyle = 'rgba(255,255,255,.06)';
+    for(let i=-2;i<10;i++){
+      g.beginPath();
+      g.moveTo(450 + i*90 - (LH-FIELD.fenceBottom), FIELD.fenceBottom);
+      g.lineTo(450 + i*90 + 90 - (LH-FIELD.fenceBottom), FIELD.fenceBottom);
+      g.lineTo(450 + (i+1)*140, LH);
+      g.lineTo(450 + i*140, LH);
+      g.closePath();
+      if(i%2===0) g.fill();
+    }
+
+    g.strokeStyle = COL.line;
+    g.lineWidth = 3;
+    g.beginPath();
+    g.moveTo(FIELD.homeX, FIELD.homeY);
+    g.lineTo(FIELD.foulLeft.x, FIELD.foulLeft.y);
+    g.moveTo(FIELD.homeX, FIELD.homeY);
+    g.lineTo(FIELD.foulRight.x, FIELD.foulRight.y);
+    g.stroke();
+
+    g.fillStyle = COL.dirt;
+    g.beginPath();
+    g.ellipse(FIELD.mound.x, FIELD.mound.y+14, 30, 12, 0, 0, Math.PI*2);
+    g.fill();
+
+    g.save();
+    g.translate(FIELD.homeX, FIELD.homeY+16);
+    const dirtGrad = g.createRadialGradient(0,0,10,0,0,150);
+    dirtGrad.addColorStop(0, COL.dirt);
+    dirtGrad.addColorStop(1, COL.dirtDark);
+    g.fillStyle = dirtGrad;
+    g.beginPath();
+    g.moveTo(0,-150);
+    g.lineTo(-150,10);
+    g.quadraticCurveTo(0,60,150,10);
+    g.closePath();
+    g.fill();
+    g.restore();
+
+    g.fillStyle = '#f4f4f0';
+    g.beginPath();
+    g.moveTo(FIELD.homeX-9, FIELD.homeY);
+    g.lineTo(FIELD.homeX+9, FIELD.homeY);
+    g.lineTo(FIELD.homeX+9, FIELD.homeY+7);
+    g.lineTo(FIELD.homeX, FIELD.homeY+13);
+    g.lineTo(FIELD.homeX-9, FIELD.homeY+7);
+    g.closePath();
+    g.fill();
+  }
+
+  function drawBall(g, x, y, r){
+    g.save();
+    g.fillStyle = '#fffdf7';
+    g.beginPath(); g.arc(x,y,r,0,Math.PI*2); g.fill();
+    g.strokeStyle = '#d94f3c';
+    g.lineWidth = Math.max(0.6, r*0.14);
+    g.beginPath();
+    g.arc(x - r*0.3, y, r*0.7, -0.7, 0.7);
+    g.stroke();
+    g.beginPath();
+    g.arc(x + r*0.3, y, r*0.7, Math.PI-0.7, Math.PI+0.7);
+    g.stroke();
+    g.restore();
+  }
+
+  function spawnParticles(x,y,color,n,spread,life){
+    if(reduceMotion) n = Math.min(n, 6);
+    for(let i=0;i<n;i++){
+      const a = Math.random()*Math.PI*2;
+      const sp = (0.3+Math.random()*0.7)*spread;
+      G.particles.push({
+        x,y, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp - spread*0.3,
+        life, maxLife:life, color
+      });
+    }
+  }
+
+  function startSelect(){
+    G.state = 'select';
+    G.pitchIndex = 0; G.hrCount = 0; G.hitCount = 0;
+    showOverlay('selectOverlay');
+    renderBatterPreview();
+    updateHud();
+  }
+
+  function renderBatterPreview(){
+    const c = document.getElementById('batterPreview');
+    const pctx = c.getContext('2d');
+    pctx.clearRect(0,0,140,140);
+    pctx.save();
+    pctx.translate(0,0);
+    drawBatterFigure(pctx, 70, 118, 1.15, BATTERS[G.batterIndex], 0, false);
+    pctx.restore();
+    document.getElementById('batterName').textContent = BATTERS[G.batterIndex].name;
+  }
+
+  function cycleBatter(dir){
+    G.batterIndex = (G.batterIndex + dir + BATTERS.length) % BATTERS.length;
+    renderBatterPreview();
+    SFX.ui();
+  }
+
+  function pitchDuration(idx){
+    return clamp(1500 - idx*45, 980, 1500);
+  }
+  function curveAmp(idx){
+    return 10 + idx*2.4;
+  }
+
+  function beginTurn(){
+    ensureAudio();
+    G.state = 'play';
+    G.pitchIndex = 0; G.hrCount = 0; G.hitCount = 0;
+    showOverlay(null);
+    updateHud();
+    beginPitch();
+  }
+
+  function beginPitch(){
+    G.sub = 'pitching';
+    G.swingAnim = 0;
+    G.swingActive = false;
+    G.ballFlight = null;
+    G.popup = null;
+    G.pitch = {
+      startedAt: performance.now(),
+      duration: pitchDuration(G.pitchIndex),
+      curve: (Math.random()*2-1) * curveAmp(G.pitchIndex),
+      released: false,
+      windT: 0,
+    };
+    document.getElementById('hint').textContent = 'たまが きたら ゆびを はなして スイング!';
+    document.getElementById('hint').style.opacity = 1;
+  }
+
+  function currentBallPos(progress){
+    const p = clamp(progress, 0, 1.3);
+    const x = lerp(FIELD.mound.x, FIELD.homeX, Math.min(p,1)) + G.pitch.curve*Math.sin(Math.min(p,1)*Math.PI);
+    const y = lerp(FIELD.mound.y, FIELD.homeY-10, easeIn(Math.min(p,1)));
+    const r = lerp(4, 13, Math.min(p,1));
+    return {x,y,r};
+  }
+
+  function resolveSwing(deltaMs){
+    const abs = Math.abs(deltaMs);
+    const timingScore = clamp(1 - abs/300, 0, 1);
+    const drift = clamp(deltaMs/260, -1, 1);
+    const roll = 0.65 + Math.random()*0.55;
+    const power = timingScore * roll;
+
+    let outcome;
+    if(abs > 300){
+      outcome = 'miss';
+    } else if(Math.abs(drift) > 0.72 && power > 0.3){
+      outcome = 'foul';
+    } else if(power >= 1.02){
+      outcome = 'homerun';
+    } else if(power >= 0.58){
+      outcome = 'hit';
+    } else {
+      outcome = 'out';
+    }
+    return { outcome, power, drift };
+  }
+
+  function launchOutcome(result, contact){
+    G.sub = 'flight';
+    const {outcome, power, drift} = result;
+    const startX = contact.x, startY = contact.y;
+
+    if(outcome === 'homerun'){
+      SFX.homerun();
+      G.hrCount++;
+      G.shake = reduceMotion ? 0 : 14;
+      G.ballFlight = {
+        type:'homerun', t:0, dur:1150,
+        x0:startX, y0:startY,
+        dx: drift*260,
+        apex: 340 + power*80,
+      };
+      G.popup = { text:'ホームラン!', color: COL.accent, big:true, t:0, dur:1300 };
+      spawnParticles(startX, startY-10, COL.accent, 26, 220, 900);
+    } else if(outcome === 'hit'){
+      SFX.hit();
+      G.hitCount++;
+      G.ballFlight = {
+        type:'hit', t:0, dur:850,
+        x0:startX, y0:startY,
+        dx: drift*180,
+        apex: 90 + power*70,
+      };
+      G.popup = { text:'ヒット!', color:'#ffffff', big:false, t:0, dur:900 };
+      spawnParticles(startX, startY, '#e8e2c8', 8, 60, 500);
+    } else if(outcome === 'out'){
+      SFX.out();
+      G.ballFlight = {
+        type:'out', t:0, dur:650,
+        x0:startX, y0:startY,
+        dx: drift*90,
+        apex: 18,
+      };
+      G.popup = { text:'ゴロ…', color:'#eeeeee', big:false, t:0, dur:800 };
+      spawnParticles(startX, startY, COL.dirt, 6, 40, 400);
+    } else if(outcome === 'foul'){
+      SFX.foul();
+      G.ballFlight = {
+        type:'foul', t:0, dur:750,
+        x0:startX, y0:startY,
+        dx: (drift>0?1:-1) * 420,
+        apex: 120,
+      };
+      G.popup = { text:'ファウル', color:'#ffe9a8', big:false, t:0, dur:800 };
+    } else {
+      SFX.miss();
+      G.ballFlight = { type:'miss', t:0, dur:350 };
+      G.popup = { text: G.pitch.released ? '空振り!' : '見逃し…', color:'#dddddd', big:false, t:0, dur:750 };
+    }
+    updateHud();
+  }
+
+  function trySwing(){
+    if(G.state !== 'play' || G.sub !== 'pitching' || G.pitch.released) return;
+    ensureAudio();
+    G.pitch.released = true;
+    G.swingActive = true;
+    G.swingAnim = 0;
+    SFX.swing();
+    const elapsed = performance.now() - G.pitch.startedAt;
+    const deltaMs = elapsed - G.pitch.duration;
+    const contact = currentBallPos(1);
+    const result = resolveSwing(deltaMs);
+    launchOutcome(result, contact);
+  }
+
+  function endPitchAndAdvance(){
+    G.pitchIndex++;
+    updateHud();
+    if(G.pitchIndex >= PITCHES_PER_TURN){
+      finishTurn();
+    } else {
+      beginPitch();
+    }
+  }
+
+  function finishTurn(){
+    G.state = 'result';
+    const isNewBest = G.hrCount > G.best;
+    if(isNewBest){ G.best = G.hrCount; localStorage.setItem(BEST_KEY, String(G.best)); }
+    document.getElementById('resHr').textContent = G.hrCount;
+    document.getElementById('resHit').textContent = G.hitCount;
+    document.getElementById('resBest').textContent = G.best;
+    document.getElementById('newBestWrap').classList.toggle('hidden', !isNewBest);
+    showOverlay('resultOverlay');
+  }
+
+  function ballFlightPos(fl){
+    const p = clamp(fl.t/fl.dur, 0, 1);
+    if(fl.type === 'miss') return null;
+    const ep = easeOut(p);
+    let targetDepth;
+    if(fl.type==='homerun') targetDepth = 1.35;
+    else if(fl.type==='hit') targetDepth = 0.62;
+    else if(fl.type==='out') targetDepth = 0.22;
+    else targetDepth = 1.0;
+
+    const groundY = lerp(fl.y0, FIELD.fenceTop-10, Math.min(ep*targetDepth,1));
+    const arc = Math.sin(p*Math.PI) * fl.apex;
+    const x = fl.x0 + fl.dx*ep;
+    const y = groundY - arc;
+    const scale = clamp(1 - ep*targetDepth*0.75, 0.12, 1);
+    return { x, y, r: 13*scale, fading: fl.type==='homerun' && p>0.75 ? (1-(p-0.75)/0.25) : 1 };
+  }
+
+  let lastT = performance.now();
+  function loop(now){
+    const dt = Math.min(48, now - lastT);
+    lastT = now;
+    G.t = now;
+    update(dt, now);
+    render(now);
+    requestAnimationFrame(loop);
+  }
+
+  function update(dt, now){
+    if(G.shake > 0) G.shake = Math.max(0, G.shake - dt*0.05);
+
+    for(let i=G.particles.length-1;i>=0;i--){
+      const p = G.particles[i];
+      p.life -= dt;
+      if(p.life<=0){ G.particles.splice(i,1); continue; }
+      p.x += p.vx*dt/1000;
+      p.y += p.vy*dt/1000;
+      p.vy += 420*dt/1000;
+    }
+
+    if(G.state !== 'play') return;
+
+    if(G.sub === 'pitching'){
+      const elapsed = now - G.pitch.startedAt;
+      const progress = elapsed / G.pitch.duration;
+      G.pitch.windT = clamp(elapsed/300, 0, 1);
+      if(!G.pitch.released && progress >= 1.28){
+        const contact = currentBallPos(1);
+        G.pitch.released = true;
+        launchOutcome({outcome:'miss', power:0, drift:0}, contact);
+      }
+    } else if(G.sub === 'flight'){
+      if(G.swingActive){
+        G.swingAnim += dt/260;
+        if(G.swingAnim >= 1){ G.swingActive = false; }
+      }
+      if(G.ballFlight){
+        G.ballFlight.t += dt;
+        if(G.ballFlight.t >= G.ballFlight.dur){
+          G.ballFlight = null;
+        }
+      }
+      if(G.popup){
+        G.popup.t += dt;
+        if(G.popup.t >= G.popup.dur) G.popup = null;
+      }
+      const flightDone = !G.ballFlight;
+      const popupDone = !G.popup;
+      if(flightDone && popupDone){
+        endPitchAndAdvance();
+      }
+    }
+  }
+
+  function render(now){
+    ctx.save();
+    if(G.shake > 0){
+      const sx = (Math.random()*2-1)*G.shake;
+      const sy = (Math.random()*2-1)*G.shake*0.6;
+      ctx.translate(sx,sy);
+    }
+
+    drawField(ctx, now);
+
+    const batter = BATTERS[G.batterIndex];
+    const batterSwingT = G.swingActive ? G.swingAnim : (G.sub==='pitching' && G.pitch && G.pitch.released ? 1 : 0);
+    drawPitcherFigure(ctx, FIELD.mound.x, FIELD.mound.y, G.sub==='pitching' && G.pitch ? G.pitch.windT : 0);
+    drawBatterFigure(ctx, FIELD.homeX+34, FIELD.homeY+2, 1.28, batter, batterSwingT, true);
+
+    if(G.state==='play' && G.sub==='pitching' && G.pitch){
+      const elapsed = now - G.pitch.startedAt;
+      const progress = elapsed / G.pitch.duration;
+      if(progress <= 1.05){
+        const b = currentBallPos(progress);
+        drawBall(ctx, b.x, b.y, b.r);
+      }
+    } else if(G.state==='play' && G.sub==='flight' && G.ballFlight){
+      const b = ballFlightPos(G.ballFlight);
+      if(b){
+        ctx.save();
+        ctx.globalAlpha = clamp(b.fading,0,1);
+        drawBall(ctx, b.x, b.y, b.r);
+        ctx.restore();
+      }
+    }
+
+    for(const p of G.particles){
+      ctx.save();
+      ctx.globalAlpha = clamp(p.life/p.maxLife, 0, 1);
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,3,0,Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    if(G.popup){
+      const p = clamp(G.popup.t / G.popup.dur, 0, 1);
+      const rise = easeOut(Math.min(p*2,1)) * 30;
+      const alpha = p < 0.75 ? 1 : (1-(p-0.75)/0.25);
+      ctx.save();
+      ctx.globalAlpha = clamp(alpha,0,1);
+      ctx.fillStyle = G.popup.color;
+      ctx.font = `900 ${G.popup.big ? 46:26}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.strokeStyle = 'rgba(0,0,0,.35)';
+      ctx.lineWidth = G.popup.big ? 6:3;
+      const yy = LH*0.536 - rise;
+      ctx.strokeText(G.popup.text, LW/2, yy);
+      ctx.fillText(G.popup.text, LW/2, yy);
+      ctx.restore();
+    }
+
+    ctx.restore();
+  }
+
+  function pointerRelease(e){
+    if(e) e.preventDefault();
+    trySwing();
+  }
+  canvas.addEventListener('pointerdown', (e)=>{ e.preventDefault(); ensureAudio(); }, {passive:false});
+  canvas.addEventListener('pointerup', pointerRelease, {passive:false});
+  canvas.addEventListener('pointercancel', pointerRelease, {passive:false});
+  window.addEventListener('keydown', (e)=>{
+    if(e.code==='Space' || e.code==='Enter'){ ensureAudio(); }
+  });
+  window.addEventListener('keyup', (e)=>{
+    if(e.code==='Space' || e.code==='Enter'){ e.preventDefault(); trySwing(); }
+  }, {passive:false});
+
+  document.getElementById('prevBtn').addEventListener('click', ()=>cycleBatter(-1));
+  document.getElementById('nextBtn').addEventListener('click', ()=>cycleBatter(1));
+  document.getElementById('changeBatterBtn').addEventListener('click', ()=>cycleBatter(1));
+  document.getElementById('startBtn').addEventListener('click', beginTurn);
+  document.getElementById('retryBtn').addEventListener('click', startSelect);
+
+  resize();
+  startSelect();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
