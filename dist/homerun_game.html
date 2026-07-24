@@ -156,8 +156,9 @@ html, body {
 const STAGE_W = 700, STAGE_H = 420;
 const MAX_BALL_COUNT = 10;
 const LASTPOS = 430;      // y where a pitch reaches the catcher's mitt
-const PITCH_START_Y = 228; // y where the ball leaves the pitcher's hand (matches the mound position)
-const CURVE_START_Y = 120;// y after which curve/shoot pitches start bending
+const MOUND_X = 350, MOUND_Y = 100; // pitcher's mound position (screen fits mound-to-home only)
+const PITCH_START_Y = MOUND_Y; // y where the ball leaves the pitcher's hand
+const CURVE_START_Y = 150;// y after which curve/shoot pitches start bending
 const BAT_CONTACT_Y = 300;
 const HOMERUN_WAIT = 40;
 const PERFECT_EXTRA_WAIT = 100;
@@ -194,7 +195,7 @@ let perfectTextScale = 0;
 let waitCount = 0;
 let soundFirst = true;
 
-const batterPosX = 310, batterPosY = 160;
+const batterPosX = 310, batterPosY = 392; // batter's foot position, near home plate
 
 /* --------------------------- audio ------------------------------ */
 
@@ -242,7 +243,7 @@ function soundHomerun() {
 
 const pitcherCnt = [0, 25, 35, 36, 65];
 const pitcher = {
-	x: 350, y: 230, timeCnt: 0, indexNo: -1, sceneNo: 0, show: true,
+	x: MOUND_X, y: MOUND_Y, timeCnt: 0, indexNo: -1, sceneNo: 0, show: true, // x/y is the foot/mound contact point
 	initMe() { this.timeCnt = 0; this.indexNo = -1; this.sceneNo = 0; },
 	startThrow() {
 		if (!this.show) return;
@@ -259,7 +260,7 @@ const pitcher = {
 			this.sceneNo++;
 			if (pitcherCnt.length <= this.sceneNo) this.sceneNo = pitcherCnt.length - 1;
 			if (this.sceneNo === 2) {
-				ball.initMe(350, PITCH_START_Y);
+				ball.initMe(MOUND_X, PITCH_START_Y);
 				ball.show = true;
 			}
 		}
@@ -304,7 +305,7 @@ const batter = {
 			// Visual placement only (keeps this.x untouched for hit-judgement math):
 			// mirror box2's stance back onto the right-hand batter's box on screen.
 			const renderX = (box === 2) ? (700 - (this.x + 250)) : this.x;
-			drawBatterSprite(this.sceneNo, renderX, this.y + 190, box);
+			drawBatterSprite(this.sceneNo, renderX, this.y, box);
 		}
 	},
 	show_me(f) { this.show = f; }
@@ -666,82 +667,67 @@ function drawBackground() {
 }
 
 function drawHomeBG() {
+	// Deliberately shows only the mound-to-home stretch (not the whole diamond),
+	// so that distance fills the screen instead of looking cramped.
+	const fenceY = 58;
+
 	// sky
-	const sky = ctx.createLinearGradient(0, 0, 0, 90);
+	const sky = ctx.createLinearGradient(0, 0, 0, fenceY);
 	sky.addColorStop(0, '#bfe3ff');
 	sky.addColorStop(1, '#e9f7ff');
 	ctx.fillStyle = sky;
-	ctx.fillRect(0, 0, STAGE_W, 90);
+	ctx.fillRect(0, 0, STAGE_W, fenceY);
 
-	// distant fence + outfield grass
-	ctx.fillStyle = '#5a9a4a';
-	ctx.beginPath();
-	ctx.moveTo(0, 90);
-	ctx.quadraticCurveTo(STAGE_W / 2, 70, STAGE_W, 90);
-	ctx.lineTo(STAGE_W, STAGE_H);
-	ctx.lineTo(0, STAGE_H);
-	ctx.closePath();
-	ctx.fill();
+	// grass
+	const grass = ctx.createLinearGradient(0, fenceY, 0, STAGE_H);
+	grass.addColorStop(0, '#5a9a4a');
+	grass.addColorStop(1, '#7cc36b');
+	ctx.fillStyle = grass;
+	ctx.fillRect(0, fenceY, STAGE_W, STAGE_H - fenceY);
 
 	// mowing stripes
-	ctx.fillStyle = 'rgba(255,255,255,0.06)';
+	ctx.fillStyle = 'rgba(255,255,255,0.07)';
 	for (let i = 0; i < 6; i++) {
-		ctx.beginPath();
-		const topX0 = i * (STAGE_W / 6), topX1 = topX0 + STAGE_W / 12;
-		const spread = 60;
-		ctx.moveTo(topX0, 95);
-		ctx.lineTo(topX1, 95);
-		ctx.lineTo(topX1 + spread, STAGE_H);
-		ctx.lineTo(topX0 - spread, STAGE_H);
-		ctx.closePath();
-		if (i % 2 === 0) ctx.fill();
+		if (i % 2 === 0) ctx.fillRect(i * (STAGE_W / 6), fenceY, STAGE_W / 6, STAGE_H - fenceY);
 	}
 
 	// outfield wall
-	ctx.strokeStyle = '#2f4f2f';
-	ctx.lineWidth = 10;
-	ctx.beginPath();
-	ctx.moveTo(0, 92);
-	ctx.quadraticCurveTo(STAGE_W / 2, 72, STAGE_W, 92);
-	ctx.stroke();
+	ctx.fillStyle = '#2f4f2f';
+	ctx.fillRect(0, fenceY - 8, STAGE_W, 9);
 
-	// foul lines
+	// foul lines running from home plate up to the fence corners
 	ctx.strokeStyle = '#fff';
 	ctx.lineWidth = 3;
 	ctx.beginPath();
 	ctx.moveTo(base_center(), 392);
-	ctx.lineTo(30, 96);
+	ctx.lineTo(65, fenceY);
 	ctx.moveTo(base_center(), 392);
-	ctx.lineTo(670, 96);
+	ctx.lineTo(635, fenceY);
 	ctx.stroke();
 
-	// infield dirt
+	// dirt path connecting the mound to home plate
 	ctx.fillStyle = '#c68a52';
 	ctx.beginPath();
-	ctx.moveTo(base_center(), 392);
-	ctx.lineTo(base_center() - 150, 250);
-	ctx.lineTo(base_center(), 140);
-	ctx.lineTo(base_center() + 150, 250);
+	ctx.moveTo(base_center() - 20, MOUND_Y + 10);
+	ctx.lineTo(base_center() - 60, 392);
+	ctx.lineTo(base_center() + 60, 392);
+	ctx.lineTo(base_center() + 20, MOUND_Y + 10);
 	ctx.closePath();
 	ctx.fill();
 
-	// infield grass diamond
-	ctx.fillStyle = '#6bb356';
-	ctx.beginPath();
-	ctx.moveTo(base_center(), 360);
-	ctx.lineTo(base_center() - 95, 250);
-	ctx.lineTo(base_center(), 175);
-	ctx.lineTo(base_center() + 95, 250);
-	ctx.closePath();
-	ctx.fill();
-
-	// pitcher's mound (sits inside the infield diamond, between home plate and the outfield)
+	// home plate dirt circle
 	ctx.fillStyle = '#c68a52';
 	ctx.beginPath();
-	ctx.ellipse(350, 270, 30, 14, 0, 0, Math.PI * 2);
+	ctx.ellipse(base_center(), 385, 78, 40, 0, 0, Math.PI * 2);
+	ctx.fill();
+
+	// pitcher's mound
+	ctx.fillStyle = '#d29a63';
+	ctx.beginPath();
+	ctx.ellipse(MOUND_X, MOUND_Y, 40, 20, 0, 0, Math.PI * 2);
 	ctx.fill();
 	ctx.fillStyle = '#e8d3b0';
-	ctx.fillRect(345, 266, 10, 4);
+	ctx.fillRect(MOUND_X - 6, MOUND_Y - 4, 12, 5);
 
 	// batter boxes
 	ctx.strokeStyle = 'rgba(255,255,255,0.85)';
@@ -819,51 +805,95 @@ function drawOutfieldBG(dir) {
 
 /* ------------------------- simple vector sprites -------------------- */
 
+// Shared chibi (2-头身 super-deformed) face: big eyes, blush, small smile.
+// Drawn around a head centered at (0, headCy) with the given radius.
+function drawCuteFace(headCy, r) {
+	const ex = r * 0.34, ey = headCy + r * 0.02;
+
+	ctx.fillStyle = '#fff';
+	ctx.beginPath(); ctx.arc(-ex, ey, r * 0.26, 0, Math.PI * 2); ctx.fill();
+	ctx.beginPath(); ctx.arc(ex, ey, r * 0.26, 0, Math.PI * 2); ctx.fill();
+
+	ctx.fillStyle = '#2a2a2a';
+	ctx.beginPath(); ctx.arc(-ex + 1, ey + 1.5, r * 0.13, 0, Math.PI * 2); ctx.fill();
+	ctx.beginPath(); ctx.arc(ex + 1, ey + 1.5, r * 0.13, 0, Math.PI * 2); ctx.fill();
+
+	ctx.fillStyle = 'rgba(255,130,130,0.55)';
+	ctx.beginPath(); ctx.ellipse(-r * 0.62, headCy + r * 0.2, r * 0.2, r * 0.13, 0, 0, Math.PI * 2); ctx.fill();
+	ctx.beginPath(); ctx.ellipse(r * 0.62, headCy + r * 0.2, r * 0.2, r * 0.13, 0, 0, Math.PI * 2); ctx.fill();
+
+	ctx.strokeStyle = '#b33';
+	ctx.lineWidth = 1.3;
+	ctx.beginPath();
+	ctx.arc(0, headCy + r * 0.38, r * 0.26, 0.15 * Math.PI, 0.85 * Math.PI);
+	ctx.stroke();
+}
+
+// Chibi character anchored at its FEET (x,y). Draws upward from there.
 function drawPitcherSprite(scene, x, y) {
 	ctx.save();
 	ctx.translate(x, y);
-	const armSets = [
-		{ la: -20, ra: 200, leg: 0 },   // 0 set position
-		{ la: -70, ra: 260, leg: -14 }, // 1 windup / leg lift
-		{ la: 40, ra: 130, leg: 14 },   // 2 release
-		{ la: 90, ra: 40, leg: 6 },     // 3 follow through
-		{ la: -20, ra: 200, leg: 0 },   // 4 reset
-	];
-	const s = armSets[Math.min(scene, armSets.length - 1)];
 
-	ctx.strokeStyle = '#1a3d7c';
-	ctx.fillStyle = '#1a3d7c';
-	ctx.lineWidth = 4;
+	const poses = [
+		{ la: -25, ra: 195, spread: 0 },   // 0 set position
+		{ la: -95, ra: 250, spread: -5 },  // 1 windup / leg lift
+		{ la: 30, ra: 115, spread: 7 },    // 2 release
+		{ la: 100, ra: 25, spread: 3 },    // 3 follow through
+		{ la: -25, ra: 195, spread: 0 },   // 4 reset
+	];
+	const s = poses[Math.min(scene, poses.length - 1)];
+	const jersey = '#3567c2', jerseyDark = '#28508f', skin = '#ffdcb2', capColor = '#dd4b39';
+
 	ctx.lineCap = 'round';
 
 	// legs
+	ctx.strokeStyle = jerseyDark;
+	ctx.lineWidth = 9;
 	ctx.beginPath();
-	ctx.moveTo(0, 24); ctx.lineTo(-8 + s.leg, 40);
-	ctx.moveTo(0, 24); ctx.lineTo(8 - s.leg, 40);
+	ctx.moveTo(-5, -10); ctx.lineTo(-7 + s.spread, 0);
+	ctx.moveTo(5, -10); ctx.lineTo(7 - s.spread, 0);
 	ctx.stroke();
 
-	// torso
-	ctx.beginPath();
-	ctx.moveTo(0, 0); ctx.lineTo(0, 24);
-	ctx.stroke();
+	// shoes
+	ctx.fillStyle = '#3a3a3a';
+	ctx.beginPath(); ctx.ellipse(-7 + s.spread, 1, 5, 3, 0, 0, Math.PI * 2); ctx.fill();
+	ctx.beginPath(); ctx.ellipse(7 - s.spread, 1, 5, 3, 0, 0, Math.PI * 2); ctx.fill();
 
-	// arms (angle in degrees from torso top)
+	// torso (round & jellybean-shaped, not a stick)
+	ctx.fillStyle = jersey;
+	ctx.beginPath();
+	ctx.ellipse(0, -22, 13, 13, 0, 0, Math.PI * 2);
+	ctx.fill();
+
+	// arms
 	const laRad = s.la * Math.PI / 180, raRad = s.ra * Math.PI / 180;
+	const lx = 14 * Math.cos(laRad), ly = -28 + 14 * Math.sin(laRad);
+	const rx = 14 * Math.cos(raRad), ry = -28 + 14 * Math.sin(raRad);
+	ctx.strokeStyle = jersey;
+	ctx.lineWidth = 7;
 	ctx.beginPath();
-	ctx.moveTo(0, 4);
-	ctx.lineTo(18 * Math.cos(laRad), 4 + 18 * Math.sin(laRad));
-	ctx.moveTo(0, 4);
-	ctx.lineTo(18 * Math.cos(raRad), 4 + 18 * Math.sin(raRad));
+	ctx.moveTo(0, -28); ctx.lineTo(lx, ly);
+	ctx.moveTo(0, -28); ctx.lineTo(rx, ry);
 	ctx.stroke();
+	ctx.fillStyle = skin;
+	ctx.beginPath(); ctx.arc(lx, ly, 4.5, 0, Math.PI * 2); ctx.fill();
+	ctx.beginPath(); ctx.arc(rx, ry, 4.5, 0, Math.PI * 2); ctx.fill();
 
 	// head
+	ctx.fillStyle = skin;
 	ctx.beginPath();
-	ctx.arc(0, -8, 8, 0, Math.PI * 2);
+	ctx.arc(0, -42, 15, 0, Math.PI * 2);
 	ctx.fill();
+
+	drawCuteFace(-42, 15);
+
 	// cap
-	ctx.fillStyle = '#c0392b';
+	ctx.fillStyle = capColor;
 	ctx.beginPath();
-	ctx.arc(0, -8, 8, Math.PI, Math.PI * 2);
+	ctx.arc(0, -42, 15.5, Math.PI, Math.PI * 2);
+	ctx.fill();
+	ctx.beginPath();
+	ctx.ellipse(0, -39, 11, 3.5, 0, 0, Math.PI * 2);
 	ctx.fill();
 
 	ctx.restore();
@@ -871,58 +901,76 @@ function drawPitcherSprite(scene, x, y) {
 
 function drawBatterSprite(scene, x, y, boxSide) {
 	ctx.save();
-	ctx.translate(x + 20, y + 40);
+	ctx.translate(x, y);
 	const mirror = boxSide === 2 ? -1 : 1;
 	ctx.scale(mirror, 1);
 
 	const poses = [
-		{ bat: -60, arm: -40 }, // 0 ready stance
-		{ bat: -100, arm: -70 }, // 1 load
-		{ bat: 10, arm: 10 },    // 2 contact / swing through
-		{ bat: 70, arm: 60 },    // 3 follow-through
+		{ bat: -70, arm: -35 },  // 0 ready stance
+		{ bat: -115, arm: -60 }, // 1 load
+		{ bat: 5, arm: 15 },     // 2 contact / swing through
+		{ bat: 75, arm: 65 },    // 3 follow-through
 	];
 	const p = poses[Math.min(scene, poses.length - 1)];
+	const jersey = '#e0483c', jerseyDark = '#b8362c', skin = '#ffdcb2', helmetColor = '#2748a3';
 
-	ctx.strokeStyle = '#c0392b';
-	ctx.fillStyle = '#c0392b';
-	ctx.lineWidth = 4;
 	ctx.lineCap = 'round';
 
 	// legs
+	ctx.strokeStyle = jerseyDark;
+	ctx.lineWidth = 9;
 	ctx.beginPath();
-	ctx.moveTo(0, 20); ctx.lineTo(-9, 40);
-	ctx.moveTo(0, 20); ctx.lineTo(9, 40);
+	ctx.moveTo(-5, -10); ctx.lineTo(-8, 0);
+	ctx.moveTo(5, -10); ctx.lineTo(8, 0);
 	ctx.stroke();
+	ctx.fillStyle = '#3a3a3a';
+	ctx.beginPath(); ctx.ellipse(-8, 1, 5, 3, 0, 0, Math.PI * 2); ctx.fill();
+	ctx.beginPath(); ctx.ellipse(8, 1, 5, 3, 0, 0, Math.PI * 2); ctx.fill();
 
 	// torso
+	ctx.fillStyle = jersey;
 	ctx.beginPath();
-	ctx.moveTo(0, -6); ctx.lineTo(0, 20);
-	ctx.stroke();
+	ctx.ellipse(0, -22, 13, 13, 0, 0, Math.PI * 2);
+	ctx.fill();
 
 	// arms + bat
 	const armRad = p.arm * Math.PI / 180;
-	const handX = 16 * Math.cos(armRad), handY = -2 + 16 * Math.sin(armRad);
+	const handX = 14 * Math.cos(armRad), handY = -28 + 14 * Math.sin(armRad);
+	ctx.strokeStyle = jersey;
+	ctx.lineWidth = 7;
 	ctx.beginPath();
-	ctx.moveTo(0, -2);
-	ctx.lineTo(handX, handY);
+	ctx.moveTo(0, -28); ctx.lineTo(handX, handY);
 	ctx.stroke();
+	ctx.fillStyle = skin;
+	ctx.beginPath(); ctx.arc(handX, handY, 4.5, 0, Math.PI * 2); ctx.fill();
 
 	const batRad = p.bat * Math.PI / 180;
-	ctx.strokeStyle = '#8a5a2b';
+	ctx.strokeStyle = '#a9702f';
 	ctx.lineWidth = 5;
+	ctx.lineCap = 'round';
 	ctx.beginPath();
 	ctx.moveTo(handX, handY);
 	ctx.lineTo(handX + 26 * Math.cos(batRad), handY + 26 * Math.sin(batRad));
 	ctx.stroke();
 
-	// head + helmet
-	ctx.fillStyle = '#f2c48b';
+	// head
+	ctx.fillStyle = skin;
 	ctx.beginPath();
-	ctx.arc(0, -14, 8, 0, Math.PI * 2);
+	ctx.arc(0, -42, 15, 0, Math.PI * 2);
 	ctx.fill();
-	ctx.fillStyle = '#1a3d7c';
+
+	drawCuteFace(-42, 15);
+
+	// batting helmet (with an ear-flap for a cuter, rounder silhouette)
+	ctx.fillStyle = helmetColor;
 	ctx.beginPath();
-	ctx.arc(0, -14, 8, Math.PI, Math.PI * 2);
+	ctx.arc(0, -42, 15.5, Math.PI, Math.PI * 2);
+	ctx.fill();
+	ctx.beginPath();
+	ctx.ellipse(0, -39, 11, 3.5, 0, 0, Math.PI * 2);
+	ctx.fill();
+	ctx.beginPath();
+	ctx.ellipse(-13, -37, 4, 6, 0, 0, Math.PI * 2);
 	ctx.fill();
 
 	ctx.restore();
