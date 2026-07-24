@@ -13,7 +13,7 @@
    ===================================================================== */
 
 const STAGE_W = 700, STAGE_H = 420;
-const MAX_BALL_COUNT = 10;
+const MAX_BALL_COUNT = 5;
 const LASTPOS = 430;      // y where a pitch reaches the catcher's mitt
 const MOUND_X = 350, MOUND_Y = 100; // pitcher's mound position (screen fits mound-to-home only)
 const PITCH_START_Y = MOUND_Y; // y where the ball leaves the pitcher's hand
@@ -53,6 +53,7 @@ let homerunTextScale = 0;
 let perfectTextScale = 0;
 let waitCount = 0;
 let soundFirst = true;
+let lastHomerunDistance = 0;
 
 const batterPosX = 310, batterPosY = 392; // batter's foot position, near home plate
 
@@ -304,6 +305,9 @@ const ball = {
 						homerunTextScale = 0;
 						perfectTextScale = 0;
 						waitCount = 0;
+						// Display-only estimated distance, driven by how well the ball was hit.
+						const power = (this.hitBallSpeed - 65) / (115 - 65); // 0 (just enough) .. 1 (full power)
+						lastHomerunDistance = Math.round(96 + power * 68 + Math.random() * 8);
 						soundHomerun();
 						return;
 					}
@@ -594,71 +598,93 @@ function drawHomeBG() {
 	ctx.strokeRect(base_center() - 55, 355, 34, 46);
 	ctx.strokeRect(base_center() + 21, 355, 34, 46);
 
-	// home plate
+	// home plate (drawn extra large so it reads clearly on screen)
 	ctx.fillStyle = '#fff';
+	ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+	ctx.lineWidth = 1.5;
 	ctx.beginPath();
-	ctx.moveTo(base_center() - 12, 392);
-	ctx.lineTo(base_center() + 12, 392);
-	ctx.lineTo(base_center() + 12, 400);
-	ctx.lineTo(base_center(), 408);
-	ctx.lineTo(base_center() - 12, 400);
+	ctx.moveTo(base_center() - 22, 388);
+	ctx.lineTo(base_center() + 22, 388);
+	ctx.lineTo(base_center() + 22, 402);
+	ctx.lineTo(base_center(), 416);
+	ctx.lineTo(base_center() - 22, 402);
 	ctx.closePath();
 	ctx.fill();
+	ctx.stroke();
 }
 
 function base_center() { return 350; }
 
+// The fence must be drawn at the exact screen height the home-run judgement
+// logic uses (see the L2/R2/C2 branch in ball.moveMe), otherwise a ball can be
+// ruled a home run while it still visually looks short of the wall. L2/R2
+// judge a flat threshold at y=260; C2 judges a curved threshold (deeper,
+// like a real center-field fence) using the same cx/cy/cr constants.
+function fenceYAt(dir, x) {
+	if (dir === 'center') {
+		const cx = 350, cy = 1036, cr = 2100;
+		return cy - Math.sqrt(Math.pow(cr, 2) - Math.pow(x - cx, 2)) + 1260;
+	}
+	return 260;
+}
+
 function drawOutfieldBG(dir) {
 	// sky
-	const sky = ctx.createLinearGradient(0, 0, 0, 150);
+	const sky = ctx.createLinearGradient(0, 0, 0, 170);
 	sky.addColorStop(0, '#a9d8ff');
 	sky.addColorStop(1, '#eef9ff');
 	ctx.fillStyle = sky;
-	ctx.fillRect(0, 0, STAGE_W, 150);
+	ctx.fillRect(0, 0, STAGE_W, 170);
 
-	// grass, perspective shading
-	const grass = ctx.createLinearGradient(0, 150, 0, STAGE_H);
+	// stands (crowd), sized to cover the full range the fence line can dip to
+	ctx.fillStyle = '#8892a3';
+	ctx.fillRect(0, 170, STAGE_W, 100);
+	ctx.fillStyle = 'rgba(0,0,0,0.12)';
+	for (let i = 0; i < 40; i++) {
+		ctx.fillRect(i * 18 + (i % 2), 176, 6, 90);
+	}
+
+	// grass, filled up to the fence line (this covers the lower part of the
+	// stands rect where the fence dips deeper, e.g. straightaway center)
+	const grass = ctx.createLinearGradient(0, 190, 0, STAGE_H);
 	grass.addColorStop(0, '#4f8f42');
 	grass.addColorStop(1, '#79c264');
 	ctx.fillStyle = grass;
-	ctx.fillRect(0, 150, STAGE_W, STAGE_H - 150);
+	ctx.beginPath();
+	ctx.moveTo(0, fenceYAt(dir, 0));
+	for (let x = 0; x <= STAGE_W; x += 20) ctx.lineTo(x, fenceYAt(dir, x));
+	ctx.lineTo(STAGE_W, STAGE_H);
+	ctx.lineTo(0, STAGE_H);
+	ctx.closePath();
+	ctx.fill();
 
-	// stripes converging based on direction
+	// mowing stripes on the grass
 	ctx.fillStyle = 'rgba(255,255,255,0.07)';
-	const bias = dir === 'left' ? -60 : (dir === 'right' ? 60 : 0);
 	for (let i = 0; i < 7; i++) {
-		ctx.beginPath();
-		const topX0 = i * (STAGE_W / 7) + bias * 0.15, topX1 = topX0 + STAGE_W / 14;
-		ctx.moveTo(topX0, 152);
-		ctx.lineTo(topX1, 152);
-		ctx.lineTo(topX1 + 100, STAGE_H);
-		ctx.lineTo(topX0 - 100, STAGE_H);
-		ctx.closePath();
-		if (i % 2 === 0) ctx.fill();
+		if (i % 2 === 0) ctx.fillRect(i * (STAGE_W / 7), 280, STAGE_W / 7, STAGE_H - 280);
 	}
 
-	// crowd / stands strip
-	ctx.fillStyle = '#8892a3';
-	ctx.fillRect(0, 118, STAGE_W, 22);
-	ctx.fillStyle = 'rgba(0,0,0,0.12)';
-	for (let i = 0; i < 40; i++) {
-		ctx.fillRect(i * 18 + (i % 2), 120, 6, 18);
-	}
-
-	// outfield wall
-	ctx.fillStyle = '#2f6b4f';
-	ctx.fillRect(0, 140, STAGE_W, 14);
-	ctx.strokeStyle = '#1c4a34';
+	// the outfield wall itself, following the judgement threshold exactly
+	ctx.strokeStyle = '#2f6b4f';
+	ctx.lineWidth = 10;
+	ctx.beginPath();
+	ctx.moveTo(0, fenceYAt(dir, 0));
+	for (let x = 0; x <= STAGE_W; x += 20) ctx.lineTo(x, fenceYAt(dir, x));
+	ctx.stroke();
+	ctx.strokeStyle = '#dfe6d8';
 	ctx.lineWidth = 2;
-	ctx.strokeRect(0, 140, STAGE_W, 14);
+	ctx.beginPath();
+	ctx.moveTo(0, fenceYAt(dir, 0) - 4);
+	for (let x = 0; x <= STAGE_W; x += 20) ctx.lineTo(x, fenceYAt(dir, x) - 4);
+	ctx.stroke();
 
 	// foul pole accent for L / R views
 	if (dir === 'left') {
 		ctx.fillStyle = '#ffde3d';
-		ctx.fillRect(30, 20, 6, 130);
+		ctx.fillRect(30, 30, 6, 140);
 	} else if (dir === 'right') {
 		ctx.fillStyle = '#ffde3d';
-		ctx.fillRect(STAGE_W - 36, 20, 6, 130);
+		ctx.fillRect(STAGE_W - 36, 30, 6, 140);
 	}
 }
 
@@ -926,12 +952,22 @@ function drawHomerunCelebration() {
 	let finishedGrowing;
 	if (!perfectFlg) {
 		if (homerunTextScale <= maxScale) homerunTextScale += 0.045;
-		drawZoomText('HOME RUN!', STAGE_W / 2, STAGE_H / 2, Math.min(homerunTextScale, maxScale), '#e63946');
+		drawZoomText('HOME RUN!', STAGE_W / 2, STAGE_H / 2 - 18, Math.min(homerunTextScale, maxScale), '#e63946');
 		finishedGrowing = homerunTextScale >= maxScale;
 	} else {
 		if (perfectTextScale <= maxScale) perfectTextScale += 0.045;
-		drawZoomText('PERFECT!!', STAGE_W / 2, STAGE_H / 2, Math.min(perfectTextScale, maxScale), '#ffb400');
+		drawZoomText('PERFECT!!', STAGE_W / 2, STAGE_H / 2 - 18, Math.min(perfectTextScale, maxScale), '#ffb400');
 		finishedGrowing = true;
+	}
+
+	if (finishedGrowing) {
+		ctx.save();
+		ctx.font = "bold 22px sans-serif";
+		ctx.textAlign = 'center';
+		ctx.textBaseline = 'middle';
+		ctx.fillStyle = '#233';
+		ctx.fillText(`推定飛距離 ${lastHomerunDistance} m`, STAGE_W / 2, STAGE_H / 2 + 36);
+		ctx.restore();
 	}
 
 	if (finishedGrowing || perfectFlg) {
