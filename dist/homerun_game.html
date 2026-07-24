@@ -358,11 +358,15 @@ const batter = {
 			if (x < 294) x = 294;
 			else if (x > 330) x = 330;
 			if (box === 2) x -= 250;
-			this.x = x;
+			this.x = x; // unchanged: this is what hitting_judge() actually uses
 
-			// Visual placement only (keeps this.x untouched for hit-judgement math):
-			// mirror box2's stance back onto the right-hand batter's box on screen.
-			const renderX = (box === 2) ? (700 - (this.x + 250)) : this.x;
+			// Visual placement only, kept separate from the physics `x` above:
+			// centre the sprite inside the drawn batter-box trapezoid instead of
+			// reusing the raw physics coordinate, which doesn't land inside the
+			// box's actual drawn bounds. dragFraction (0..1) carries the same
+			// stance-lean feel across into a small on-screen wiggle.
+			const dragFraction = (box === 2 ? (x - 44) : (x - 294)) / 36;
+			const renderX = (box === 2 ? 474 : 226) + (dragFraction - 0.5) * 36;
 			drawBatterSprite(this.sceneNo, renderX, this.y, box);
 		}
 	},
@@ -680,6 +684,9 @@ function startGame() {
 
 function boxChange() {
 	box = (box === 1) ? 2 : 1;
+	// Redraw immediately so the box switch is visible even while idle at the
+	// start screen (the animation loop isn't running yet to pick it up).
+	if (!gammingFlg && !homerunFlg) drawScene();
 }
 
 function startSwing() {
@@ -1151,26 +1158,37 @@ function drawMascotIcon(x, y, r) {
 
 /* ------------------------------ HUD --------------------------------- */
 
+function drawHUDBadge(x, y, w, h) {
+	ctx.fillStyle = 'rgba(0,0,0,0.65)';
+	ctx.beginPath();
+	if (ctx.roundRect) ctx.roundRect(x, y, w, h, 8);
+	else ctx.rect(x, y, w, h);
+	ctx.fill();
+}
+
 function drawHUD() {
 	if (!batter.show) return;
 
-	ctx.fillStyle = 'rgba(20,20,20,0.75)';
-	ctx.font = "bold 16px sans-serif";
-	ctx.fillText(`残り ${Number(MAX_BALL_COUNT - ballCount + 1)}球`, 14, 22);
+	const badgeY = 6, badgeH = 42;
+	drawHUDBadge(8, badgeY, 112, badgeH);
+	drawHUDBadge(STAGE_W - 148, badgeY, 140, badgeH);
+
+	ctx.fillStyle = '#fff';
+	ctx.font = "bold 15px sans-serif";
+	ctx.fillText(`残り ${Number(MAX_BALL_COUNT - ballCount + 1)}球`, 18, badgeY + 17);
 
 	for (let i = 0; i <= MAX_BALL_COUNT - ballCount; i++) {
-		const yy = (i % 2 === 0) ? 34 : 46;
-		drawBallIcon(20 + i * 15, yy, 6);
+		const yy = badgeY + (i % 2 === 0 ? 27 : 36);
+		drawBallIcon(24 + i * 14, yy, 5.5);
 	}
 
-	ctx.fillStyle = 'rgba(20,20,20,0.75)';
 	ctx.textAlign = 'right';
-	ctx.fillText(`ホームラン ${Number(homerunCount)}本`, STAGE_W - 14, 22);
+	ctx.fillText(`ホームラン ${Number(homerunCount)}本`, STAGE_W - 18, badgeY + 17);
 	ctx.textAlign = 'left';
 
 	for (let i = 0; i < homerunCount; i++) {
-		const yy = (i % 2 === 0) ? 34 : 46;
-		drawMascotIcon(STAGE_W - 20 - i * 15, yy, 7);
+		const yy = badgeY + (i % 2 === 0 ? 27 : 36);
+		drawMascotIcon(STAGE_W - 24 - i * 14, yy, 6.5);
 	}
 }
 
