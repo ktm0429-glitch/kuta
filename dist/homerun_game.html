@@ -759,23 +759,15 @@ function drawHomeBG() {
 	ctx.fillStyle = '#009900';
 	ctx.fillRect(0, BANNER_H, STAGE_W, STAGE_H - BANNER_H);
 
-	// upper foul lines: a shallow "tent" peaking above the mound, fading into
-	// plain grass before reaching home plate (matches the source art, which
-	// does not draw one continuous line the whole way)
+	// foul lines: one continuous line per side, from each batter box's outer
+	// corner straight out to the fence corner. Real foul lines never bend
+	// back toward the middle near the mound - the mound just sits in the
+	// open grass between them.
 	ctx.strokeStyle = '#fff';
 	ctx.lineWidth = 2.5;
 	ctx.beginPath();
-	ctx.moveTo(0, 80);
-	ctx.lineTo(base_center(), 68);
-	ctx.lineTo(STAGE_W, 80);
-	ctx.stroke();
-
-	// lower foul lines, resuming near the batter boxes
-	ctx.beginPath();
-	ctx.moveTo(0, 152);
-	ctx.lineTo(base_center() - 92, 175);
-	ctx.moveTo(STAGE_W, 152);
-	ctx.lineTo(base_center() + 92, 175);
+	ctx.moveTo(base_center() - 165, 350); ctx.lineTo(0, 85);
+	ctx.moveTo(base_center() + 165, 350); ctx.lineTo(STAGE_W, 85);
 	ctx.stroke();
 
 	// pitcher's mound: a small, flat, wide ellipse (no dirt path to home plate)
