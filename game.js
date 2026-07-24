@@ -15,7 +15,7 @@
 const STAGE_W = 700, STAGE_H = 420;
 const MAX_BALL_COUNT = 10;
 const LASTPOS = 430;      // y where a pitch reaches the catcher's mitt
-const PITCH_START_Y = 98; // y where the ball leaves the pitcher's hand
+const PITCH_START_Y = 228; // y where the ball leaves the pitcher's hand (matches the mound position)
 const CURVE_START_Y = 120;// y after which curve/shoot pitches start bending
 const BAT_CONTACT_Y = 300;
 const HOMERUN_WAIT = 40;
@@ -101,7 +101,7 @@ function soundHomerun() {
 
 const pitcherCnt = [0, 25, 35, 36, 65];
 const pitcher = {
-	x: 316, y: 100, timeCnt: 0, indexNo: -1, sceneNo: 0, show: true,
+	x: 350, y: 230, timeCnt: 0, indexNo: -1, sceneNo: 0, show: true,
 	initMe() { this.timeCnt = 0; this.indexNo = -1; this.sceneNo = 0; },
 	startThrow() {
 		if (!this.show) return;
@@ -118,7 +118,7 @@ const pitcher = {
 			this.sceneNo++;
 			if (pitcherCnt.length <= this.sceneNo) this.sceneNo = pitcherCnt.length - 1;
 			if (this.sceneNo === 2) {
-				ball.initMe(340, PITCH_START_Y);
+				ball.initMe(350, PITCH_START_Y);
 				ball.show = true;
 			}
 		}
@@ -594,13 +594,13 @@ function drawHomeBG() {
 	ctx.closePath();
 	ctx.fill();
 
-	// pitcher's mound
+	// pitcher's mound (sits inside the infield diamond, between home plate and the outfield)
 	ctx.fillStyle = '#c68a52';
 	ctx.beginPath();
-	ctx.ellipse(350, 140, 26, 12, 0, 0, Math.PI * 2);
+	ctx.ellipse(350, 270, 30, 14, 0, 0, Math.PI * 2);
 	ctx.fill();
 	ctx.fillStyle = '#e8d3b0';
-	ctx.fillRect(345, 136, 10, 4);
+	ctx.fillRect(345, 266, 10, 4);
 
 	// batter boxes
 	ctx.strokeStyle = 'rgba(255,255,255,0.85)';
