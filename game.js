@@ -27,6 +27,18 @@ const ctx = canvas.getContext('2d');
 const btnStart = document.getElementById('btnStart');
 const btnBoxChange = document.getElementById('btnBoxChange');
 
+// Render at native pixel density so detailed art stays crisp on hi-DPI screens.
+const DPR = Math.min(window.devicePixelRatio || 1, 2);
+canvas.width = STAGE_W * DPR;
+canvas.height = STAGE_H * DPR;
+ctx.scale(DPR, DPR);
+
+// Deterministic pseudo-random (stable across frames, no per-frame flicker in textures).
+function pseudo(i) {
+	const x = Math.sin(i * 12.9898 + 78.233) * 43758.5453;
+	return x - Math.floor(x);
+}
+
 /* ---------------------------- state ---------------------------- */
 
 let gammingFlg = false;   // true from pitch start until result is settled
@@ -650,142 +662,350 @@ function fenceYAt(dir, x) {
 }
 
 function drawOutfieldBG(dir) {
-	const wallH = 24;
+	const padH = 10;   // bottom kick-padding strip
+	const boardH = 24; // ad-board strip
+	const capH = 5;    // top cap rail
+	const wallH = padH + boardH + capH;
+	const wallTopAt = (x) => fenceYAt(dir, x) - wallH;
+	const pathAlong = (yFn) => { ctx.moveTo(0, yFn(0)); for (let x = 10; x <= STAGE_W; x += 10) ctx.lineTo(x, yFn(x)); };
 
-	// sky
+	// ---- sky -------------------------------------------------------
 	const sky = ctx.createLinearGradient(0, 0, 0, 170);
-	sky.addColorStop(0, '#2f8fe4');
-	sky.addColorStop(0.7, '#7cc0f5');
-	sky.addColorStop(1, '#cfe9ff');
+	sky.addColorStop(0, '#1f78d1');
+	sky.addColorStop(0.55, '#4fa3ea');
+	sky.addColorStop(1, '#dcefff');
 	ctx.fillStyle = sky;
 	ctx.fillRect(0, 0, STAGE_W, 170);
 
-	// soft clouds
-	ctx.fillStyle = 'rgba(255,255,255,0.85)';
-	[[90, 40, 24], [125, 48, 16], [500, 30, 26], [545, 38, 17], [280, 55, 15]].forEach(([cx, cy, r]) => {
+	// sun glow
+	const sunX = dir === 'left' ? 610 : 90;
+	const glow = ctx.createRadialGradient(sunX, 34, 4, sunX, 34, 85);
+	glow.addColorStop(0, 'rgba(255,250,225,0.9)');
+	glow.addColorStop(1, 'rgba(255,250,225,0)');
+	ctx.fillStyle = glow;
+	ctx.fillRect(sunX - 90, -50, 180, 170);
+
+	// layered clouds (soft double-blob for volume)
+	[[130, 42, 26], [340, 30, 20], [520, 50, 30], [605, 34, 18]].forEach(([cx, cy, r], i) => {
+		ctx.fillStyle = 'rgba(255,255,255,0.55)';
+		ctx.beginPath(); ctx.ellipse(cx + 6, cy + 4, r * 1.15, r * 0.62, 0, 0, Math.PI * 2); ctx.fill();
+		ctx.fillStyle = 'rgba(255,255,255,0.92)';
 		ctx.beginPath(); ctx.ellipse(cx, cy, r, r * 0.55, 0, 0, Math.PI * 2); ctx.fill();
+		ctx.beginPath(); ctx.ellipse(cx - r * 0.7, cy + 3, r * 0.6, r * 0.4, 0, 0, Math.PI * 2); ctx.fill();
 	});
 
-	// distant city skyline silhouette (generic building blocks, no branding)
+	// ---- distant haze (atmospheric perspective near the horizon) --
+	const haze = ctx.createLinearGradient(0, 120, 0, 170);
+	haze.addColorStop(0, 'rgba(220,235,250,0)');
+	haze.addColorStop(1, 'rgba(220,235,250,0.75)');
+	ctx.fillStyle = haze;
+	ctx.fillRect(0, 120, STAGE_W, 50);
+
+	// ---- city skyline (shaded, lit windows, rooftop details) ------
 	const buildings = [
-		{ x: -10, w: 70, h: 34 }, { x: 55, w: 42, h: 58 }, { x: 95, w: 55, h: 30 },
-		{ x: 405, w: 46, h: 32 }, { x: 448, w: 46, h: 56 }, { x: 500, w: 58, h: 28 },
-		{ x: 565, w: 48, h: 42 }, { x: 620, w: 60, h: 24 }, { x: 670, w: 40, h: 36 },
+		{ x: -10, w: 66, h: 32 }, { x: 48, w: 40, h: 60, antenna: true }, { x: 90, w: 52, h: 28 },
+		{ x: 150, w: 34, h: 22 },
+		{ x: 400, w: 44, h: 30 }, { x: 442, w: 44, h: 58, tank: true }, { x: 494, w: 56, h: 26 },
+		{ x: 558, w: 46, h: 44 }, { x: 612, w: 58, h: 22 }, { x: 664, w: 40, h: 34, antenna: true },
 	];
-	ctx.fillStyle = '#9fb6cf';
-	buildings.forEach(b => ctx.fillRect(b.x, 150 - b.h, b.w, b.h));
-	ctx.fillStyle = 'rgba(255,255,255,0.5)';
 	buildings.forEach(b => {
-		for (let wx = b.x + 4; wx < b.x + b.w - 4; wx += 8) {
-			for (let wy = 150 - b.h + 5; wy < 146; wy += 9) ctx.fillRect(wx, wy, 2, 3);
+		const top = 150 - b.h;
+		const bg = ctx.createLinearGradient(0, top, 0, 150);
+		bg.addColorStop(0, '#b7c9dd');
+		bg.addColorStop(1, '#8fa4bc');
+		ctx.fillStyle = bg;
+		ctx.fillRect(b.x, top, b.w, b.h);
+		ctx.fillStyle = 'rgba(255,255,255,0.35)';
+		ctx.fillRect(b.x, top, 2, b.h);
+		if (b.antenna) {
+			ctx.strokeStyle = '#8fa4bc'; ctx.lineWidth = 1.5;
+			ctx.beginPath(); ctx.moveTo(b.x + b.w / 2, top); ctx.lineTo(b.x + b.w / 2, top - 12); ctx.stroke();
+			ctx.fillStyle = '#e05a5a'; ctx.beginPath(); ctx.arc(b.x + b.w / 2, top - 12, 1.6, 0, Math.PI * 2); ctx.fill();
+		}
+		if (b.tank) {
+			ctx.fillStyle = '#7f93aa';
+			ctx.fillRect(b.x + b.w / 2 - 7, top - 9, 14, 8);
+			ctx.beginPath(); ctx.ellipse(b.x + b.w / 2, top - 9, 7, 2.4, 0, 0, Math.PI * 2); ctx.fill();
+		}
+		for (let wx = b.x + 4; wx < b.x + b.w - 3; wx += 7) {
+			for (let wy = top + 5; wy < 146; wy += 8) {
+				const lit = pseudo(wx * 3 + wy * 7 + b.x) > 0.6;
+				ctx.fillStyle = lit ? 'rgba(255,225,140,0.85)' : 'rgba(255,255,255,0.28)';
+				ctx.fillRect(wx, wy, 2.2, 3.2);
+			}
 		}
 	});
 
-	// crowd / stands band (a generous fixed rect; grass + wall drawn later
-	// correctly cover whatever part of it sits below the actual fence line)
-	ctx.fillStyle = '#8892a3';
-	ctx.fillRect(0, 150, STAGE_W, 100);
-	ctx.fillStyle = 'rgba(0,0,0,0.15)';
-	for (let i = 0; i < 45; i++) ctx.fillRect(i * 16 + (i % 2) * 3, 156, 7, 88);
+	// ---- crowd / stands ---------------------------------------------
+	// roof/overhang shading above the crowd
+	ctx.fillStyle = '#6b7482';
+	ctx.fillRect(0, 148, STAGE_W, 8);
+	const standsGrad = ctx.createLinearGradient(0, 156, 0, 246);
+	standsGrad.addColorStop(0, '#7e8b9c');
+	standsGrad.addColorStop(1, '#9aa6b5');
+	ctx.fillStyle = standsGrad;
+	ctx.fillRect(0, 156, STAGE_W, 90);
+	// seated-crowd texture: small varied-colour dots in staggered rows
+	const crowdPalette = ['#e8b98a', '#c98a5c', '#8a5a3c', '#274b8f', '#b1332b', '#2f7d4f', '#e8e8e8', '#3a3a3a', '#d9a441'];
+	for (let row = 0; row < 8; row++) {
+		const ry = 160 + row * 10.5;
+		for (let col = 0; col < 78; col++) {
+			const seed = row * 131 + col;
+			const rx = col * 9 + (row % 2 === 0 ? 0 : 4.5) + pseudo(seed) * 2;
+			if (rx > STAGE_W) continue;
+			ctx.fillStyle = crowdPalette[Math.floor(pseudo(seed * 3.1) * crowdPalette.length)];
+			ctx.beginPath();
+			ctx.ellipse(rx, ry, 3.1, 3.6, 0, 0, Math.PI * 2);
+			ctx.fill();
+		}
+	}
+	// gentle shadow where the stands meet the field
+	const standsShadow = ctx.createLinearGradient(0, 228, 0, 250);
+	standsShadow.addColorStop(0, 'rgba(0,0,0,0)');
+	standsShadow.addColorStop(1, 'rgba(0,0,0,0.25)');
+	ctx.fillStyle = standsShadow;
+	ctx.fillRect(0, 228, STAGE_W, 22);
 
-	// stadium light towers
+	// ---- stadium light towers --------------------------------------
 	function lightTower(cx) {
-		ctx.strokeStyle = '#5b6472';
+		const metal = ctx.createLinearGradient(cx - 14, 0, cx + 14, 0);
+		metal.addColorStop(0, '#cbd3dc');
+		metal.addColorStop(0.5, '#6b7684');
+		metal.addColorStop(1, '#4a525e');
+		ctx.strokeStyle = metal;
 		ctx.lineWidth = 3;
 		ctx.beginPath();
-		ctx.moveTo(cx - 12, 170); ctx.lineTo(cx, 58);
-		ctx.moveTo(cx + 12, 170); ctx.lineTo(cx, 58);
-		for (let yy = 165; yy > 65; yy -= 20) {
-			const t = (yy - 58) / (170 - 58);
-			ctx.moveTo(cx - 12 * t, yy); ctx.lineTo(cx + 12 * t, yy);
+		ctx.moveTo(cx - 13, 168); ctx.lineTo(cx, 46);
+		ctx.moveTo(cx + 13, 168); ctx.lineTo(cx, 46);
+		for (let yy = 163; yy > 52; yy -= 16) {
+			const t = (yy - 46) / (168 - 46);
+			ctx.moveTo(cx - 13 * t, yy); ctx.lineTo(cx + 13 * t, yy);
 		}
 		ctx.stroke();
-		ctx.fillStyle = '#48505e';
-		ctx.fillRect(cx - 20, 48, 40, 11);
-		ctx.fillStyle = '#ffe9a6';
-		for (let lx = cx - 15; lx <= cx + 15; lx += 8) { ctx.beginPath(); ctx.arc(lx, 53, 2.6, 0, Math.PI * 2); ctx.fill(); }
+		ctx.fillStyle = '#3d434e';
+		ctx.fillRect(cx - 4, 168, 8, 10);
+		// two lamp decks
+		[36, 50].forEach((deckY, i) => {
+			const w = i === 0 ? 46 : 38;
+			ctx.fillStyle = '#3c4149';
+			ctx.fillRect(cx - w / 2, deckY, w, 9);
+			ctx.strokeStyle = '#20242a'; ctx.lineWidth = 1;
+			ctx.strokeRect(cx - w / 2, deckY, w, 9);
+			ctx.fillStyle = '#fff2c2';
+			for (let lx = cx - w / 2 + 5; lx <= cx + w / 2 - 5; lx += 7) {
+				ctx.beginPath(); ctx.arc(lx, deckY + 4.5, 2.4, 0, Math.PI * 2); ctx.fill();
+			}
+		});
+		// aviation warning light on top
+		ctx.fillStyle = '#e2413a';
+		ctx.beginPath(); ctx.arc(cx, 33, 2, 0, Math.PI * 2); ctx.fill();
 	}
-	lightTower(50);
-	lightTower(STAGE_W - 50);
+	lightTower(46);
+	lightTower(STAGE_W - 46);
 
-	// scoreboard silhouette (center view only, generic colored panels, no logos/text)
+	// ---- scoreboard (center view only; abstract shapes, no branding) ----
 	if (dir === 'center') {
-		ctx.fillStyle = '#212b38';
-		ctx.fillRect(STAGE_W / 2 - 100, 84, 200, 62);
-		ctx.strokeStyle = '#10161e';
-		ctx.lineWidth = 4;
-		ctx.strokeRect(STAGE_W / 2 - 100, 84, 200, 62);
-		ctx.fillStyle = '#49c0ff'; ctx.fillRect(STAGE_W / 2 - 90, 92, 84, 20);
-		ctx.fillStyle = '#ff6a5e'; ctx.fillRect(STAGE_W / 2 - 90, 116, 40, 24);
-		ctx.fillStyle = '#fafafa'; ctx.fillRect(STAGE_W / 2 - 46, 116, 40, 24);
-		ctx.fillStyle = '#ffcf4d'; ctx.fillRect(STAGE_W / 2, 92, 90, 48);
+		const bbX = STAGE_W / 2 - 108, bbY = 78, bbW = 216, bbH = 68;
+		ctx.fillStyle = '#0f151d';
+		ctx.fillRect(bbX - 5, bbY - 5, bbW + 10, bbH + 10);
+		const bez = ctx.createLinearGradient(0, bbY, 0, bbY + bbH);
+		bez.addColorStop(0, '#333c48'); bez.addColorStop(1, '#171d24');
+		ctx.fillStyle = bez;
+		ctx.fillRect(bbX - 3, bbY - 3, bbW + 6, bbH + 6);
+
+		const screen = ctx.createLinearGradient(0, bbY, 0, bbY + bbH);
+		screen.addColorStop(0, '#123a52'); screen.addColorStop(1, '#0a1f2e');
+		ctx.fillStyle = screen;
+		ctx.fillRect(bbX, bbY, bbW, bbH);
+
+		ctx.fillStyle = '#49c8ff'; ctx.fillRect(bbX + 8, bbY + 8, bbW - 16, 22);
+		ctx.fillStyle = '#ff6a5e'; ctx.fillRect(bbX + 8, bbY + 34, 44, 26);
+		ctx.fillStyle = '#f4f6f8'; ctx.fillRect(bbX + 56, bbY + 34, 44, 26);
+		ctx.fillStyle = '#ffcf4d'; ctx.fillRect(bbX + 104, bbY + 8, bbW - 112, 52);
+		// LED scanlines for a video-board texture
+		ctx.strokeStyle = 'rgba(0,0,0,0.18)'; ctx.lineWidth = 1;
+		for (let ly = bbY + 2; ly < bbY + bbH; ly += 3) { ctx.beginPath(); ctx.moveTo(bbX, ly); ctx.lineTo(bbX + bbW, ly); ctx.stroke(); }
+		// flanking sponsor-panel shapes (abstract, no text)
+		ctx.fillStyle = '#e7e9ec'; ctx.fillRect(bbX - 46, bbY + 12, 34, 44);
+		ctx.fillStyle = '#e7e9ec'; ctx.fillRect(bbX + bbW + 12, bbY + 12, 34, 44);
 	}
 
-	// grass, filled up to the fence line (this covers the lower part of the
-	// stands rect where the fence dips deeper, e.g. straightaway center)
+	// ---- grass -------------------------------------------------------
 	const grass = ctx.createLinearGradient(0, 190, 0, STAGE_H);
-	grass.addColorStop(0, '#4f8f42');
-	grass.addColorStop(1, '#79c264');
+	grass.addColorStop(0, '#417f37');
+	grass.addColorStop(0.5, '#5a9e49');
+	grass.addColorStop(1, '#7fc766');
 	ctx.fillStyle = grass;
 	ctx.beginPath();
-	ctx.moveTo(0, fenceYAt(dir, 0));
-	for (let x = 0; x <= STAGE_W; x += 20) ctx.lineTo(x, fenceYAt(dir, x));
-	ctx.lineTo(STAGE_W, STAGE_H);
-	ctx.lineTo(0, STAGE_H);
+	pathAlong((x) => fenceYAt(dir, x));
+	ctx.lineTo(STAGE_W, STAGE_H); ctx.lineTo(0, STAGE_H);
 	ctx.closePath();
 	ctx.fill();
 
-	// warning track (dirt strip right in front of the wall, like a real park)
-	ctx.fillStyle = '#c8935f';
+	// soft contact shadow the wall casts onto the grass/track
+	const wallShadow = ctx.createLinearGradient(0, 0, 0, 34);
+	wallShadow.addColorStop(0, 'rgba(0,0,0,0.28)');
+	wallShadow.addColorStop(1, 'rgba(0,0,0,0)');
+	ctx.save();
 	ctx.beginPath();
-	ctx.moveTo(0, fenceYAt(dir, 0));
-	for (let x = 0; x <= STAGE_W; x += 20) ctx.lineTo(x, fenceYAt(dir, x));
-	for (let x = STAGE_W; x >= 0; x -= 20) ctx.lineTo(x, fenceYAt(dir, x) + 16);
+	pathAlong((x) => fenceYAt(dir, x));
+	ctx.lineTo(STAGE_W, STAGE_H); ctx.lineTo(0, STAGE_H);
 	ctx.closePath();
-	ctx.fill();
+	ctx.clip();
+	ctx.translate(0, fenceYAt(dir, STAGE_W / 2));
+	ctx.fillStyle = wallShadow;
+	ctx.fillRect(0, -4, STAGE_W, 34);
+	ctx.restore();
 
-	// mowing stripes on the grass
-	ctx.fillStyle = 'rgba(255,255,255,0.07)';
-	for (let i = 0; i < 7; i++) {
-		if (i % 2 === 0) ctx.fillRect(i * (STAGE_W / 7), 300, STAGE_W / 7, STAGE_H - 300);
+	// mowing stripes (trapezoids that widen toward the viewer for perspective)
+	ctx.save();
+	ctx.beginPath();
+	pathAlong((x) => fenceYAt(dir, x));
+	ctx.lineTo(STAGE_W, STAGE_H); ctx.lineTo(0, STAGE_H);
+	ctx.closePath();
+	ctx.clip();
+	ctx.fillStyle = 'rgba(255,255,255,0.08)';
+	const bands = 8;
+	for (let i = 0; i < bands; i++) {
+		if (i % 2 !== 0) continue;
+		const topX0 = i * (STAGE_W / bands), topX1 = topX0 + STAGE_W / bands;
+		const spread = 90;
+		ctx.beginPath();
+		ctx.moveTo(topX0, 150);
+		ctx.lineTo(topX1, 150);
+		ctx.lineTo(topX1 + spread, STAGE_H);
+		ctx.lineTo(topX0 - spread, STAGE_H);
+		ctx.closePath();
+		ctx.fill();
 	}
+	ctx.restore();
 
-	// outfield wall with ad-board-style color panels (generic blocks, not real ads)
-	const panelColors = ['#1c5fa8', '#d94b3d', '#2e9e5b', '#e0a52e', '#1c5fa8', '#7a4fc7'];
+	// ---- warning track (speckled dirt) -------------------------------
+	const trackGrad = ctx.createLinearGradient(0, 0, 0, 20);
+	trackGrad.addColorStop(0, '#b87c48');
+	trackGrad.addColorStop(1, '#a8703f');
+	ctx.save();
+	ctx.beginPath();
+	pathAlong((x) => fenceYAt(dir, x));
+	for (let x = STAGE_W; x >= 0; x -= 10) ctx.lineTo(x, fenceYAt(dir, x) + 17);
+	ctx.closePath();
+	ctx.clip();
+	ctx.translate(0, fenceYAt(dir, STAGE_W / 2));
+	ctx.fillStyle = trackGrad;
+	ctx.fillRect(0, -2, STAGE_W, 24);
+	for (let i = 0; i < 260; i++) {
+		const sx = pseudo(i * 7.3) * STAGE_W;
+		const sy = pseudo(i * 3.1 + 4) * 18 - 1;
+		ctx.fillStyle = pseudo(i) > 0.5 ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.12)';
+		ctx.fillRect(sx, sy, 1.6, 1.6);
+	}
+	ctx.restore();
+
+	// ---- outfield wall: padding + ad boards + cap rail --------------
+	// base padding (with vertical seam texture)
+	ctx.save();
+	ctx.beginPath();
+	pathAlong((x) => wallTopAt(x) + boardH + capH);
+	for (let x = STAGE_W; x >= 0; x -= 10) ctx.lineTo(x, fenceYAt(dir, x));
+	ctx.closePath();
+	ctx.clip();
+	const padGrad = ctx.createLinearGradient(0, 0, 0, padH);
+	padGrad.addColorStop(0, '#1d4a34');
+	padGrad.addColorStop(1, '#123324');
+	ctx.translate(0, 0);
+	ctx.fillStyle = padGrad;
+	ctx.fillRect(0, wallTopAt(0) + boardH + capH, STAGE_W, padH + 6);
+	ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 1.2;
+	for (let x = 8; x < STAGE_W; x += 16) {
+		ctx.beginPath();
+		ctx.moveTo(x, wallTopAt(x) + boardH + capH);
+		ctx.lineTo(x, fenceYAt(dir, x));
+		ctx.stroke();
+	}
+	ctx.restore();
+
+	// ad-board panels (gradient-shaded, framed, generic colour blocks - no real ads)
+	const panelColors = ['#1c5fa8', '#c8402f', '#218a52', '#d99a1f', '#2d5fa8', '#7a4fc7', '#c8402f', '#218a52'];
 	const segW = STAGE_W / panelColors.length;
 	panelColors.forEach((color, i) => {
 		const x0 = i * segW, x1 = x0 + segW;
-		ctx.fillStyle = color;
+		ctx.save();
 		ctx.beginPath();
-		ctx.moveTo(x0, fenceYAt(dir, x0) - wallH);
-		for (let x = x0; x <= x1; x += 10) ctx.lineTo(x, fenceYAt(dir, x) - wallH);
-		for (let x = x1; x >= x0; x -= 10) ctx.lineTo(x, fenceYAt(dir, x));
+		ctx.moveTo(x0, wallTopAt(x0));
+		for (let x = x0; x <= x1; x += 8) ctx.lineTo(x, wallTopAt(x));
+		for (let x = x1; x >= x0; x -= 8) ctx.lineTo(x, wallTopAt(x) + boardH);
 		ctx.closePath();
-		ctx.fill();
-		ctx.strokeStyle = 'rgba(0,0,0,0.2)';
-		ctx.lineWidth = 1.5;
-		ctx.beginPath();
-		ctx.moveTo(x0, fenceYAt(dir, x0) - wallH);
-		ctx.lineTo(x0, fenceYAt(dir, x0));
-		ctx.stroke();
+		ctx.clip();
+		const midY = wallTopAt((x0 + x1) / 2);
+		const panelGrad = ctx.createLinearGradient(0, midY, 0, midY + boardH);
+		panelGrad.addColorStop(0, shadeColor(color, 22));
+		panelGrad.addColorStop(0.45, color);
+		panelGrad.addColorStop(1, shadeColor(color, -28));
+		ctx.fillStyle = panelGrad;
+		ctx.fillRect(x0, midY - 2, segW + 1, boardH + 4);
+		// top highlight + bottom shadow line for a raised-board look
+		ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1.4;
+		ctx.beginPath(); ctx.moveTo(x0, wallTopAt(x0) + 1.5); ctx.lineTo(x1, wallTopAt(x1) + 1.5); ctx.stroke();
+		ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 1.4;
+		ctx.beginPath(); ctx.moveTo(x0, wallTopAt(x0) + boardH - 1); ctx.lineTo(x1, wallTopAt(x1) + boardH - 1); ctx.stroke();
+		ctx.restore();
+
+		ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 1.6;
+		ctx.beginPath(); ctx.moveTo(x0, wallTopAt(x0)); ctx.lineTo(x0, wallTopAt(x0) + boardH); ctx.stroke();
 	});
+
+	// cap rail (brushed-metal look) along the very top
+	ctx.save();
+	ctx.beginPath();
+	pathAlong((x) => wallTopAt(x));
+	for (let x = STAGE_W; x >= 0; x -= 10) ctx.lineTo(x, wallTopAt(x) + capH);
+	ctx.closePath();
+	const capGrad = ctx.createLinearGradient(0, 0, 0, capH);
+	capGrad.addColorStop(0, '#e7ebef');
+	capGrad.addColorStop(1, '#9aa4ad');
+	ctx.fillStyle = capGrad;
+	ctx.fill();
+	ctx.restore();
 
 	// yellow home-run line along the top edge of the wall
 	ctx.strokeStyle = '#ffd400';
 	ctx.lineWidth = 3;
 	ctx.beginPath();
-	ctx.moveTo(0, fenceYAt(dir, 0) - wallH);
-	for (let x = 0; x <= STAGE_W; x += 20) ctx.lineTo(x, fenceYAt(dir, x) - wallH);
+	pathAlong((x) => wallTopAt(x));
 	ctx.stroke();
 
-	// foul pole accent for L / R views
-	if (dir === 'left') {
-		ctx.fillStyle = '#ffde3d';
-		ctx.fillRect(28, 30, 5, 210);
-	} else if (dir === 'right') {
-		ctx.fillStyle = '#ffde3d';
-		ctx.fillRect(STAGE_W - 33, 30, 5, 210);
+	// ---- foul poles (L / R views): pole, screen mesh, pennant --------
+	if (dir === 'left' || dir === 'right') {
+		const px = dir === 'left' ? 30 : STAGE_W - 30;
+		const poleTop = 24, poleBottom = wallTopAt(px) + capH;
+		const poleGrad = ctx.createLinearGradient(px - 3, 0, px + 3, 0);
+		poleGrad.addColorStop(0, '#fff3a0');
+		poleGrad.addColorStop(0.5, '#ffd400');
+		poleGrad.addColorStop(1, '#c99e00');
+		ctx.fillStyle = poleGrad;
+		ctx.fillRect(px - 2.5, poleTop, 5, poleBottom - poleTop);
+		// screen netting alongside the pole (common at real parks)
+		ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1;
+		const meshX = dir === 'left' ? px + 4 : px - 34;
+		for (let gx = 0; gx <= 30; gx += 6) { ctx.beginPath(); ctx.moveTo(meshX + gx, poleTop + 10); ctx.lineTo(meshX + gx, poleBottom); ctx.stroke(); }
+		for (let gy = poleTop + 10; gy <= poleBottom; gy += 8) { ctx.beginPath(); ctx.moveTo(meshX, gy); ctx.lineTo(meshX + 30, gy); ctx.stroke(); }
+		// pennant flag near the top
+		ctx.fillStyle = '#e2413a';
+		ctx.beginPath();
+		ctx.moveTo(px + 2.5, poleTop + 4);
+		ctx.lineTo(px + 22, poleTop + 9);
+		ctx.lineTo(px + 2.5, poleTop + 14);
+		ctx.closePath();
+		ctx.fill();
 	}
+}
+
+// Lighten (positive amt) or darken (negative amt) a "#rrggbb" colour.
+function shadeColor(hex, amt) {
+	const n = parseInt(hex.slice(1), 16);
+	let r = (n >> 16) + amt, g = ((n >> 8) & 0xff) + amt, b = (n & 0xff) + amt;
+	r = Math.max(0, Math.min(255, r)); g = Math.max(0, Math.min(255, g)); b = Math.max(0, Math.min(255, b));
+	return `rgb(${r},${g},${b})`;
 }
 
 /* ------------------------- simple vector sprites -------------------- */
