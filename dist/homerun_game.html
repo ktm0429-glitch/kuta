@@ -836,14 +836,29 @@ function fenceYAt(dir, x) {
 	return 260;
 }
 
-// Wall height tapers across the width so it reads as receding toward centre
-// field (a flat wall looked artificial). The bottom edge - the part the
-// home-run judgement actually cares about - is always exactly fenceYAt(),
-// unaffected by this taper.
+// The foul pole sits well inside the frame (not at the screen edge) - this
+// matches both the reference game's actual footage and where the ported
+// hit-physics trajectories actually land (verified by replaying the ball
+// math offline: pulled fly balls land around screen-x 350-440, never near
+// the edges). Past the pole is foul territory (wall stays a constant, near
+// height); on the other side the wall recedes toward centre field.
+const POLE_X_RIGHT = 420, POLE_X_LEFT = STAGE_W - POLE_X_RIGHT;
+
+// Wall height bends at the pole so it reads as receding toward centre field
+// on one side and staying at a constant near distance (foul territory) on
+// the other. The bottom edge - the part the home-run judgement actually
+// cares about - is always exactly fenceYAt(), unaffected by this.
 function wallHAt(dir, x) {
 	if (dir === 'center') return 20;
-	const t = x / STAGE_W; // 0..1 across the screen
-	return dir === 'left' ? (52 - 36 * t) : (16 + 36 * t);
+	if (dir === 'right') {
+		if (x >= POLE_X_RIGHT) return 18;
+		const t = x / POLE_X_RIGHT; // 0 at centre field edge .. 1 at the pole
+		return 18 + 36 * t;
+	}
+	// left (mirror of right)
+	if (x <= POLE_X_LEFT) return 18;
+	const t = (STAGE_W - x) / POLE_X_LEFT;
+	return 18 + 36 * t;
 }
 function wallTopAt(dir, x) { return fenceYAt(dir, x) - wallHAt(dir, x); }
 
@@ -932,7 +947,8 @@ function drawOutfieldBG(dir) {
 
 	// foul line + pole (L / R views only)
 	if (dir === 'left' || dir === 'right') {
-		const poleX = dir === 'left' ? 0 : STAGE_W;
+		const poleX = dir === 'right' ? POLE_X_RIGHT : POLE_X_LEFT;
+		const nearCornerX = dir === 'right' ? STAGE_W : 0; // same side as the pole, not the far corner
 		ctx.strokeStyle = '#ffd400';
 		ctx.lineWidth = 4;
 		ctx.beginPath();
@@ -943,7 +959,7 @@ function drawOutfieldBG(dir) {
 		ctx.strokeStyle = '#fff';
 		ctx.lineWidth = 3;
 		ctx.beginPath();
-		ctx.moveTo(dir === 'left' ? STAGE_W : 0, STAGE_H);
+		ctx.moveTo(nearCornerX, STAGE_H);
 		ctx.lineTo(poleX, fenceYAt(dir, poleX));
 		ctx.stroke();
 	}
