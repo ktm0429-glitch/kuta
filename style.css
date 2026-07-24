@@ -1,0 +1,105 @@
+* { box-sizing: border-box; }
+
+html, body {
+	margin: 0;
+	padding: 0;
+	background: linear-gradient(#bfe3ff, #eaf6ff 40%, #f5fbff);
+	font-family: "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
+	color: #234;
+	min-height: 100%;
+}
+
+#header {
+	text-align: center;
+	padding: 14px 8px 4px;
+}
+
+#header h1 {
+	margin: 0;
+	font-size: 1.6em;
+	color: #1a4d8f;
+	text-shadow: 1px 1px 0 #fff;
+}
+
+#header .sub {
+	margin: 2px 0 0;
+	font-size: 0.75em;
+	color: #567;
+}
+
+#stage-wrap {
+	position: relative;
+	display: inline-block;
+	max-width: 700px;
+	width: 100%;
+	line-height: 0;
+	touch-action: none;
+	border: 4px solid #2e5c34;
+	border-radius: 10px;
+	overflow: hidden;
+	box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+}
+
+#field {
+	display: block;
+	width: 100%;
+	height: auto;
+	background: #7cc36b;
+	cursor: pointer;
+}
+
+.overlay-btn {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	width: 22%;
+	aspect-ratio: 1 / 1;
+	border-radius: 50%;
+	border: 4px solid #fff;
+	background: radial-gradient(circle at 35% 30%, #ffdd57, #ff9f1c 70%, #e07800);
+	color: #7a2e00;
+	font-weight: bold;
+	font-size: clamp(11px, 2.6vw, 18px);
+	line-height: 1.1;
+	cursor: pointer;
+	box-shadow: 0 4px 10px rgba(0,0,0,0.35);
+	transition: transform 0.08s ease;
+}
+.overlay-btn:active {
+	transform: translate(-50%, -50%) scale(0.93);
+}
+
+.corner-btn {
+	position: absolute;
+	right: 3%;
+	bottom: 3%;
+	width: 12%;
+	aspect-ratio: 1 / 1;
+	border-radius: 50%;
+	border: 3px solid #fff;
+	background: rgba(20, 40, 90, 0.75);
+	color: #fff;
+	font-size: clamp(12px, 3vw, 20px);
+	cursor: pointer;
+	box-shadow: 0 3px 8px rgba(0,0,0,0.35);
+}
+.corner-btn:active {
+	transform: scale(0.9);
+}
+
+#instructions {
+	max-width: 700px;
+	margin: 10px auto 4px;
+	font-size: 0.85em;
+	color: #345;
+	padding: 0 10px;
+}
+
+#footer {
+	text-align: center;
+	font-size: 0.7em;
+	color: #789;
+	margin: 18px 0 24px;
+	padding: 0 10px;
+}

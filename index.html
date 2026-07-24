@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ホームラン競争 - Home Run Derby</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="header">
+	<h1>⚾ ホームラン競争 ⚾</h1>
+	<p class="sub">Home Run Derby (fan-made clone, unofficial)</p>
+</div>
+
+<center>
+<div id="stage-wrap">
+	<canvas width="700" height="420" id="field">お使いのブラウザは canvas に対応していません。</canvas>
+	<button id="btnStart" class="overlay-btn">▶<br>スタート</button>
+	<button id="btnBoxChange" class="corner-btn" title="打席交代">⇄</button>
+</div>
+
+<div id="instructions">
+	10球のうちで、どれだけホームランを打てるかな？<br>
+	画面をタップ（またはクリック）して、いいタイミングでスイングしよう！<br>
+	指を動かすとバッターの立ち位置を微調整できるよ。左下のボタンで左右の打席を交代できるよ。
+</div>
+</center>
+
+<div id="footer">
+	Fan-made unofficial clone for study purposes. Not affiliated with or endorsed by any professional baseball team.
+</div>
+
+<script src="game.js"></script>
+</body>
+</html>
