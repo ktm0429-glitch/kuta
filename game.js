@@ -17,7 +17,7 @@ const MAX_BALL_COUNT = 5;
 const LASTPOS = 430;      // y where a pitch reaches the catcher's mitt
 const MOUND_X = 350, MOUND_Y = 100; // pitcher's mound position (screen fits mound-to-home only)
 const PITCH_START_Y = MOUND_Y; // y where the ball leaves the pitcher's hand
-const CURVE_START_Y = 150;// y after which curve/shoot pitches start bending
+const CURVE_START_Y = MOUND_Y + 22; // y after which curve/shoot pitches start bending (matches the source game's release-to-break distance)
 const BAT_CONTACT_Y = 300;
 const HOMERUN_WAIT = 40;
 const PERFECT_EXTRA_WAIT = 100;
@@ -1099,15 +1099,24 @@ function getCanvasX(clientX) {
 	return (clientX - rect.left) * (STAGE_W / rect.width);
 }
 
+// Matches the source game's actual input model, which differs by device:
+// - mouse: the stance reference is set once when the round starts (see
+//   startGame()), and the cursor is tracked continuously on every hover -
+//   no button needs to be held down to lean the stance left/right.
+// - touch: the reference re-centers on every finger-down (so each swing
+//   attempt starts from wherever you touch), and position only updates
+//   while actually touching.
 canvas.addEventListener('pointerdown', (e) => {
 	pointerDown = true;
-	initialMouseX = getCanvasX(e.clientX);
-	nowMouseX = initialMouseX;
+	if (e.pointerType !== 'mouse') {
+		initialMouseX = getCanvasX(e.clientX);
+		nowMouseX = initialMouseX;
+	}
 	e.preventDefault();
 });
 
 canvas.addEventListener('pointermove', (e) => {
-	if (pointerDown) nowMouseX = getCanvasX(e.clientX);
+	nowMouseX = getCanvasX(e.clientX);
 });
 
 window.addEventListener('pointerup', (e) => {
