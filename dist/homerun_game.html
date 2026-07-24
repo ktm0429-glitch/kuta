@@ -103,6 +103,29 @@ html, body {
 	padding: 0 10px;
 }
 
+#pitchLog {
+	max-width: 700px;
+	margin: 12px auto 0;
+	padding: 0 10px;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	justify-content: center;
+	min-height: 1px;
+}
+
+.pitch-chip {
+	font-size: 0.8em;
+	font-weight: bold;
+	padding: 4px 10px;
+	border-radius: 999px;
+	color: #fff;
+	white-space: nowrap;
+}
+.pitch-chip.pitch-miss { background: #93a0ab; }
+.pitch-chip.pitch-hit { background: #3d7fd1; }
+.pitch-chip.pitch-homerun { background: linear-gradient(#ff9f1c, #e0620a); }
+
 #footer {
 	text-align: center;
 	font-size: 0.7em;
@@ -126,6 +149,8 @@ html, body {
 	<button id="btnStart" class="overlay-btn">▶<br>スタート</button>
 	<button id="btnBoxChange" class="corner-btn" title="打席交代">⇄</button>
 </div>
+
+<div id="pitchLog"></div>
 
 <div id="instructions">
 	5球のうちで、どれだけホームランを打てるかな？<br>
@@ -195,8 +220,21 @@ let perfectTextScale = 0;
 let waitCount = 0;
 let soundFirst = true;
 let lastHomerunDistance = 0;
+let pitchResults = []; // per-pitch outcome log: {result:'miss'|'hit'|'homerun', distance?}
 
 const batterPosX = 310, batterPosY = 392; // batter's foot position, near home plate
+const pitchLogEl = document.getElementById('pitchLog');
+
+function renderPitchLog() {
+	if (!pitchLogEl) return;
+	pitchLogEl.innerHTML = pitchResults.map((r, i) => {
+		let label, cls;
+		if (r.result === 'homerun') { label = `ホームラン ${r.distance}m`; cls = 'homerun'; }
+		else if (r.result === 'hit') { label = 'ヒット'; cls = 'hit'; }
+		else { label = '空振り'; cls = 'miss'; }
+		return `<span class="pitch-chip pitch-${cls}">${i + 1}球目 ${label}</span>`;
+	}).join('');
+}
 
 /* --------------------------- audio ------------------------------ */
 
@@ -416,19 +454,19 @@ const ball = {
 				if (Dir === "L2") {
 					if (260 <= shade.x && shade.y <= 260) {
 						if (realZ > wallHeight) wallPlus = 68;
-						else { nextBall(); return; }
+						else { pitchResults.push({ result: 'hit' }); renderPitchLog(); nextBall(); return; }
 					}
 				} else if (Dir === "R2") {
 					if (shade.x <= 436 && shade.y <= 260) {
 						if (realZ > wallHeight) wallPlus = 68;
-						else { nextBall(); return; }
+						else { pitchResults.push({ result: 'hit' }); renderPitchLog(); nextBall(); return; }
 					}
 				} else {
 					const cx = 350, cy = 1036, cr = 2100;
 					const yy = cy - Math.sqrt(Math.pow(cr, 2) - Math.pow(shade.x - cx, 2)) + 1260;
 					if (shade.y < yy) {
 						if (realZ > wallHeight + 66) wallPlus = 70;
-						else { nextBall(); return; }
+						else { pitchResults.push({ result: 'hit' }); renderPitchLog(); nextBall(); return; }
 					}
 				}
 
@@ -449,9 +487,13 @@ const ball = {
 						// Display-only estimated distance, driven by how well the ball was hit.
 						const power = (this.hitBallSpeed - 65) / (115 - 65); // 0 (just enough) .. 1 (full power)
 						lastHomerunDistance = Math.round(96 + power * 68 + Math.random() * 8);
+						pitchResults.push({ result: 'homerun', distance: lastHomerunDistance });
+						renderPitchLog();
 						soundHomerun();
 						return;
 					}
+					pitchResults.push({ result: 'hit' });
+					renderPitchLog();
 					nextBall();
 					return;
 				}
@@ -461,6 +503,8 @@ const ball = {
 		if (this.show && this.y >= LASTPOS) {
 			gammingFlg = false;
 			this.show = false;
+			pitchResults.push({ result: 'miss' });
+			renderPitchLog();
 		}
 
 		if (this.show && this.y < 0 && (Dir === "L" || Dir === "C" || Dir === "R")) {
@@ -608,6 +652,8 @@ function startGame() {
 	btnStart.style.visibility = 'hidden';
 	ballCount = 0;
 	homerunCount = 0;
+	pitchResults = [];
+	renderPitchLog();
 	initialMouseX = nowMouseX;
 	if (updateTimer) clearInterval(updateTimer);
 	updateTimer = setInterval(drawTimer, 80);
@@ -770,19 +816,75 @@ function fenceYAt(dir, x) {
 }
 
 function drawOutfieldBG(dir) {
+	const wallH = 24;
+
 	// sky
 	const sky = ctx.createLinearGradient(0, 0, 0, 170);
-	sky.addColorStop(0, '#a9d8ff');
-	sky.addColorStop(1, '#eef9ff');
+	sky.addColorStop(0, '#2f8fe4');
+	sky.addColorStop(0.7, '#7cc0f5');
+	sky.addColorStop(1, '#cfe9ff');
 	ctx.fillStyle = sky;
 	ctx.fillRect(0, 0, STAGE_W, 170);
 
-	// stands (crowd), sized to cover the full range the fence line can dip to
+	// soft clouds
+	ctx.fillStyle = 'rgba(255,255,255,0.85)';
+	[[90, 40, 24], [125, 48, 16], [500, 30, 26], [545, 38, 17], [280, 55, 15]].forEach(([cx, cy, r]) => {
+		ctx.beginPath(); ctx.ellipse(cx, cy, r, r * 0.55, 0, 0, Math.PI * 2); ctx.fill();
+	});
+
+	// distant city skyline silhouette (generic building blocks, no branding)
+	const buildings = [
+		{ x: -10, w: 70, h: 34 }, { x: 55, w: 42, h: 58 }, { x: 95, w: 55, h: 30 },
+		{ x: 405, w: 46, h: 32 }, { x: 448, w: 46, h: 56 }, { x: 500, w: 58, h: 28 },
+		{ x: 565, w: 48, h: 42 }, { x: 620, w: 60, h: 24 }, { x: 670, w: 40, h: 36 },
+	];
+	ctx.fillStyle = '#9fb6cf';
+	buildings.forEach(b => ctx.fillRect(b.x, 150 - b.h, b.w, b.h));
+	ctx.fillStyle = 'rgba(255,255,255,0.5)';
+	buildings.forEach(b => {
+		for (let wx = b.x + 4; wx < b.x + b.w - 4; wx += 8) {
+			for (let wy = 150 - b.h + 5; wy < 146; wy += 9) ctx.fillRect(wx, wy, 2, 3);
+		}
+	});
+
+	// crowd / stands band (a generous fixed rect; grass + wall drawn later
+	// correctly cover whatever part of it sits below the actual fence line)
 	ctx.fillStyle = '#8892a3';
-	ctx.fillRect(0, 170, STAGE_W, 100);
-	ctx.fillStyle = 'rgba(0,0,0,0.12)';
-	for (let i = 0; i < 40; i++) {
-		ctx.fillRect(i * 18 + (i % 2), 176, 6, 90);
+	ctx.fillRect(0, 150, STAGE_W, 100);
+	ctx.fillStyle = 'rgba(0,0,0,0.15)';
+	for (let i = 0; i < 45; i++) ctx.fillRect(i * 16 + (i % 2) * 3, 156, 7, 88);
+
+	// stadium light towers
+	function lightTower(cx) {
+		ctx.strokeStyle = '#5b6472';
+		ctx.lineWidth = 3;
+		ctx.beginPath();
+		ctx.moveTo(cx - 12, 170); ctx.lineTo(cx, 58);
+		ctx.moveTo(cx + 12, 170); ctx.lineTo(cx, 58);
+		for (let yy = 165; yy > 65; yy -= 20) {
+			const t = (yy - 58) / (170 - 58);
+			ctx.moveTo(cx - 12 * t, yy); ctx.lineTo(cx + 12 * t, yy);
+		}
+		ctx.stroke();
+		ctx.fillStyle = '#48505e';
+		ctx.fillRect(cx - 20, 48, 40, 11);
+		ctx.fillStyle = '#ffe9a6';
+		for (let lx = cx - 15; lx <= cx + 15; lx += 8) { ctx.beginPath(); ctx.arc(lx, 53, 2.6, 0, Math.PI * 2); ctx.fill(); }
+	}
+	lightTower(50);
+	lightTower(STAGE_W - 50);
+
+	// scoreboard silhouette (center view only, generic colored panels, no logos/text)
+	if (dir === 'center') {
+		ctx.fillStyle = '#212b38';
+		ctx.fillRect(STAGE_W / 2 - 100, 84, 200, 62);
+		ctx.strokeStyle = '#10161e';
+		ctx.lineWidth = 4;
+		ctx.strokeRect(STAGE_W / 2 - 100, 84, 200, 62);
+		ctx.fillStyle = '#49c0ff'; ctx.fillRect(STAGE_W / 2 - 90, 92, 84, 20);
+		ctx.fillStyle = '#ff6a5e'; ctx.fillRect(STAGE_W / 2 - 90, 116, 40, 24);
+		ctx.fillStyle = '#fafafa'; ctx.fillRect(STAGE_W / 2 - 46, 116, 40, 24);
+		ctx.fillStyle = '#ffcf4d'; ctx.fillRect(STAGE_W / 2, 92, 90, 48);
 	}
 
 	// grass, filled up to the fence line (this covers the lower part of the
@@ -799,33 +901,56 @@ function drawOutfieldBG(dir) {
 	ctx.closePath();
 	ctx.fill();
 
-	// mowing stripes on the grass
-	ctx.fillStyle = 'rgba(255,255,255,0.07)';
-	for (let i = 0; i < 7; i++) {
-		if (i % 2 === 0) ctx.fillRect(i * (STAGE_W / 7), 280, STAGE_W / 7, STAGE_H - 280);
-	}
-
-	// the outfield wall itself, following the judgement threshold exactly
-	ctx.strokeStyle = '#2f6b4f';
-	ctx.lineWidth = 10;
+	// warning track (dirt strip right in front of the wall, like a real park)
+	ctx.fillStyle = '#c8935f';
 	ctx.beginPath();
 	ctx.moveTo(0, fenceYAt(dir, 0));
 	for (let x = 0; x <= STAGE_W; x += 20) ctx.lineTo(x, fenceYAt(dir, x));
-	ctx.stroke();
-	ctx.strokeStyle = '#dfe6d8';
-	ctx.lineWidth = 2;
+	for (let x = STAGE_W; x >= 0; x -= 20) ctx.lineTo(x, fenceYAt(dir, x) + 16);
+	ctx.closePath();
+	ctx.fill();
+
+	// mowing stripes on the grass
+	ctx.fillStyle = 'rgba(255,255,255,0.07)';
+	for (let i = 0; i < 7; i++) {
+		if (i % 2 === 0) ctx.fillRect(i * (STAGE_W / 7), 300, STAGE_W / 7, STAGE_H - 300);
+	}
+
+	// outfield wall with ad-board-style color panels (generic blocks, not real ads)
+	const panelColors = ['#1c5fa8', '#d94b3d', '#2e9e5b', '#e0a52e', '#1c5fa8', '#7a4fc7'];
+	const segW = STAGE_W / panelColors.length;
+	panelColors.forEach((color, i) => {
+		const x0 = i * segW, x1 = x0 + segW;
+		ctx.fillStyle = color;
+		ctx.beginPath();
+		ctx.moveTo(x0, fenceYAt(dir, x0) - wallH);
+		for (let x = x0; x <= x1; x += 10) ctx.lineTo(x, fenceYAt(dir, x) - wallH);
+		for (let x = x1; x >= x0; x -= 10) ctx.lineTo(x, fenceYAt(dir, x));
+		ctx.closePath();
+		ctx.fill();
+		ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+		ctx.lineWidth = 1.5;
+		ctx.beginPath();
+		ctx.moveTo(x0, fenceYAt(dir, x0) - wallH);
+		ctx.lineTo(x0, fenceYAt(dir, x0));
+		ctx.stroke();
+	});
+
+	// yellow home-run line along the top edge of the wall
+	ctx.strokeStyle = '#ffd400';
+	ctx.lineWidth = 3;
 	ctx.beginPath();
-	ctx.moveTo(0, fenceYAt(dir, 0) - 4);
-	for (let x = 0; x <= STAGE_W; x += 20) ctx.lineTo(x, fenceYAt(dir, x) - 4);
+	ctx.moveTo(0, fenceYAt(dir, 0) - wallH);
+	for (let x = 0; x <= STAGE_W; x += 20) ctx.lineTo(x, fenceYAt(dir, x) - wallH);
 	ctx.stroke();
 
 	// foul pole accent for L / R views
 	if (dir === 'left') {
 		ctx.fillStyle = '#ffde3d';
-		ctx.fillRect(30, 30, 6, 140);
+		ctx.fillRect(28, 30, 5, 210);
 	} else if (dir === 'right') {
 		ctx.fillStyle = '#ffde3d';
-		ctx.fillRect(STAGE_W - 36, 30, 6, 140);
+		ctx.fillRect(STAGE_W - 33, 30, 5, 210);
 	}
 }
 

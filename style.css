@@ -96,6 +96,29 @@ html, body {
 	padding: 0 10px;
 }
 
+#pitchLog {
+	max-width: 700px;
+	margin: 12px auto 0;
+	padding: 0 10px;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	justify-content: center;
+	min-height: 1px;
+}
+
+.pitch-chip {
+	font-size: 0.8em;
+	font-weight: bold;
+	padding: 4px 10px;
+	border-radius: 999px;
+	color: #fff;
+	white-space: nowrap;
+}
+.pitch-chip.pitch-miss { background: #93a0ab; }
+.pitch-chip.pitch-hit { background: #3d7fd1; }
+.pitch-chip.pitch-homerun { background: linear-gradient(#ff9f1c, #e0620a); }
+
 #footer {
 	text-align: center;
 	font-size: 0.7em;
