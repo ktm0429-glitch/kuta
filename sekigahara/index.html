@@ -1,0 +1,1301 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>関ヶ原立体絵図</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600&family=Shippori+Mincho+B1:wght@500;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<style>
+/* ── 関ヶ原立体絵図 ─ a single committed dark stage: a broadcast gallery at dawn ── */
+:root{
+  --sumi:#0E1014;        /* 墨 — ground */
+  --sumi-2:#161A21;      /* panel */
+  --sumi-3:#1E232C;      /* raised */
+  --kiri:#D9DDD3;        /* 霧 — primary text */
+  --kiri-dim:#98A096;    /* secondary text */
+  --kiri-faint:#666E68;  /* tertiary */
+  --shu:#D0453A;         /* 朱 — 西軍 */
+  --shu-lo:#7A2822;
+  --ai:#4F88C8;          /* 藍 — 東軍 */
+  --ai-lo:#274A70;
+  --kin:#CBA135;         /* 金 — 裏切り・問鉄砲 */
+  --sen:#2A2F38;         /* hairline */
+  --sen-lo:#1D222A;
+  --disp:'Shippori Mincho B1', 'Yu Mincho', 'Hiragino Mincho ProN', serif;
+  --body:'Zen Kaku Gothic New', 'Hiragino Sans', 'Noto Sans JP', system-ui, sans-serif;
+  --data:'Barlow Condensed', 'Zen Kaku Gothic New', sans-serif;
+  --bar-h:72px;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; background:var(--sumi); color:var(--kiri);
+  font-family:var(--body); font-size:14px; line-height:1.7;
+  overflow:hidden; -webkit-font-smoothing:antialiased;
+}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+:focus-visible{outline:2px solid var(--kin);outline-offset:2px;border-radius:2px}
+
+/* ── stage ── */
+#stage{position:fixed;inset:0}
+#gl{display:block;width:100%;height:100%}
+#grade{position:fixed;inset:0;pointer-events:none;z-index:2;
+  background:
+    radial-gradient(ellipse 120% 90% at 50% 42%, transparent 40%, rgba(6,7,10,.55) 100%),
+    linear-gradient(to bottom, rgba(9,11,15,.68) 0%, rgba(9,11,15,.18) 22%, transparent 40%, rgba(8,9,12,.34) 74%, rgba(8,9,12,.86) 100%),
+    linear-gradient(to right, rgba(9,11,15,.44) 0%, transparent 26%);
+}
+
+/* ── 3D-anchored labels ── */
+#labels{position:fixed;inset:0;pointer-events:none;z-index:3;overflow:hidden}
+.lb{position:absolute;transform:translate(-50%,-100%);white-space:nowrap;
+  font-size:11px;letter-spacing:.06em;line-height:1.25;
+  text-shadow:0 1px 3px rgba(0,0,0,.95),0 0 12px rgba(0,0,0,.7);
+  will-change:transform,opacity}
+.lb i{display:block;font-style:normal;font-family:var(--disp);font-weight:700;font-size:13px}
+.lb b{display:block;font-family:var(--data);font-weight:500;font-size:11px;
+  letter-spacing:.08em;font-variant-numeric:tabular-nums;opacity:.72}
+.lb.e i{color:#BBD6F4} .lb.e{border-bottom:1px solid var(--ai)}
+.lb.w i{color:#F2C3BC} .lb.w{border-bottom:1px solid var(--shu)}
+.lb.g i{color:#F0DCA0} .lb.g{border-bottom:1px solid var(--kin)}
+.lb.e,.lb.w,.lb.g{padding:0 5px 2px}
+.lb.geo{border:0;padding:0}
+.lb.geo i{font-size:12px;font-weight:500;color:#C4CBBF;letter-spacing:.22em;opacity:.85}
+.lb.geo.rd i{font-size:10.5px;color:#B7A98A;letter-spacing:.3em;opacity:.72}
+.lb.minor{opacity:.62}
+.lb.minor i{font-size:11px;font-weight:500}
+
+/* ── overlay chrome ── */
+.ui{position:fixed;z-index:4}
+
+/* slate */
+#slate{top:26px;left:30px;pointer-events:none}
+#slate h1{margin:0;font-family:var(--disp);font-weight:800;font-size:40px;line-height:1;
+  letter-spacing:.16em;text-shadow:0 2px 20px rgba(0,0,0,.9)}
+#slate .rule{width:64px;height:2px;background:var(--shu);margin:11px 0 9px}
+#slate .meta{font-family:var(--data);font-size:14px;letter-spacing:.14em;color:var(--kiri-dim);
+  font-variant-numeric:tabular-nums}
+#slate .meta em{font-style:normal;font-family:var(--body);font-size:11.5px;letter-spacing:.18em;
+  display:block;color:var(--kiri-faint);margin-top:2px}
+
+/* vertical chapter title — a 軍記 title slip standing on the left edge */
+#chap{top:198px;left:30px;pointer-events:none;width:120px;height:460px}
+#chapTtl,#chapKick{position:absolute;top:0;display:flex;flex-direction:column;
+  align-items:center;line-height:1}
+#chapTtl{left:0;width:38px;gap:.16em;font-family:var(--disp);font-weight:700;font-size:29px;
+  text-shadow:0 2px 18px rgba(0,0,0,.95);transition:color .5s}
+#chapTtl .pt{height:.42em;transform:translate(.36em,-.30em)}
+#chapRule{position:absolute;left:48px;top:2px;width:1px;height:104px;background:var(--sen)}
+#chapKick{left:56px;width:16px;gap:.5em;font-size:11px;font-weight:500;color:var(--kiri-dim);
+  text-shadow:0 1px 8px rgba(0,0,0,.9)}
+#chap.turn #chapTtl{color:#EBD6A0}
+
+/* right rail */
+#rail{top:26px;right:30px;width:212px;display:flex;flex-direction:column;gap:14px}
+.card{background:rgba(16,19,25,.78);border:1px solid var(--sen-lo);
+  backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);padding:13px 14px}
+.card h2{margin:0 0 10px;font-size:10.5px;font-weight:500;letter-spacing:.34em;
+  color:var(--kiri-faint)}
+.force{display:flex;align-items:baseline;gap:9px;padding:5px 0}
+.force+.force{border-top:1px solid var(--sen-lo)}
+.force .sw{width:10px;height:10px;flex:none;transform:translateY(1px)}
+.force .nm{font-family:var(--disp);font-weight:700;font-size:15px;letter-spacing:.1em}
+.force .no{margin-left:auto;font-family:var(--data);font-size:15px;letter-spacing:.04em;
+  font-variant-numeric:tabular-nums;color:var(--kiri-dim)}
+.force .no s{text-decoration:none;font-size:10px;color:var(--kiri-faint);margin-left:2px}
+.e-sw{background:var(--ai)} .w-sw{background:var(--shu)}
+.note{margin:9px 0 0;font-size:11px;line-height:1.6;color:var(--kiri-faint)}
+
+.tg{display:flex;align-items:center;gap:9px;width:100%;padding:6px 0;text-align:left;
+  font-size:12.5px;color:var(--kiri-dim);letter-spacing:.06em}
+.tg+.tg{border-top:1px solid var(--sen-lo)}
+.tg .box{width:26px;height:14px;flex:none;border:1px solid var(--sen);background:var(--sumi);
+  position:relative;transition:background .18s,border-color .18s}
+.tg .box::after{content:"";position:absolute;top:2px;left:2px;width:8px;height:8px;
+  background:var(--kiri-faint);transition:transform .18s,background .18s}
+.tg[aria-pressed="true"]{color:var(--kiri)}
+.tg[aria-pressed="true"] .box{border-color:var(--ai-lo);background:rgba(79,136,200,.16)}
+.tg[aria-pressed="true"] .box::after{transform:translateX(12px);background:var(--ai)}
+.tg:hover{color:var(--kiri)}
+
+/* narration — the lower third */
+#narr{left:30px;bottom:calc(var(--bar-h) + 26px);width:min(520px,42vw);
+  border-left:2px solid var(--shu);padding:2px 0 2px 16px;pointer-events:none}
+#narr .clockline{font-family:var(--data);font-size:13px;letter-spacing:.2em;color:var(--kin);
+  font-variant-numeric:tabular-nums;margin-bottom:5px}
+#narr .clockline span{color:var(--kiri-faint);margin-left:10px;font-family:var(--body);
+  font-size:11px;letter-spacing:.2em}
+#narr p{margin:0;font-size:14.5px;line-height:1.85;color:var(--kiri);
+  text-shadow:0 1px 10px rgba(0,0,0,.9)}
+#narr.turn{border-left-color:var(--kin)}
+
+/* transport bar */
+#bar{left:0;right:0;bottom:0;height:var(--bar-h);
+  background:linear-gradient(to top,rgba(9,11,15,.96),rgba(11,13,18,.82));
+  border-top:1px solid var(--sen);display:flex;align-items:center;gap:20px;padding:0 30px}
+#clock{font-family:var(--data);font-weight:600;font-size:30px;line-height:1;letter-spacing:.03em;
+  font-variant-numeric:tabular-nums;min-width:88px}
+#koku{font-family:var(--disp);font-size:12px;letter-spacing:.3em;color:var(--kiri-faint);
+  min-width:52px;margin-left:-12px}
+.tbtn{width:32px;height:32px;display:grid;place-items:center;border:1px solid var(--sen);
+  color:var(--kiri-dim);transition:border-color .15s,color .15s,background .15s}
+.tbtn:hover{border-color:var(--ai-lo);color:var(--kiri);background:rgba(79,136,200,.1)}
+.tbtn svg{width:13px;height:13px;fill:currentColor}
+#speed{font-family:var(--data);font-size:14px;letter-spacing:.06em;color:var(--kiri-dim);
+  border:1px solid var(--sen);height:32px;padding:0 11px;min-width:46px;
+  font-variant-numeric:tabular-nums}
+#speed:hover{border-color:var(--ai-lo);color:var(--kiri)}
+
+#track{flex:1;position:relative;height:var(--bar-h);cursor:pointer;touch-action:none}
+#trline{position:absolute;left:0;right:0;top:calc(50% + 5px);height:2px;background:var(--sen)}
+#trfill{position:absolute;left:0;top:calc(50% + 5px);height:2px;background:var(--shu);width:0}
+#trhead{position:absolute;top:calc(50% + 6px);width:1px;height:0;transform:translateX(-50%)}
+#trhead::before{content:"";position:absolute;left:-4px;top:-4px;width:9px;height:9px;
+  background:var(--kiri);box-shadow:0 0 0 3px rgba(208,69,58,.35)}
+.mk{position:absolute;top:calc(50% + 5px);transform:translateX(-50%);padding:0;
+  color:var(--kiri-faint);font-size:10.5px;letter-spacing:.14em;white-space:nowrap;
+  transition:color .15s}
+.mk::before{content:"";display:block;width:1px;height:9px;background:var(--sen);margin:0 auto 5px;
+  transform:translateY(-14px)}
+.mk span{display:block;transform:translateY(-14px)}
+.mk:hover{color:var(--kiri)}
+.mk.on{color:var(--shu)}
+.mk.on::before{background:var(--shu);height:13px;transform:translateY(-18px)}
+
+#hint{right:30px;bottom:calc(var(--bar-h) + 26px);font-size:11px;letter-spacing:.1em;
+  color:var(--kiri-faint);text-align:right;pointer-events:none;transition:opacity .5s}
+#hint kbd{font-family:var(--data);font-size:11.5px;border:1px solid var(--sen);padding:0 5px;
+  margin:0 2px;color:var(--kiri-dim)}
+
+@media (max-width:860px){
+  #slate h1{font-size:30px} #chap{display:none} #rail{display:none} #hint{display:none}
+  #narr{width:auto;right:24px;bottom:calc(var(--bar-h) + 18px)}
+  #bar{gap:12px;padding:0 16px} #clock{font-size:24px;min-width:66px} #koku{display:none}
+  .mk span{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  *{transition-duration:.01ms !important}
+}
+</style>
+</head>
+<body>
+<div id="stage"><canvas id="gl"></canvas></div>
+<div id="grade"></div>
+<div id="labels"></div>
+
+<header id="slate" class="ui">
+  <h1>関ヶ原</h1>
+  <div class="rule"></div>
+  <div class="meta">1600.10.21<em>慶長五年九月十五日</em></div>
+</header>
+
+<div id="chap" class="ui">
+  <div id="chapTtl">霧の盆地</div>
+  <div id="chapRule"></div>
+  <div id="chapKick">布陣</div>
+</div>
+
+<aside id="rail" class="ui">
+  <section class="card">
+    <h2>両軍</h2>
+    <div class="force"><i class="sw e-sw"></i><span class="nm">東軍</span>
+      <span class="no">74,000<s>騎</s></span></div>
+    <div class="force"><i class="sw w-sw"></i><span class="nm">西軍</span>
+      <span class="no">82,000<s>騎</s></span></div>
+    <p class="note">西軍のうち実際に戦ったのは約三万五千。南宮山と松尾山の三万余は、ついに山を下りなかった。</p>
+  </section>
+  <section class="card">
+    <h2>表示</h2>
+    <button class="tg" id="tgFog"   aria-pressed="true"><i class="box"></i>霧</button>
+    <button class="tg" id="tgArrow" aria-pressed="true"><i class="box"></i>進軍矢印</button>
+    <button class="tg" id="tgUnit"  aria-pressed="true"><i class="box"></i>部隊名</button>
+    <button class="tg" id="tgGeo"   aria-pressed="true"><i class="box"></i>地名</button>
+    <button class="tg" id="tgCam"   aria-pressed="true"><i class="box"></i>自動カメラ</button>
+  </section>
+</aside>
+
+<div id="narr" class="ui">
+  <div class="clockline" id="narrClock">辰の刻<span>七時四十五分</span></div>
+  <p id="narrText">濃霧が盆地を満たしている。</p>
+</div>
+
+<div id="hint" class="ui">
+  ドラッグで視点移動・ホイールで寄る<br>
+  <kbd>Space</kbd>再生 <kbd>←</kbd><kbd>→</kbd>章送り
+</div>
+
+<nav id="bar" class="ui" aria-label="再生操作">
+  <div id="clock">07:45</div>
+  <div id="koku">辰の刻</div>
+  <button class="tbtn" id="btnPrev" aria-label="前の章"><svg viewBox="0 0 16 16"><path d="M4 2h2v12H4zM14 2v12L6 8z"/></svg></button>
+  <button class="tbtn" id="btnPlay" aria-label="再生"><svg viewBox="0 0 16 16"><path d="M3 2l11 6-11 6z"/></svg></button>
+  <button class="tbtn" id="btnNext" aria-label="次の章"><svg viewBox="0 0 16 16"><path d="M10 2h2v12h-2zM2 2l8 6-8 6z"/></svg></button>
+  <button id="speed" aria-label="再生速度">×1.0</button>
+  <div id="track" role="slider" aria-label="戦況時刻" tabindex="0" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+    <div id="trline"></div><div id="trfill"></div><div id="trhead"></div>
+  </div>
+</nav>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
+<script>
+"use strict";
+/* =====================================================================
+   関ヶ原立体絵図 — 1600.10.21 / 慶長五年九月十五日
+   Coordinates: metres, origin at 決戦地 (35.3717N 136.4683E).
+   +x = 東 (east), +z = 南 (south), +y = 標高 (elevation).
+   ===================================================================== */
+
+const RM = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ── 地形 ── the Sekigahara basin: a plain 4km across, closed on every side
+   but the east, where the Nakasendo runs out towards Tarui and Ogaki.     */
+const FIELD = 11800;          // terrain extent (m)
+const SEG   = 340;           // grid resolution
+const VEX   = 2.05;          // vertical exaggeration — the broadcast convention
+
+const MOUNTAINS = [
+  // 盆地を囲む山々 (peak elevations in metres above sea level)
+  {n:'笹尾山',   x:-1450, z:-430,  h:198, rx:340,  rz:290,  r:  10, p:1.5},
+  {n:'北天満山', x:-1520, z: 120,  h:190, rx:300,  rz:330,  r:   0, p:1.6},
+  {n:'天満山',   x:-1330, z: 520,  h:198, rx:310,  rz:360,  r:  -8, p:1.6},
+  {n:'松尾山',   x:-2060, z:2180,  h:293, rx:700,  rz:620,  r:  22, p:1.7},
+  {n:'南宮山',   x: 2540, z:1260,  h:419, rx:1000, rz: 820, r: -18, p:1.8},
+  {n:'栗原山',   x: 3160, z:1560,  h:310, rx:600,  rz: 520, r:  10, p:1.6},
+  {n:'桃配山',   x: 1770, z: 430,  h:152, rx:330,  rz: 260, r:  15, p:1.5},
+  {n:'丸山',     x: -790, z:-720,  h:160, rx:230,  rz: 200, r:   0, p:1.5},
+  {n:'藤川台',   x:-2350, z:1480,  h:236, rx:520,  rz: 430, r:  35, p:1.5},
+  {n:'中山',     x:-2760, z: 460,  h:300, rx:760,  rz: 700, r: -12, p:1.7},
+  {n:'池田山',   x:-2500, z:-1500, h:430, rx:1150, rz: 950, r:  25, p:1.9},
+  {n:'伊吹山地', x: -400, z:-2450, h:400, rx:2400, rz: 900, r:  -4, p:1.9},
+  {n:'相川山',   x: 1150, z:-1650, h:290, rx:1100, rz: 700, r:  12, p:1.7},
+  {n:'南尾根',   x:  400, z:2500,  h:270, rx:1600, rz: 800, r:   6, p:1.8},
+  {n:'今須山',   x:-3200, z:1500,  h:330, rx:900,  rz: 900, r:   0, p:1.8},
+  // 遠景 — 盆地を閉じる山並み
+  {n:'伊吹山',   x:-2600, z:-4600, h:820, rx:2300, rz:2000, r:  0, p:2.0},
+  {n:'霊仙山',   x:-4300, z:-2300, h:660, rx:1900, rz:1800, r: 20, p:2.0},
+  {n:'鈴鹿山脈', x:-2400, z: 5000, h:700, rx:3600, rz:2000, r:  8, p:2.0},
+  {n:'養老山地', x: 3900, z: 3600, h:620, rx:2700, rz:2200, r:-35, p:2.0},
+  {n:'多度山地', x: 5200, z: 1000, h:400, rx:1700, rz:2400, r:  0, p:1.9},
+  {n:'西の山並', x:-5400, z:  600, h:540, rx:2000, rz:2600, r:  0, p:2.0},
+  {n:'北の山並', x: 2600, z:-3800, h:560, rx:2600, rz:1800, r: 10, p:2.0}
+];
+
+/* 河川 — 相川 drains the Ibuki foothills south-east across the plain;
+   藤古川 cuts the western edge, and Otani planted his camp behind it. */
+const RIVERS = [
+  {w:34, pts:[[-680,-1750],[-460,-1300],[-260,-820],[-120,-360],[60,120],[380,520],
+              [900,760],[1500,880],[2150,900],[2700,860],[3400,840]]},
+  {w:20, pts:[[-2050,-900],[-1990,-400],[-1930,100],[-1900,600],[-1900,1100],[-1940,1500]]}
+];
+
+/* 街道 — the roads are why the battle happened here at all. */
+const ROADS = [
+  {n:'中山道', w:26, pts:[[-3100,780],[-2500,660],[-2000,540],[-1500,420],[-1000,340],
+                          [-500,300],[100,290],[700,330],[1300,380],[1900,420],[2600,480],[3200,560]]},
+  {n:'北国街道', w:20, pts:[[-1120,180],[-1060,-260],[-1010,-760],[-980,-1300],[-960,-1900]]},
+  {n:'伊勢街道', w:18, pts:[[-1060,340],[-1180,900],[-1330,1500],[-1480,2100],[-1560,2600]]}
+];
+
+/* ── 部隊 ──
+   a: 東=E 西=W   s: 兵力   x,z: 初期布陣   mv: [[t, x, z], …] 時刻は再生尺 0–1
+   fx: 消滅/壊走の再生尺   mon: 幟の紋   maj: 常時表示                     */
+const UNITS = [
+/* ===== 西軍 ===== */
+{n:'石田三成', k:'石田', a:'W', s:6000,  x:-1450, z:-430, mon:'daiichi', maj:1,
+  mv:[[.790,-1600,-560],[.855,-2350,-1000]], fx:.864},
+{n:'島左近',   k:'島',   a:'W', s:1000,  x:-1080, z:-330, mv:[[.16,-820,-250]], fx:.34},
+{n:'蒲生郷舎', k:'蒲生', a:'W', s:1000,  x:-1230, z:-560, mv:[[.790,-1700,-700]], fx:.862},
+{n:'島津義弘', k:'島津', a:'W', s:1500,  x: -880, z:  60, mon:'maruju', maj:1,
+  mv:[[.885,-560,300],[.93,340,720],[.965,1250,1350],[1,2050,2050]]},
+{n:'島津豊久', k:'豊久', a:'W', s: 750,  x: -790, z: 170,
+  mv:[[.885,-500,420],[.93,420,880]], fx:.945},
+{n:'小西行長', k:'小西', a:'W', s:4000,  x:-1300, z: 200, maj:1,
+  mv:[[.775,-1900,120],[.840,-2600,60]], fx:.860},
+{n:'宇喜多秀家',k:'宇喜多',a:'W',s:17000, x:-1350, z: 620, mon:'kenkatabami', maj:1,
+  mv:[[.752,-1180,660],[.800,-1900,760],[.855,-2650,820]], fx:.862},
+{n:'明石全登', k:'明石', a:'W', s:2000,  x:-1180, z: 830, mv:[[.752,-980,860],[.820,-1900,980]], fx:.858},
+{n:'大谷吉継', k:'大谷', a:'W', s:1500,  x:-1780, z:1450, mon:'takanoha', maj:1, fx:.726},
+{n:'大谷吉勝', k:'吉勝', a:'W', s:2000,  x:-1650, z:1300, fx:.720},
+{n:'木下頼継', k:'木下', a:'W', s:1000,  x:-1560, z:1210, fx:.720},
+{n:'平塚為広', k:'平塚', a:'W', s: 900,  x:-1450, z:1520, mv:[[.665,-1620,1620]], fx:.718},
+{n:'戸田重政', k:'戸田', a:'W', s:1500,  x:-1530, z:1620, mv:[[.665,-1700,1700]], fx:.718},
+{n:'小早川秀秋',k:'小早川',a:'W',s:15600, x:-2060, z:2180, mon:'kama', maj:1, turn:.632,
+  mv:[[.640,-1980,2020],[.672,-1800,1700],[.715,-1700,1520]]},
+{n:'脇坂安治', k:'脇坂', a:'W', s: 990,  x:-1810, z:1870, turn:.660, mv:[[.694,-1740,1660]]},
+{n:'朽木元綱', k:'朽木', a:'W', s: 600,  x:-1910, z:1960, turn:.660, mv:[[.694,-1830,1740]]},
+{n:'小川祐忠', k:'小川', a:'W', s:2100,  x:-2010, z:2040, turn:.660, mv:[[.694,-1920,1810]]},
+{n:'赤座直保', k:'赤座', a:'W', s: 600,  x:-2100, z:1900, turn:.660, mv:[[.694,-2000,1720]]},
+{n:'毛利秀元', k:'毛利', a:'W', s:15000, x: 2540, z:1230, mon:'ichimonji', maj:1,
+  mv:[[.92,3050,1420],[1,3700,1700]]},
+{n:'吉川広家', k:'吉川', a:'W', s:3000,  x: 2080, z: 900, maj:1, mv:[[.92,2700,1150],[1,3400,1500]]},
+{n:'安国寺恵瓊',k:'安国寺',a:'W',s:1800,  x: 2790, z:1340, mv:[[.90,3300,1600],[1,3800,1850]]},
+{n:'長宗我部盛親',k:'長宗我部',a:'W',s:6600,x:3040, z:1530, maj:1, mv:[[.92,3500,1750],[1,4000,2000]]},
+{n:'長束正家', k:'長束', a:'W', s:1500,  x: 3240, z:1680, mv:[[.90,3700,1900],[1,4100,2150]]},
+/* ===== 東軍 ===== */
+{n:'徳川家康', k:'徳川', a:'E', s:30000, x: 1770, z: 430, mon:'aoi', maj:1,
+  mv:[[.40,900,300],[.47,-380,60]]},
+{n:'松平忠吉', k:'忠吉', a:'E', s:3000,  x: -400, z: 660, mv:[[.14,-760,660],[.80,-1500,700]]},
+{n:'井伊直政', k:'井伊', a:'E', s:3600,  x: -450, z: 720, mon:'igeta', maj:1,
+  mv:[[.14,-830,690],[.55,-1030,700],[.80,-1650,760],[.93,-1200,1600]]},
+{n:'福島正則', k:'福島', a:'E', s:6000,  x: -640, z: 920, maj:1,
+  mv:[[.16,-1030,830],[.55,-1160,800],[.80,-1900,880]]},
+{n:'藤堂高虎', k:'藤堂', a:'E', s:2490,  x: -720, z:1270, mv:[[.20,-1240,1360],[.80,-1750,1450]]},
+{n:'京極高知', k:'京極', a:'E', s:3000,  x: -640, z:1400, mv:[[.20,-1170,1480],[.80,-1680,1560]]},
+{n:'寺沢広高', k:'寺沢', a:'E', s:2400,  x: -520, z:1520, mv:[[.24,-1000,1620]]},
+{n:'織田有楽', k:'有楽', a:'E', s: 450,  x: -270, z: 920, mv:[[.30,-700,940]]},
+{n:'古田重勝', k:'古田', a:'E', s:1200,  x: -170, z:1030, mv:[[.30,-620,1080]]},
+{n:'金森長近', k:'金森', a:'E', s:1140,  x: -110, z: 810, mv:[[.30,-560,830]]},
+{n:'黒田長政', k:'黒田', a:'E', s:5400,  x: -830, z:-570, maj:1,
+  mv:[[.22,-1180,-470],[.60,-1290,-450],[.86,-1900,-620]]},
+{n:'竹中重門', k:'竹中', a:'E', s:1000,  x: -620, z:-720, mv:[[.26,-1000,-700]]},
+{n:'細川忠興', k:'細川', a:'E', s:5000,  x: -710, z:-250, maj:1,
+  mv:[[.22,-1130,-240],[.60,-1230,-260],[.86,-1850,-330]]},
+{n:'加藤嘉明', k:'加藤', a:'E', s:3000,  x: -570, z: -60, mv:[[.22,-1010,-60],[.86,-1800,-60]]},
+{n:'田中吉政', k:'田中', a:'E', s:3000,  x: -430, z: 190, mv:[[.22,-900,240],[.86,-1780,180]]},
+{n:'筒井定次', k:'筒井', a:'E', s:2850,  x: -300, z: 390, mv:[[.28,-760,420]]},
+{n:'生駒一正', k:'生駒', a:'E', s:1830,  x: -210, z: 620, mv:[[.28,-680,640]]},
+{n:'本多忠勝', k:'本多', a:'E', s: 500,  x:   60, z: 720, mon:'tachiaoi', maj:1,
+  mv:[[.30,-380,780],[.90,320,900]]},
+{n:'池田輝政', k:'池田', a:'E', s:4560,  x: 1500, z: 900, maj:1, mv:[[.92,2200,1050]]},
+{n:'浅野幸長', k:'浅野', a:'E', s:6510,  x: 1760, z:1150, mv:[[.92,2400,1300]]},
+{n:'山内一豊', k:'山内', a:'E', s:2058,  x: 1490, z:1270},
+{n:'有馬豊氏', k:'有馬', a:'E', s: 900,  x: 1330, z:1370}
+];
+
+/* ── 地名 ── */
+const PLACES = [
+  {n:'笹尾山', x:-1450, z:-430, h:0},   {n:'天満山', x:-1330, z:520,  h:0},
+  {n:'松尾山', x:-2060, z:2180, h:0},   {n:'南宮山', x: 2540, z:1260, h:0},
+  {n:'桃配山', x: 1770, z: 430, h:0},   {n:'丸山',   x: -790, z:-720, h:0},
+  {n:'藤川台', x:-2350, z:1480, h:0},   {n:'伊吹山地',x:-400, z:-2450, h:0},
+  {n:'関ヶ原', x:  -60, z: 640, h:0, flat:1},
+  {n:'決戦地', x:-1060, z: -80, h:0, flat:1},
+  {n:'中山道 → 大垣',  x: 2500, z:470, h:0, rd:1},
+  {n:'← 中山道 今須',  x:-2900, z:740, h:0, rd:1},
+  {n:'北国街道 ↑ 伊吹', x:-980, z:-1500, h:0, rd:1},
+  {n:'伊勢街道 ↓',     x:-1520, z:2380, h:0, rd:1}
+];
+
+/* ── 進軍矢印 ──
+   c: 章  a: 東E/西W/裏切りG/合図S  p: 経路(m)  w: 幅  d: 章内の遅れ(0–1) */
+const ARROWS = [
+  {c:1,a:'E',w:100,d:.00,p:[[-460,720],[-720,700],[-1090,660]]},
+  {c:1,a:'E',w:120,d:.12,p:[[-650,920],[-900,880],[-1200,820]]},
+  {c:1,a:'W',w:150,d:.30,p:[[-1330,620],[-1080,700],[-880,760]]},
+  {c:2,a:'E',w:130,d:.00,p:[[-840,-570],[-1080,-520],[-1330,-460]]},
+  {c:2,a:'E',w:120,d:.08,p:[[-720,-250],[-1000,-240],[-1270,-250]]},
+  {c:2,a:'E',w:110,d:.16,p:[[-580,-60],[-830,-60],[-1090,-60]]},
+  {c:2,a:'E',w:110,d:.24,p:[[-440,190],[-700,220],[-980,250]]},
+  {c:2,a:'W',w:110,d:.34,p:[[-1090,-330],[-870,-280],[-680,-210]]},
+  {c:2,a:'E',w:110,d:.46,p:[[-730,1270],[-1080,1330],[-1420,1400]]},
+  {c:2,a:'E',w:100,d:.54,p:[[-650,1400],[-980,1470],[-1300,1530]]},
+  {c:3,a:'E',w:120,d:.10,p:[[1520,900],[1830,960],[2120,1010]]},
+  {c:3,a:'W',w:140,d:.34,dash:1,stop:1,p:[[2540,1230],[2260,1130],[2000,1040]]},
+  {c:4,a:'S',w:26,d:.05,dash:1,p:[[-380,60],[-1100,900],[-1700,1700],[-2040,2130]]},
+  {c:5,a:'G',w:260,d:.00,p:[[-2060,2180],[-1960,1980],[-1830,1720],[-1740,1520]]},
+  {c:5,a:'G',w:70,d:.30,p:[[-1810,1870],[-1770,1740],[-1740,1620]]},
+  {c:5,a:'G',w:70,d:.36,p:[[-1910,1960],[-1860,1820],[-1820,1690]]},
+  {c:5,a:'G',w:80,d:.42,p:[[-2010,2040],[-1950,1900],[-1900,1770]]},
+  {c:6,a:'W',w:150,d:.00,hollow:1,p:[[-1350,660],[-1850,760],[-2500,820]]},
+  {c:6,a:'W',w:110,d:.10,hollow:1,p:[[-1300,200],[-1900,140],[-2520,70]]},
+  {c:6,a:'W',w:120,d:.22,hollow:1,p:[[-1470,-430],[-1850,-680],[-2300,-980]]},
+  {c:6,a:'E',w:160,d:.34,p:[[-1030,700],[-1400,720],[-1800,780]]},
+  {c:7,a:'W',w:120,d:.00,p:[[-880,60],[-420,380],[300,760],[1150,1280],[1950,1960]]}
+];
+
+/* ── 章 ── seven acts, plus the deployment.  dur = playback seconds. */
+const CHAPTERS = [
+  {kick:'布陣', ttl:'霧の盆地', dur:20, c0:'07:45', c1:'08:00', fog:1.00,
+   nar:'夜半からの雨が上がり、盆地は乳のような濃霧に沈んでいた。西軍八万二千は笹尾山から松尾山まで、東軍を三方から囲む鶴翼に布いている。兵法どおりなら、西軍が勝つ布陣だった。',
+   cam:[[3100,3050,3700, -200,150,500],[2200,2750,3450, -350,150,450],[1350,2450,3150, -500,150,420]]},
+  {kick:'開戦', ttl:'井伊の抜駆', dur:17, c0:'08:00', c1:'08:30', fog:.72, fire:1,
+   nar:'霧が薄れた午前八時、井伊直政と松平忠吉が福島隊の脇を抜けて宇喜多隊に銃を放つ。抜駆けの一発が、天下分け目の火蓋を切った。',
+   cam:[[1350,2450,3150,-500,150,420],[300,1450,2350,-800,150,600],[-250,880,1700,-980,150,620]]},
+  {kick:'激突', ttl:'乱戦、六刻', dur:22, c0:'08:30', c1:'11:00', fog:.34, fire:1,
+   nar:'東軍主力が笹尾山へ殺到する。石田隊の島左近は銃創に倒れ、宇喜多隊は福島隊を押し返した。両軍は一進一退のまま、二刻半を費やす。',
+   cam:[[-250,880,1700,-980,150,620],[-900,820,1450,-1150,150,300],[-1600,900,1150,-1300,150,-60]]},
+  {kick:'不動', ttl:'動かぬ南宮山', dur:18, c0:'11:00', c1:'11:45', fog:.22,fire:1,
+   nar:'三成は狼煙を上げ、南宮山の毛利秀元に出撃を促す。しかし山道を塞いだ吉川広家は家康に内通しており、毛利勢一万五千は「弁当を使っている」と称して一歩も動かなかった。',
+   cam:[[-1600,900,1150,-1300,150,-60],[300,1500,2400,900,200,700],[2050,1800,3150,2450,220,1200]]},
+  {kick:'催促', ttl:'問鉄砲', dur:16, c0:'11:45', c1:'12:00', fog:.18, fire:1,
+   nar:'家康は陣を桃配山から陣場野へ進め、松尾山へ向けて鉄砲を撃ちかけた。去就を決めかねる小早川秀秋一万五千六百への、最後の催促である。',
+   cam:[[2050,1800,3150,2450,220,1200],[300,1750,3500,-900,200,1700],[-620,1400,3450,-1980,250,2110]]},
+  {kick:'裏切', ttl:'小早川、山を下る', dur:19, c0:'12:00', c1:'12:30', fog:.16, fire:1, turn:1,
+   nar:'正午過ぎ、小早川隊が松尾山を駆け下り、味方であるはずの大谷隊の側面に突入した。脇坂・朽木・小川・赤座の四隊も続いて寝返る。大谷吉継は輿の上で自刃した。',
+   cam:[[-620,1400,3450,-1980,250,2110],[-1180,1010,3010,-1870,225,1900],[-1560,780,2640,-1760,195,1650]]},
+  {kick:'崩壊', ttl:'西軍壊走', dur:19, c0:'12:30', c1:'14:00', fog:.20, fire:1,
+   nar:'大谷隊の壊滅で西軍の右翼が崩れた。宇喜多、小西、そして石田の各隊が伊吹の山中へ潰走する。開戦から四刻、勝敗は決した。',
+   cam:[[-1560,780,2640,-1760,195,1650],[-1450,1700,2700,-1150,150,900],[-750,2600,3050,-800,150,500]]},
+  {kick:'退口', ttl:'島津、敵中を突く', dur:20, c0:'14:00', c1:'14:30', fog:.26,
+   nar:'孤立した島津義弘はただ一隊、退路である西ではなく、家康本陣のある東へ向かって突撃した。捨て奸で追撃を断ち、伊勢街道へ抜けたとき、生き残りは八十余騎であったという。',
+   cam:[[-750,2600,3050,-800,150,500],[-350,1880,2950,350,170,900],[760,1680,2760,1560,195,1520]]}
+];
+</script>
+<script>
+"use strict";
+/* =====================================================================
+   1. 地形エンジン — analytic heightfield, coloured by elevation & slope
+   ===================================================================== */
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+const lerp=(a,b,t)=>a+(b-a)*t;
+const sstep=(e0,e1,x)=>{const t=clamp((x-e0)/(e1-e0),0,1);return t*t*(3-2*t);};
+const smoother=t=>t*t*t*(t*(t*6-15)+10);
+const smax=(a,b,k)=>{const h=Math.max(0,k-Math.abs(a-b))/k;return Math.max(a,b)+h*h*k*0.25;};
+
+function hash2(x,y){const n=Math.sin(x*127.1+y*311.7)*43758.5453;return n-Math.floor(n);}
+function vnoise(x,y){
+  const xi=Math.floor(x),yi=Math.floor(y),xf=x-xi,yf=y-yi;
+  const u=xf*xf*(3-2*xf),v=yf*yf*(3-2*yf);
+  const a=hash2(xi,yi),b=hash2(xi+1,yi),c=hash2(xi,yi+1),d=hash2(xi+1,yi+1);
+  return a+(b-a)*u+(c-a)*v+(a-b-c+d)*u*v;
+}
+function fbm(x,y,oct){let s=0,amp=.5,f=1;for(let i=0;i<oct;i++){s+=amp*vnoise(x*f,y*f);f*=2.07;amp*=.5;}return s;}
+
+const MPRE = MOUNTAINS.map(m=>{const r=m.r*Math.PI/180;return{...m,cs:Math.cos(r),sn:Math.sin(r)};});
+
+function segDist(px,pz,ax,az,bx,bz){
+  const dx=bx-ax,dz=bz-az,l2=dx*dx+dz*dz;
+  let t=l2?((px-ax)*dx+(pz-az)*dz)/l2:0; t=clamp(t,0,1);
+  const cx=ax+dx*t-px,cz=az+dz*t-pz; return Math.sqrt(cx*cx+cz*cz);
+}
+function polyDist(x,z,pts){
+  let d=1e9;
+  for(let i=0;i<pts.length-1;i++) d=Math.min(d,segDist(x,z,pts[i][0],pts[i][1],pts[i+1][0],pts[i+1][1]));
+  return d;
+}
+
+function baseH(x,z){
+  let b=132;
+  b-=sstep(700,3000,x)*64;      // 東へ ─ 垂井・大垣方面へ下る
+  b+=sstep(-900,-3000,x)*74;    // 西へ ─ 今須の峠へ上る
+  b+=sstep(700,2500,-z)*26;     // 北 ─ 伊吹の裾
+  b+=sstep(1400,2900,z)*30;     // 南 ─ 尾根の裾
+  return b;
+}
+function reliefAt(x,z){
+  let r=0;
+  for(let i=0;i<MPRE.length;i++){
+    const m=MPRE[i], ox=x-m.x, oz=z-m.z;
+    const dx=(ox*m.cs-oz*m.sn)/m.rx, dz=(ox*m.sn+oz*m.cs)/m.rz;
+    const d2=dx*dx+dz*dz; if(d2>=1) continue;
+    r=smax(r,(m.h-132)*Math.pow(1-d2,m.p),22);
+  }
+  return r;
+}
+/** 真の標高 (m) — 誇張前 */
+function rawH(x,z){
+  let h=baseH(x,z)+reliefAt(x,z);
+  const rl=reliefAt(x,z);
+  h+=(fbm(x*0.0016,z*0.0016,4)-0.5)*(9+rl*0.30);
+  h+=(fbm(x*0.0068,z*0.0068,3)-0.5)*(3+rl*0.05);
+  for(let i=0;i<RIVERS.length;i++){
+    const rv=RIVERS[i], w=rv.w*5, d=polyDist(x,z,rv.pts);
+    if(d<w){const k=1-d/w; h-=k*k*11;}
+  }
+  return h;
+}
+/** 画面上の高さ — 誇張後 */
+const H=(x,z)=>rawH(x,z)*VEX;
+
+/* =====================================================================
+   2. 舞台 — renderer, sky, light
+   ===================================================================== */
+const canvas=document.getElementById('gl');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.85));
+renderer.setSize(innerWidth,innerHeight,false);
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.02;
+renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+
+const scene=new THREE.Scene();
+scene.fog=new THREE.FogExp2(0x9aa7ad,0.00016);
+const camera=new THREE.PerspectiveCamera(38,innerWidth/innerHeight,15,46000);
+camera.position.set(3100,3050,3700);
+
+/* 空 — a gradient dome whose horizon warms as the morning burns the mist off */
+const skyU={
+  uTop:{value:new THREE.Color(0x1d3350)},
+  uMid:{value:new THREE.Color(0x8fa0ad)},
+  uBot:{value:new THREE.Color(0xd8c39c)}
+};
+const sky=new THREE.Mesh(
+  new THREE.SphereGeometry(22000,44,26),
+  new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,fog:false,uniforms:skyU,
+    vertexShader:`varying vec3 vP;void main(){vP=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+    fragmentShader:`uniform vec3 uTop,uMid,uBot;varying vec3 vP;
+      void main(){float h=normalize(vP).y;
+        vec3 c=mix(uBot,uMid,smoothstep(-0.06,0.14,h));
+        c=mix(c,uTop,smoothstep(0.10,0.62,h));
+        gl_FragColor=vec4(c,1.);}`}));
+scene.add(sky);
+
+const hemi=new THREE.HemisphereLight(0xb6c4d2,0x6b5a3a,2.35); scene.add(hemi);
+const sun=new THREE.DirectionalLight(0xffd9ae,8.4);
+sun.castShadow=true;
+sun.shadow.mapSize.set(2048,2048);
+sun.shadow.camera.near=200; sun.shadow.camera.far=11000;
+sun.shadow.camera.left=-3600; sun.shadow.camera.right=3600;
+sun.shadow.camera.top=3600;   sun.shadow.camera.bottom=-3600;
+sun.shadow.normalBias=3.5; sun.shadow.bias=-0.0004;
+scene.add(sun); scene.add(sun.target);
+const fill=new THREE.DirectionalLight(0x9db6d2,2.1); fill.position.set(-1,0.55,-1); scene.add(fill);
+
+/** 太陽を戦況時刻へ — 08:00 は東南東 低く、14:00 は南西へ回る */
+function setSun(k){                       // k: 0(07:45) … 1(14:30)
+  const az=(104-76*k)*Math.PI/180;        // 方位: 東南東 → 南寄り
+  const el=(17+35*k)*Math.PI/180;          // 仰角: 低い朝日 → 昼
+  const R=6200;
+  sun.position.set(Math.sin(az)*Math.cos(el)*R, Math.sin(el)*R, Math.cos(az)*Math.cos(el)*R);
+  sun.target.position.set(-500,150,600);
+  sun.intensity=lerp(8.2,10.4,sstep(0,.4,k));
+  sun.color.setHSL(lerp(0.086,0.108,k), lerp(0.50,0.24,k), lerp(0.64,0.75,k));
+  hemi.intensity=lerp(2.85,2.05,k);
+  fill.intensity=lerp(2.40,1.55,k);
+  skyU.uTop.value.setHSL(0.60,lerp(0.44,0.50,k),lerp(0.17,0.30,k));
+  skyU.uMid.value.setHSL(0.57,lerp(0.20,0.32,k),lerp(0.45,0.55,k));
+  skyU.uBot.value.setHSL(lerp(0.09,0.13,k),lerp(0.30,0.16,k),lerp(0.55,0.66,k));
+}
+
+/* =====================================================================
+   3. 地表 — heightfield mesh with per-vertex colour
+   ===================================================================== */
+const C_PADDY=new THREE.Color(0x8f804c),   // 刈り入れ後の田
+      C_GRASS=new THREE.Color(0x666d3d),
+      C_WOOD =new THREE.Color(0x35472c),
+      C_DEEP =new THREE.Color(0x26351f),
+      C_ROCK =new THREE.Color(0x4e5048);
+
+function buildTerrain(){
+  const g=new THREE.PlaneGeometry(FIELD,FIELD,SEG,SEG);
+  g.rotateX(-Math.PI/2);
+  const p=g.attributes.position, n=p.count;
+  const col=new Float32Array(n*3), tmp=new THREE.Color(), c2=new THREE.Color();
+  const W=SEG+1, cell=FIELD/SEG;
+  const hs=new Float32Array(n);
+  for(let i=0;i<n;i++){ const h=rawH(p.getX(i),p.getZ(i)); hs[i]=h; p.setY(i,h*VEX); }
+  for(let i=0;i<n;i++){
+    const ix=i%W, iy=(i/W)|0, x=p.getX(i), z=p.getZ(i), h=hs[i];
+    // 傾斜 — gradient read off the grid itself
+    const gx=(hs[i+(ix<W-1?1:0)]-hs[i-(ix>0?1:0)])/(cell*((ix>0&&ix<W-1)?2:1));
+    const gz=(hs[i+(iy<W-1?W:0)]-hs[i-(iy>0?W:0)])/(cell*((iy>0&&iy<W-1)?2:1));
+    const slope=Math.sqrt(gx*gx+gz*gz);
+    tmp.copy(C_PADDY).lerp(C_GRASS,sstep(128,172,h));
+    const wood=clamp(sstep(0.13,0.31,slope)*0.96+sstep(165,255,h)*0.42,0,1);
+    c2.copy(C_WOOD).lerp(C_DEEP,sstep(0.30,0.62,slope));
+    tmp.lerp(c2,wood);
+    tmp.lerp(C_ROCK,sstep(0.44,0.80,slope)*sstep(220,340,h));
+    // 田の区画 — a faint patchwork where the plain is flat and low
+    if(h<156&&slope<0.075){
+      const q=Math.round(vnoise(x*0.0125,z*0.0125)*5)/5;
+      tmp.offsetHSL(0,0.014*(q-0.5),0.055*(q-0.5));
+    }
+    const m=(fbm(x*0.011,z*0.011,3)-0.5)*0.055;
+    tmp.offsetHSL(0,0,m);
+    col[i*3]=tmp.r; col[i*3+1]=tmp.g; col[i*3+2]=tmp.b;
+  }
+  g.setAttribute('color',new THREE.BufferAttribute(col,3));
+  g.computeVertexNormals();
+  const mesh=new THREE.Mesh(g,new THREE.MeshStandardMaterial({
+    vertexColors:true,roughness:0.96,metalness:0.0,flatShading:false}));
+  mesh.receiveShadow=true; mesh.castShadow=true;
+  return mesh;
+}
+scene.add(buildTerrain());
+
+/* ── 川と街道 — ribbons draped on the surface ── */
+function ribbon(pts,width,lift){
+  const cv=new THREE.CatmullRomCurve3(pts.map(q=>new THREE.Vector3(q[0],0,q[1])),false,'catmullrom',0.4);
+  const N=Math.max(24,pts.length*14), pos=[],uv=[],idx=[];
+  for(let i=0;i<=N;i++){
+    const t=i/N, pt=cv.getPoint(t), tg=cv.getTangent(t);
+    const nx=-tg.z, nz=tg.x, l=Math.hypot(nx,nz)||1;
+    const w=width*0.5*(0.16+0.84*Math.min(1,Math.min(t,1-t)/0.055));
+    for(let s=-1;s<=1;s+=2){
+      const x=pt.x+(nx/l)*w*s, z=pt.z+(nz/l)*w*s;
+      pos.push(x,H(x,z)+lift,z); uv.push(t*12,(s+1)*0.5);
+    }
+  }
+  for(let i=0;i<N;i++){const a=i*2;idx.push(a,a+1,a+2, a+1,a+3,a+2);}
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+  g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));
+  g.setIndex(idx); g.computeVertexNormals();
+  return g;
+}
+const waterMat=new THREE.MeshStandardMaterial({color:0x51707e,roughness:0.22,metalness:0.10,
+  transparent:true,opacity:0.85});
+RIVERS.forEach(r=>{const m=new THREE.Mesh(ribbon(r.pts,r.w,2.5),waterMat);
+  m.renderOrder=1; scene.add(m);});
+const roadMat=new THREE.MeshStandardMaterial({color:0x8a7d59,roughness:1.0,
+  transparent:true,opacity:0.38,depthWrite:false});
+const roadGroup=new THREE.Group(); scene.add(roadGroup);
+ROADS.forEach(r=>{const m=new THREE.Mesh(ribbon(r.pts,r.w,3.2),roadMat);
+  m.renderOrder=2; roadGroup.add(m);});
+</script>
+<script>
+"use strict";
+/* =====================================================================
+   4. 幟と部隊 — banners, formations
+   ===================================================================== */
+const T=new THREE.Vector3(), Q=new THREE.Quaternion(), S=new THREE.Vector3(), M=new THREE.Matrix4();
+const uTime={value:0};
+const srgb=h=>new THREE.Vector3(((h>>16)&255)/255,((h>>8)&255)/255,(h&255)/255);
+
+const COL={ E:0x2E5C92, W:0xB33A30, G:0xC79A2E,
+            Eo:0x8FBEEA, Wo:0xE9A69B, Go:0xF0D48A };
+
+/* ── 家紋 — stylised, legible at banner scale ── */
+function drawMon(x,k,cx,cy,r,ink){
+  x.save(); x.translate(cx,cy); x.strokeStyle=ink; x.fillStyle=ink;
+  x.lineCap='round'; x.lineJoin='round';
+  const ring=()=>{x.lineWidth=r*0.15;x.beginPath();x.arc(0,0,r*0.92,0,7);x.stroke();};
+  if(k==='maruju'){                                   // 島津 丸に十字
+    ring(); x.lineWidth=r*0.20;
+    x.beginPath();x.moveTo(-r*.62,0);x.lineTo(r*.62,0);x.moveTo(0,-r*.62);x.lineTo(0,r*.62);x.stroke();
+  }else if(k==='ichimonji'){                          // 毛利 一文字三星
+    x.lineWidth=r*0.22;
+    x.beginPath();x.moveTo(-r*.85,-r*.42);x.lineTo(r*.85,-r*.42);x.stroke();
+    [[0,r*.28],[-r*.6,r*.66],[r*.6,r*.66]].forEach(p=>{
+      x.beginPath();x.arc(p[0],p[1],r*.26,0,7);x.fill();});
+  }else if(k==='igeta'){                              // 井伊 井桁
+    x.lineWidth=r*0.19;x.beginPath();
+    x.moveTo(-r*.34,-r*.86);x.lineTo(-r*.34,r*.86);x.moveTo(r*.34,-r*.86);x.lineTo(r*.34,r*.86);
+    x.moveTo(-r*.86,-r*.34);x.lineTo(r*.86,-r*.34);x.moveTo(-r*.86,r*.34);x.lineTo(r*.86,r*.34);
+    x.stroke();
+  }else if(k==='aoi'){                                // 徳川 三つ葉葵
+    ring();
+    for(let i=0;i<3;i++){x.save();x.rotate(i*Math.PI*2/3);
+      x.beginPath();x.moveTo(0,-r*.12);
+      x.bezierCurveTo(-r*.52,-r*.30,-r*.44,-r*.80,0,-r*.74);
+      x.bezierCurveTo(r*.44,-r*.80,r*.52,-r*.30,0,-r*.12);
+      x.fill();x.restore();}
+  }else if(k==='kama'){                               // 小早川 違い鎌
+    x.lineWidth=r*0.17;
+    for(const s of[-1,1]){x.save();x.scale(s,1);
+      x.beginPath();x.moveTo(-r*.62,r*.78);x.lineTo(r*.10,-r*.20);x.stroke();
+      x.beginPath();x.arc(r*.24,-r*.42,r*.42,Math.PI*0.55,Math.PI*1.75);x.stroke();
+      x.restore();}
+  }else if(k==='takanoha'){                           // 大谷 違い鷹の羽
+    for(const s of[-1,1]){x.save();x.rotate(s*0.42);
+      x.beginPath();x.ellipse(0,0,r*.24,r*.88,0,0,7);x.fill();
+      x.save();x.globalCompositeOperation='destination-out';
+      x.lineWidth=r*.09;x.strokeStyle='#000';
+      x.beginPath();x.moveTo(0,-r*.72);x.lineTo(0,r*.78);x.stroke();x.restore();
+      x.restore();}
+  }else if(k==='kenkatabami'){                        // 宇喜多 剣片喰
+    for(let i=0;i<3;i++){x.save();x.rotate(i*Math.PI*2/3);
+      x.beginPath();x.ellipse(0,-r*.50,r*.28,r*.34,0,0,7);x.fill();
+      x.beginPath();x.moveTo(-r*.10,r*.10);x.lineTo(0,r*.95);x.lineTo(r*.10,r*.10);x.fill();
+      x.restore();}
+  }else if(k==='tachiaoi'){                           // 本多 立ち葵
+    x.lineWidth=r*0.15;
+    x.beginPath();x.moveTo(0,r*.92);x.lineTo(0,-r*.55);x.stroke();
+    for(const s of[-1,1]){x.beginPath();x.moveTo(0,r*.20);
+      x.bezierCurveTo(s*r*.75,r*.10,s*r*.72,-r*.55,0,-r*.62);x.fill();}
+    x.beginPath();x.arc(0,-r*.78,r*.20,0,7);x.fill();
+  }else if(k==='daiichi'){                            // 石田 大一大万大吉
+    x.font='bold '+(r*0.62)+'px "Shippori Mincho B1", serif';
+    x.textAlign='center'; x.textBaseline='middle';
+    const g=['大','一','大','万','大','吉'];
+    for(let i=0;i<6;i++) x.fillText(g[i],(i%2?1:-1)*r*0.42,(Math.floor(i/2)-1)*r*0.66);
+  }
+  x.restore();
+}
+
+const texCache={};
+function noboriTex(u,gold){
+  const key=u.k+(gold?'_g':'');
+  if(texCache[key]) return texCache[key];
+  const c=document.createElement('canvas'); c.width=140; c.height=384;
+  const x=c.getContext('2d');
+  const cloth = gold?'#C79A2E' : (u.a==='W' ? '#B0362C' : '#22406B');
+  const ink   = gold?'#2A2410' : '#F2EDE2';
+  x.fillStyle=cloth; x.fillRect(0,0,140,384);
+  x.fillStyle='rgba(0,0,0,.22)'; x.fillRect(0,0,10,384);       // 竿側の影
+  x.fillStyle=ink; x.globalAlpha=.5; x.fillRect(20,300,100,3); x.globalAlpha=1;
+  if(u.mon) drawMon(x,u.mon,70,70,42,ink);
+  // 縦書きの姓
+  x.fillStyle=ink; x.textAlign='center'; x.textBaseline='middle';
+  const gl=[...u.k], size = gl.length>3?40:(gl.length>2?50:58);
+  x.font='700 '+size+'px "Shippori Mincho B1","Yu Mincho",serif';
+  const top=u.mon?150:120, step=Math.min(size*1.12,(300-top)/Math.max(1,gl.length-1)||size);
+  gl.forEach((ch,i)=>x.fillText(ch,70,top+i*step));
+  const t=new THREE.CanvasTexture(c);
+  t.colorSpace=THREE.SRGBColorSpace; t.anisotropy=4;
+  texCache[key]=t; return t;
+}
+
+/* shared geometry */
+const gBlock=new THREE.BoxGeometry(1,1,1);
+const gPole =new THREE.CylinderGeometry(1.5,1.5,1,6).translate(0,0.5,0);
+const gFlag =new THREE.PlaneGeometry(1,1,4,10).translate(0.5,0.5,0);
+const gDisc =new THREE.CircleGeometry(1,30).rotateX(-Math.PI/2);
+const poleMat=new THREE.MeshStandardMaterial({color:0x2b2822,roughness:.9});
+
+function flagMat(u,gold){
+  const m=new THREE.MeshBasicMaterial({map:noboriTex(u,gold),transparent:true,
+    side:THREE.DoubleSide,toneMapped:true});
+  m.onBeforeCompile=sh=>{
+    sh.uniforms.uT=uTime;
+    sh.vertexShader='uniform float uT;\n'+sh.vertexShader.replace('#include <begin_vertex>',
+      '#include <begin_vertex>\n transformed.z += sin(position.y*7.0 + uT*2.4 + position.x*3.0)*position.x*position.x*5.5;');
+  };
+  return m;
+}
+
+const unitLayer=new THREE.Group(); scene.add(unitLayer);
+const RNG=(s=>()=>((s=s*1664525+1013904223|0)>>>8)/16777216)(20001021);
+
+UNITS.forEach((u,ui)=>{
+  const g=new THREE.Group(); g.position.set(u.x,H(u.x,u.z),u.z);
+  // 敵の方角を向く
+  const tx = u.a==='W' ? 100 : -1450, tz = u.a==='W' ? 500 : 500;
+  g.rotation.y=Math.atan2(tx-u.x,tz-u.z);
+  const base = u.a==='W'?COL.W:COL.E;
+
+  const n=clamp(Math.round(Math.pow(u.s,0.52)/8),6,18);
+  const cols=Math.min(n,Math.ceil(Math.sqrt(n)*1.6)), rows=Math.ceil(n/cols);
+  const bw=Math.round(lerp(36,54,sstep(500,17000,u.s))), bh=lerp(11,17,sstep(500,17000,u.s));
+  const im=new THREE.InstancedMesh(gBlock,
+    new THREE.MeshStandardMaterial({color:base,roughness:.72,metalness:.05}),n);
+  im.castShadow=true; im.receiveShadow=true;
+  im.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  const seeds=[];
+  for(let i=0;i<n;i++){
+    const cx=(i%cols-(cols-1)/2)*(bw+13), cz=(Math.floor(i/cols)-(rows-1)/2)*(bh*2.6);
+    seeds.push({x:cx,z:cz,ph:RNG()*6.28});
+    M.compose(new THREE.Vector3(cx,bh*.5,cz),Q.identity(),new THREE.Vector3(bw,bh,bh*1.5));
+    im.setMatrixAt(i,M);
+  }
+  g.add(im);
+
+  const dr=Math.max(58,cols*(bw+13)*0.44);
+  const disc=new THREE.Mesh(gDisc,new THREE.MeshBasicMaterial({color:base,transparent:true,
+    opacity:.13,depthWrite:false}));
+  disc.scale.setScalar(dr); disc.position.y=3; disc.renderOrder=3; g.add(disc);
+
+  const ph=u.maj?118:88;
+  const pole=new THREE.Mesh(gPole,poleMat); pole.scale.set(1,ph,1);
+  pole.position.set(-bw*0.55,0,-(rows*bh*1.5)-16); pole.castShadow=true; g.add(pole);
+  const fw=u.maj?34:26, fh=fw*2.7;
+  const flag=new THREE.Mesh(gFlag,flagMat(u,false));
+  flag.scale.set(fw,fh,1); flag.position.set(pole.position.x+2,ph-fh,pole.position.z);
+  flag.castShadow=false; g.add(flag);
+
+  unitLayer.add(g);
+  u._={g,im,n,seeds,disc,flag,pole,bw,bh,base:new THREE.Color(base),
+       cur:new THREE.Color(base),alive:1,eng:0,gold:0};
+});
+
+/* =====================================================================
+   5. 進軍矢印 — tapered ribbons with a flowing chevron fill
+   ===================================================================== */
+const ARROW_COL={E:srgb(0x3C7BC6), W:srgb(0xC3382A), G:srgb(0xD9A526), S:srgb(0xE0C87E)};
+const arrowVert=`varying vec2 vU;void main(){vU=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`;
+const arrowFrag=`
+uniform vec3 uCol; uniform float uProg,uT,uOp,uDash,uHollow,uOut;
+varying vec2 vU;
+void main(){
+  float u=vU.x, e=abs(vU.y*2.0-1.0);
+  float rev=smoothstep(uProg,uProg-0.05,u);
+  float edge=smoothstep(1.0,0.70,e);
+  float body=1.0;
+  if(uHollow>0.5) body=smoothstep(0.30,0.86,e);
+  float dash=uDash>0.5?smoothstep(0.42,0.52,fract(u*22.0-uT*0.5)):1.0;
+  float a=rev*edge*body*dash*uOp;
+  if(a<0.004) discard;
+  float chev=smoothstep(0.06,0.46,fract(u*9.0+e*0.34-uT*0.55));   // 山形 — apex leads
+  vec3 c=uOut>0.5?vec3(0.03,0.03,0.05)
+                 :mix(uCol*0.74,mix(uCol,vec3(1.0),0.50),chev);
+  gl_FragColor=vec4(c,a*(uOut>0.5?0.78:0.88));
+}`;
+
+function arrowGeom(pts,w){
+  const cv=new THREE.CatmullRomCurve3(pts.map(p=>new THREE.Vector3(p[0],0,p[1])),false,'catmullrom',0.5);
+  const L=cv.getLength(), headL=Math.min(w*4.6,L*0.42), hs=1-headL/L;
+  const smp=[]; const NB=46,NH=14;
+  for(let i=0;i<=NB;i++){const t=hs*i/NB; smp.push([t,w*0.5*(0.50+0.50*(i/NB))]);}
+  smp.push([hs,w*1.32]);
+  for(let j=1;j<=NH;j++){const k=j/NH; smp.push([hs+(1-hs)*k,w*1.32*(1-k)]);}
+  const pos=[],uv=[],idx=[];
+  for(let i=0;i<smp.length;i++){
+    const t=smp[i][0], hw=smp[i][1];
+    const p=cv.getPoint(t), tg=cv.getTangent(t);
+    let nx=-tg.z,nz=tg.x; const l=Math.hypot(nx,nz)||1; nx/=l; nz/=l;
+    for(let s=-1;s<=1;s+=2){
+      const x=p.x+nx*hw*s, z=p.z+nz*hw*s;
+      pos.push(x,H(x,z)+46,z); uv.push(t,(s+1)*0.5);
+    }
+  }
+  for(let i=0;i<smp.length-1;i++){const a=i*2;idx.push(a,a+1,a+2,a+1,a+3,a+2);}
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+  g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));
+  g.setIndex(idx);
+  return g;
+}
+const arrowLayer=new THREE.Group(); scene.add(arrowLayer);
+ARROWS.forEach(a=>{
+  const mk=(outline)=>{
+    const m=new THREE.Mesh(arrowGeom(a.p,a.w*0.46*(outline?1.32:1)),new THREE.ShaderMaterial({
+      vertexShader:arrowVert,fragmentShader:arrowFrag,transparent:true,depthWrite:false,
+      side:THREE.DoubleSide,
+      uniforms:{uCol:{value:ARROW_COL[a.a]},uProg:{value:0},uT:uTime,uOp:{value:1},
+        uDash:{value:a.dash?1:0},uHollow:{value:a.hollow?1:0},uOut:{value:outline?1:0}}}));
+    m.renderOrder=outline?6:7; m.frustumCulled=false; arrowLayer.add(m); return m;
+  };
+  a._out=a.dash?null:mk(true); a._m=mk(false);
+});
+
+/* 「不戦」 — the cross that marks Mori's road, blocked by Kikkawa */
+const noFight=new THREE.Group();
+{
+  const mat=new THREE.MeshBasicMaterial({color:0xE05548,transparent:true,opacity:0,depthWrite:false});
+  for(const s of[-1,1]){
+    const b=new THREE.Mesh(new THREE.BoxGeometry(230,7,26),mat);
+    b.rotation.y=s*Math.PI/4; noFight.add(b);
+  }
+  noFight.position.set(2140,H(2140,1010)+40,1010);
+  noFight.userData.mat=mat; noFight.renderOrder=8; scene.add(noFight);
+}
+</script>
+<script>
+"use strict";
+/* =====================================================================
+   6. 霧と硝煙 — drifting valley mist, gunsmoke, muzzle flash
+   ===================================================================== */
+function mistTexture(){
+  const S=512,c=document.createElement('canvas');c.width=c.height=S;
+  const x=c.getContext('2d');
+  x.fillStyle='rgba(0,0,0,0)';x.fillRect(0,0,S,S);
+  let s=7,rnd=()=>((s=s*1103515245+12345|0)>>>9)/8388608;
+  for(let i=0;i<300;i++){
+    const px=rnd()*S,py=rnd()*S,r=26+rnd()*118,a=0.028+rnd()*0.055;
+    for(let ox=-1;ox<=1;ox++)for(let oy=-1;oy<=1;oy++){
+      const gx=px+ox*S,gy=py+oy*S;
+      if(gx<-r||gx>S+r||gy<-r||gy>S+r)continue;
+      const gr=x.createRadialGradient(gx,gy,0,gx,gy,r);
+      gr.addColorStop(0,'rgba(255,255,255,'+a+')');
+      gr.addColorStop(1,'rgba(255,255,255,0)');
+      x.fillStyle=gr;x.beginPath();x.arc(gx,gy,r,0,7);x.fill();
+    }
+  }
+  const t=new THREE.CanvasTexture(c);
+  t.wrapS=t.wrapT=THREE.RepeatWrapping; t.colorSpace=THREE.SRGBColorSpace;
+  return t;
+}
+const mistTex=mistTexture();
+const mistLayer=new THREE.Group(); scene.add(mistLayer);
+const MIST=[{y:282,rep:1.7,sp:[ .0038,.0016],o:1.00},
+            {y:326,rep:2.4,sp:[-.0026,.0031],o:0.86},
+            {y:392,rep:3.2,sp:[ .0019,-.0024],o:0.62},
+            {y:472,rep:4.6,sp:[-.0013,-.0011],o:0.36}];
+MIST.forEach(L=>{
+  const tx=mistTex.clone(); tx.needsUpdate=true;
+  tx.wrapS=tx.wrapT=THREE.RepeatWrapping; tx.repeat.set(L.rep*2.3,L.rep*2.3);
+  const m=new THREE.Mesh(new THREE.PlaneGeometry(30000,30000).rotateX(-Math.PI/2),
+    new THREE.MeshBasicMaterial({map:tx,transparent:true,depthWrite:false,
+      color:0xdfe6e8,opacity:0,fog:false}));
+  m.position.y=L.y; m.renderOrder=10; L.tex=tx; L.mesh=m; mistLayer.add(m);
+});
+
+function puffTexture(hard){
+  const c=document.createElement('canvas');c.width=c.height=128;
+  const x=c.getContext('2d');
+  const g=x.createRadialGradient(64,64,0,64,64,64);
+  g.addColorStop(0,'rgba(255,255,255,1)');
+  g.addColorStop(hard?0.22:0.42,'rgba(255,255,255,'+(hard?0.8:0.45)+')');
+  g.addColorStop(1,'rgba(255,255,255,0)');
+  x.fillStyle=g;x.fillRect(0,0,128,128);
+  const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;
+}
+const smokeMatProto=new THREE.SpriteMaterial({map:puffTexture(false),transparent:true,
+  depthWrite:false,color:0xe2dccd,opacity:0});
+const flashMatProto=new THREE.SpriteMaterial({map:puffTexture(true),transparent:true,
+  depthWrite:false,color:0xffcf8c,blending:THREE.AdditiveBlending,opacity:0});
+const fxLayer=new THREE.Group(); scene.add(fxLayer);
+const POOL=[];
+for(let i=0;i<210;i++){
+  const mS=smokeMatProto.clone(), mF=flashMatProto.clone();
+  const sp=new THREE.Sprite(mS);
+  sp.visible=false; sp.renderOrder=9; fxLayer.add(sp);
+  POOL.push({sp,mS,mF,life:0,max:1,v:new THREE.Vector3(),s0:0,s1:0,o0:0,flash:false});
+}
+let poolI=0;
+function emit(x,z,flash){
+  const p=POOL[poolI=(poolI+1)%POOL.length];
+  const y=H(x,z);
+  p.sp.position.set(x+(Math.random()-.5)*90,y+14+Math.random()*22,z+(Math.random()-.5)*90);
+  p.sp.material=flash?p.mF:p.mS;
+  p.flash=flash;
+  if(flash){p.max=.16;p.s0=26;p.s1=64;p.o0=.95;p.v.set(0,26,0);}
+  else{p.max=4.5+Math.random()*4.5;p.s0=34;p.s1=190+Math.random()*150;p.o0=.42+Math.random()*.26;
+       p.v.set((Math.random()-.5)*22,20+Math.random()*24,(Math.random()-.5)*22);}
+  p.life=0; p.sp.visible=true;
+}
+function stepFX(dt){
+  for(const p of POOL){
+    if(!p.sp.visible) continue;
+    p.life+=dt; const k=p.life/p.max;
+    if(k>=1){p.sp.visible=false;continue;}
+    p.sp.position.addScaledVector(p.v,dt);
+    p.v.multiplyScalar(1-dt*0.5);
+    const sc=lerp(p.s0,p.s1,p.flash?k:Math.sqrt(k));
+    p.sp.scale.set(sc,sc,1);
+    p.sp.material.opacity=p.o0*(p.flash?(1-k):(k<.16?k/.16:1-(k-.16)/.84));
+  }
+}
+
+/* =====================================================================
+   7. カメラ — a keyframed crane, plus free orbit on demand
+   ===================================================================== */
+let TOTAL=0; CHAPTERS.forEach(c=>TOTAL+=c.dur);
+{let acc=0; CHAPTERS.forEach(c=>{c.t0=acc/TOTAL; acc+=c.dur; c.t1=acc/TOTAL;});}
+const KEYS=[];
+CHAPTERS.forEach((c,ci)=>{
+  c.cam.forEach((k,j)=>{
+    if(ci>0&&j===0) return;                    // shared with previous chapter's tail
+    KEYS.push({t:c.t0+(j/(c.cam.length-1))*(c.t1-c.t0),
+      p:new THREE.Vector3(k[0],k[1],k[2]), g:new THREE.Vector3(k[3],k[4],k[5])});
+  });
+});
+const cr=(a,b,c,d,u)=>{const u2=u*u,u3=u2*u;
+  return 0.5*(2*b+(c-a)*u+(2*a-5*b+4*c-d)*u2+(-a+3*b-3*c+d)*u3);};
+const camPos=new THREE.Vector3(), camTgt=new THREE.Vector3();
+function camAt(p){
+  let i=0; while(i<KEYS.length-2&&KEYS[i+1].t<=p) i++;
+  const k1=KEYS[i],k2=KEYS[i+1],k0=KEYS[Math.max(0,i-1)],k3=KEYS[Math.min(KEYS.length-1,i+2)];
+  const u=clamp((p-k1.t)/Math.max(1e-6,k2.t-k1.t),0,1);
+  camPos.set(cr(k0.p.x,k1.p.x,k2.p.x,k3.p.x,u),cr(k0.p.y,k1.p.y,k2.p.y,k3.p.y,u),cr(k0.p.z,k1.p.z,k2.p.z,k3.p.z,u));
+  camTgt.set(cr(k0.g.x,k1.g.x,k2.g.x,k3.g.x,u),cr(k0.g.y,k1.g.y,k2.g.y,k3.g.y,u),cr(k0.g.z,k1.g.z,k2.g.z,k3.g.z,u));
+}
+
+/* 手動操作 — bespoke orbit, since the UMD build ships no controls */
+const orb={tgt:new THREE.Vector3(-500,150,500),rad:4200,the:0.72,phi:0.86,
+           drag:0,px:0,py:0,pan:false};
+function applyOrbit(){
+  const sp=Math.sin(orb.phi),cp=Math.cos(orb.phi);
+  camera.position.set(orb.tgt.x+orb.rad*sp*Math.sin(orb.the),
+                      orb.tgt.y+orb.rad*cp,
+                      orb.tgt.z+orb.rad*sp*Math.cos(orb.the));
+  camera.lookAt(orb.tgt);
+}
+function seedOrbit(){
+  orb.tgt.copy(camTgt);
+  const d=camera.position.clone().sub(orb.tgt);
+  orb.rad=d.length(); orb.phi=Math.acos(clamp(d.y/orb.rad,-1,1)); orb.the=Math.atan2(d.x,d.z);
+}
+canvas.addEventListener('pointerdown',e=>{
+  if(auto){auto=false;syncToggle(tgCam,false);seedOrbit();}
+  orb.drag=1;orb.px=e.clientX;orb.py=e.clientY;orb.pan=e.shiftKey||e.button===2;
+  canvas.setPointerCapture(e.pointerId);
+});
+canvas.addEventListener('pointermove',e=>{
+  if(!orb.drag)return;
+  const dx=e.clientX-orb.px,dy=e.clientY-orb.py; orb.px=e.clientX;orb.py=e.clientY;
+  if(orb.pan){
+    const f=orb.rad*0.0013;
+    const rt=new THREE.Vector3(Math.cos(orb.the),0,-Math.sin(orb.the));
+    const fw=new THREE.Vector3(-Math.sin(orb.the),0,-Math.cos(orb.the));
+    orb.tgt.addScaledVector(rt,-dx*f).addScaledVector(fw,-dy*f);
+  }else{
+    orb.the-=dx*0.0042; orb.phi=clamp(orb.phi-dy*0.0034,0.10,1.44);
+  }
+});
+addEventListener('pointerup',()=>orb.drag=0);
+canvas.addEventListener('contextmenu',e=>e.preventDefault());
+canvas.addEventListener('wheel',e=>{
+  e.preventDefault();
+  if(auto){auto=false;syncToggle(tgCam,false);seedOrbit();}
+  orb.rad=clamp(orb.rad*(1+Math.sign(e.deltaY)*0.10),300,9500);
+},{passive:false});
+</script>
+<script>
+"use strict";
+/* =====================================================================
+   8. 進行 — playback state, unit behaviour, labels, transport
+   ===================================================================== */
+let playing=!RM, P=0, speed=1, auto=true, ci=-1;
+const NOFIGHT=new Set(['毛利秀元','吉川広家','安国寺恵瓊','長宗我部盛親','長束正家',
+                       '池田輝政','浅野幸長','山内一豊','有馬豊氏']);
+const GOLDC=new THREE.Color(COL.G);
+UNITS.forEach(u=>{u._k=[[0,u.x,u.z]].concat(u.mv||[]); u._.side=u.a; u._.head=u._.g.rotation.y;});
+
+function posAt(u,p){
+  const k=u._k; let i=k.length-1;
+  while(i>0&&k[i][0]>p) i--;
+  if(i>=k.length-1) return [k[i][1],k[i][2],0];
+  const a=k[i],b=k[i+1];
+  const t=clamp((p-a[0])/Math.max(1e-6,b[0]-a[0]),0,1), e=smoother(t);
+  const moving=t>0.001&&t<0.999?1:0;
+  return [lerp(a[1],b[1],e),lerp(a[2],b[2],e),moving?Math.atan2(b[1]-a[1],b[2]-a[2]):0];
+}
+
+const hots=[]; let engTick=0;
+function detectEngage(fire){
+  hots.length=0;
+  for(const u of UNITS) u._.eng=0;
+  if(!fire) return;
+  for(let i=0;i<UNITS.length;i++){
+    const a=UNITS[i]; if(a._.alive<0.5||NOFIGHT.has(a.n)) continue;
+    for(let j=i+1;j<UNITS.length;j++){
+      const b=UNITS[j];
+      if(b._.alive<0.5||NOFIGHT.has(b.n)||a._.side===b._.side) continue;
+      const dx=a._.g.position.x-b._.g.position.x, dz=a._.g.position.z-b._.g.position.z;
+      if(dx*dx+dz*dz<560*560){
+        a._.eng=1; b._.eng=1;
+        hots.push([(a._.g.position.x+b._.g.position.x)*.5,(a._.g.position.z+b._.g.position.z)*.5]);
+      }
+    }
+  }
+}
+function writeMatrices(u,jit,sc){
+  const st=u._;
+  for(let i=0;i<st.n;i++){
+    const s=st.seeds[i];
+    const jx=jit?Math.sin(uTime.value*3.1+s.ph)*jit:0;
+    const jz=jit?Math.cos(uTime.value*2.6+s.ph*1.7)*jit:0;
+    T.set(s.x+jx,st.bh*.5*sc,s.z+jz);
+    S.set(st.bw*lerp(0.4,1,sc),st.bh*sc,st.bh*1.5*lerp(0.4,1,sc));
+    M.compose(T,Q.identity(),S);
+    st.im.setMatrixAt(i,M);
+  }
+  st.im.instanceMatrix.needsUpdate=true;
+}
+
+/* ── labels ── */
+const labelBox=document.getElementById('labels');
+function mkLabel(cls,name,sub){
+  const d=document.createElement('div'); d.className='lb '+cls;
+  d.innerHTML='<i></i>'+(sub!==undefined?'<b></b>':'');
+  d.firstChild.textContent=name;
+  if(sub!==undefined) d.lastChild.textContent=sub;
+  d.style.opacity='0'; labelBox.appendChild(d); return d;
+}
+UNITS.forEach(u=>{
+  u._.el=mkLabel((u.a==='W'?'w':'e')+(u.maj?'':' minor'),u.n,u.s.toLocaleString('en-US'));
+});
+PLACES.forEach(pl=>{pl.el=mkLabel('geo'+(pl.rd?' rd':''),pl.n); pl.y=H(pl.x,pl.z);});
+
+const NDC=new THREE.Vector3();
+let EX=[];                       // screen regions the chrome already owns
+function measureChrome(){
+  EX=['slate','rail','narr','bar','hint'].map(id=>{
+    const r=document.getElementById(id).getBoundingClientRect();
+    return [r.left-(id==='rail'?96:16),r.top-10,r.right+16,r.bottom+10];
+  });
+}
+const hidden=(px,py)=>{
+  for(let i=0;i<EX.length;i++){const r=EX[i];
+    if(px>r[0]&&px<r[2]&&py>r[1]&&py<r[3]) return true;}
+  return false;
+};
+function place(el,x,y,z,vis,op){
+  if(!vis){ if(el.style.opacity!=='0') el.style.opacity='0'; return; }
+  NDC.set(x,y,z).project(camera);
+  if(NDC.z>1||NDC.x<-0.97||NDC.x>0.97||NDC.y<-0.97||NDC.y>0.99){
+    if(el.style.opacity!=='0') el.style.opacity='0'; return; }
+  const px=(NDC.x*.5+.5)*innerWidth, py=(-NDC.y*.5+.5)*innerHeight;
+  if(hidden(px,py)){ if(el.style.opacity!=='0') el.style.opacity='0'; return; }
+  el.style.transform='translate('+px.toFixed(1)+'px,'+py.toFixed(1)+'px) translate(-50%,-100%)';
+  el.style.opacity=op.toFixed(2);
+}
+
+/* ── transport ── */
+const $=id=>document.getElementById(id);
+const elClock=$('clock'),elKoku=$('koku'),elChapT=$('chapTtl'),elChapK=$('chapKick'),
+      elNarr=$('narrText'),elNarrC=$('narrClock'),elFill=$('trfill'),elHead=$('trhead'),
+      elTrack=$('track'),elChap=$('chap'),elNarrBox=$('narr'),elPlay=$('btnPlay'),elSpeed=$('speed');
+const ICON_PLAY='<svg viewBox="0 0 16 16"><path d="M3 2l11 6-11 6z"/></svg>';
+const ICON_PAUSE='<svg viewBox="0 0 16 16"><path d="M3 2h4v12H3zM9 2h4v12H9z"/></svg>';
+CHAPTERS.forEach((c,i)=>{
+  const b=document.createElement('button');
+  b.className='mk'; b.innerHTML='<span>'+c.kick+'</span>';
+  b.style.left=(c.t0*100).toFixed(2)+'%';
+  b.title=c.c0+' '+c.ttl;
+  b.addEventListener('click',e=>{e.stopPropagation();P=c.t0+0.0005;});
+  elTrack.appendChild(b); c.mk=b;
+});
+const mins=s=>{const a=s.split(':');return +a[0]*60+ +a[1];};
+const K1=['〇','一','二','三','四','五','六','七','八','九'];
+const kn=n=>n<10?K1[n]:(n>=20?K1[Math.floor(n/10)]:'')+'十'+(n%10?K1[n%10]:'');
+const jpTime=m=>{const h=Math.floor(m/60),mm=m%60;
+  return (h<12?'午前':'午後')+kn(h>12?h-12:h)+'時'+(mm?kn(mm)+'分':'');};
+const koku=m=>m<540?'辰の刻':m<660?'巳の刻':m<780?'午の刻':'未の刻';
+
+function vtext(el,str){
+  el.textContent='';
+  for(const ch of str){
+    const sp=document.createElement('span');
+    sp.textContent=ch;
+    if('、。，・'.indexOf(ch)>=0) sp.className='pt';
+    el.appendChild(sp);
+  }
+}
+function setChapter(i){
+  const c=CHAPTERS[i];
+  vtext(elChapT,c.ttl); vtext(elChapK,c.kick); elNarr.textContent=c.nar;
+  elChap.classList.toggle('turn',!!c.turn); elNarrBox.classList.toggle('turn',!!c.turn);
+  CHAPTERS.forEach((d,j)=>d.mk.classList.toggle('on',j===i));
+  elChapT.animate?elChapT.animate([{opacity:0,transform:'translateY(-14px)'},{opacity:1,transform:'none'}],
+    {duration:RM?0:520,easing:'cubic-bezier(.2,.7,.3,1)'}):0;
+  elNarr.animate?elNarr.animate([{opacity:0},{opacity:1}],{duration:RM?0:600}):0;
+}
+function syncToggle(b,v){b.setAttribute('aria-pressed',v?'true':'false');}
+const tgFog=$('tgFog'),tgArrow=$('tgArrow'),tgUnit=$('tgUnit'),tgGeo=$('tgGeo'),tgCam=$('tgCam');
+let showFog=true,showArrow=true,showUnit=true,showGeo=true;
+tgFog.onclick  =()=>{showFog=!showFog;syncToggle(tgFog,showFog);};
+tgArrow.onclick=()=>{showArrow=!showArrow;syncToggle(tgArrow,showArrow);arrowLayer.visible=showArrow;};
+tgUnit.onclick =()=>{showUnit=!showUnit;syncToggle(tgUnit,showUnit);};
+tgGeo.onclick  =()=>{showGeo=!showGeo;syncToggle(tgGeo,showGeo);};
+tgCam.onclick  =()=>{auto=!auto;syncToggle(tgCam,auto);if(!auto)seedOrbit();};
+function setPlay(v){playing=v;elPlay.innerHTML=v?ICON_PAUSE:ICON_PLAY;
+  elPlay.setAttribute('aria-label',v?'一時停止':'再生');}
+elPlay.onclick=()=>setPlay(!playing);
+$('btnPrev').onclick=()=>{const c=CHAPTERS.findIndex(c=>P<c.t1);
+  P=CHAPTERS[Math.max(0,(P-CHAPTERS[c].t0<0.012?c-1:c))].t0+0.0005;};
+$('btnNext').onclick=()=>{const c=CHAPTERS.findIndex(c=>P<c.t1);
+  P=c<CHAPTERS.length-1?CHAPTERS[c+1].t0+0.0005:0.9995;};
+const SPEEDS=[0.5,1,1.5,2]; let si=1;
+elSpeed.onclick=()=>{si=(si+1)%SPEEDS.length;speed=SPEEDS[si];elSpeed.textContent='×'+speed.toFixed(1);};
+let scrub=0;
+const setFromX=cx=>{const r=elTrack.getBoundingClientRect();P=clamp((cx-r.left)/r.width,0,0.9999);};
+elTrack.addEventListener('pointerdown',e=>{if(e.target.classList.contains('mk'))return;
+  scrub=1;setFromX(e.clientX);elTrack.setPointerCapture(e.pointerId);});
+elTrack.addEventListener('pointermove',e=>{if(scrub)setFromX(e.clientX);});
+addEventListener('pointerup',()=>scrub=0);
+addEventListener('keydown',e=>{
+  if(e.target.tagName==='BUTTON'&&e.key===' ')return;
+  if(e.key===' '){e.preventDefault();setPlay(!playing);}
+  else if(e.key==='ArrowRight'){e.preventDefault();$('btnNext').onclick();}
+  else if(e.key==='ArrowLeft'){e.preventDefault();$('btnPrev').onclick();}
+});
+setPlay(playing);
+setTimeout(()=>{const h=$('hint');if(h)h.style.opacity='0';},11000);
+
+/* =====================================================================
+   9. 描画 — the loop
+   ===================================================================== */
+addEventListener('resize',()=>{
+  camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight,false); measureChrome();
+});
+let last=performance.now(), emitAcc=0;
+function frame(now){
+  requestAnimationFrame(frame);
+  const dt=Math.min(0.05,(now-last)/1000); last=now;
+  uTime.value+=dt;
+  if(playing&&!scrub){ P+=dt*speed/TOTAL; if(P>=1){P=0.99999;setPlay(false);} }
+
+  /* 章 */
+  let i=0; while(i<CHAPTERS.length-1&&P>=CHAPTERS[i].t1) i++;
+  const c=CHAPTERS[i], cu=clamp((P-c.t0)/(c.t1-c.t0),0,1);
+  if(i!==ci){ ci=i; setChapter(i); }
+  const m0=mins(c.c0), m1=mins(c.c1), cm=Math.round(lerp(m0,m1,cu));
+  const hh=String(Math.floor(cm/60)).padStart(2,'0'), mm=String(cm%60).padStart(2,'0');
+  if(elClock.textContent!==hh+':'+mm){
+    elClock.textContent=hh+':'+mm; elKoku.textContent=koku(cm);
+    elNarrC.innerHTML=koku(cm)+'<span>'+jpTime(cm)+'</span>';
+  }
+  elFill.style.width=(P*100).toFixed(3)+'%'; elHead.style.left=(P*100).toFixed(3)+'%';
+  elTrack.setAttribute('aria-valuenow',Math.round(P*100));
+  elTrack.setAttribute('aria-valuetext',hh+':'+mm+' '+c.ttl);
+
+  /* 光と霧 */
+  const dayK=clamp((cm-465)/(870-465),0,1);
+  setSun(dayK);
+  const nx=CHAPTERS[Math.min(i+1,CHAPTERS.length-1)];
+  const fogK=lerp(c.fog,nx.fog,smoother(cu));
+  scene.fog.density=0.000105+fogK*0.000092;
+  scene.fog.color.copy(skyU.uMid.value).lerp(new THREE.Color(0xd6dcd8),0.35*fogK);
+  mistLayer.visible=showFog;
+  MIST.forEach(L=>{
+    L.tex.offset.x+=L.sp[0]*dt; L.tex.offset.y+=L.sp[1]*dt;
+    L.mesh.material.opacity=0.44*fogK*L.o;
+  });
+
+  /* 部隊 */
+  const fire=!!c.fire||i===CHAPTERS.length-1;
+  if((engTick=(engTick+1)%6)===0) detectEngage(fire);
+  for(const u of UNITS){
+    const st=u._, pr=posAt(u,P), y=H(pr[0],pr[1]);
+    st.g.position.set(pr[0],y,pr[1]);
+    const head=pr[2];
+    if(head){ let d=head-st.g.rotation.y;
+      while(d>Math.PI)d-=6.2832; while(d<-Math.PI)d+=6.2832;
+      st.g.rotation.y+=d*Math.min(1,dt*1.6); }
+    const alive=u.fx?1-sstep(u.fx,u.fx+0.03,P):1;
+    const gold=u.turn?sstep(u.turn,u.turn+0.02,P):0;
+    if(gold>0.5&&!st.gold){st.gold=1;st.side='E';
+      st.flag.material.map=noboriTex(u,true);st.flag.material.needsUpdate=true;}
+    st.cur.copy(st.base).lerp(GOLDC,gold);
+    st.im.material.color.copy(st.cur);
+    st.disc.material.color.copy(st.cur);
+    st.disc.material.opacity=0.13*alive;
+    st.flag.material.opacity=alive;
+    st.flag.visible=alive>0.05;
+    st.g.visible=alive>0.02;
+    const wasAlive=st.alive; st.alive=alive;
+    if(st.eng||alive<0.999||wasAlive!==alive) writeMatrices(u,st.eng?7:0,Math.max(0.001,alive));
+    st.im.castShadow=alive>0.5;
+    /* label */
+    const dcam=camera.position.distanceTo(st.g.position);
+    const vis=showUnit&&alive>0.25&&(u.maj||dcam<2200);
+    place(st.el,st.g.position.x,y+(u.maj?150:120),st.g.position.z,vis,
+      alive*(u.maj?1:clamp((2200-dcam)/600,0,1)));
+    if(st.gold) st.el.className='lb g'+(u.maj?'':' minor');
+  }
+  for(const pl of PLACES){
+    const dcam=camera.position.distanceTo(T.set(pl.x,pl.y,pl.z));
+    place(pl.el,pl.x,pl.y+(pl.flat||pl.rd?40:70),pl.z,showGeo&&dcam<7200,
+      clamp((7200-dcam)/2200,0,1)*0.95);
+  }
+
+  /* 硝煙 */
+  if(fire&&hots.length){
+    emitAcc+=dt*Math.min(26,6+hots.length*2.4);
+    while(emitAcc>1){ emitAcc-=1;
+      const h=hots[(Math.random()*hots.length)|0];
+      emit(h[0],h[1],Math.random()<0.42); }
+  }
+  stepFX(dt);
+
+  /* 矢印 */
+  ARROWS.forEach(a=>{
+    const ch=CHAPTERS[a.c], u=(P-ch.t0)/(ch.t1-ch.t0);
+    const prog=clamp((u-(a.d||0))/0.40,0,1);
+    const op=(u<0?0:1)*(1-sstep(ch.t1-0.004,ch.t1+0.016,P));
+    a._m.material.uniforms.uProg.value=prog;
+    a._m.material.uniforms.uOp.value=op;
+    a._m.visible=op>0.01&&prog>0;
+    if(a._out){a._out.material.uniforms.uProg.value=prog;
+      a._out.material.uniforms.uOp.value=op;a._out.visible=a._m.visible;}
+    if(a.stop) noFight.userData.mat.opacity=op*prog*0.9;
+  });
+  noFight.visible=noFight.userData.mat.opacity>0.02&&showArrow;
+
+  /* カメラ */
+  if(auto){
+    camAt(P);
+    if(!RM){
+      const t=uTime.value;
+      camPos.x+=Math.sin(t*0.29)*9; camPos.y+=Math.sin(t*0.21+1.3)*6; camPos.z+=Math.cos(t*0.24)*9;
+      camTgt.x+=Math.sin(t*0.19+2.1)*5; camTgt.z+=Math.cos(t*0.17)*5;
+    }
+    camera.position.lerp(camPos,1-Math.pow(0.0015,dt));
+    T.copy(camTgt); camera.lookAt(T);
+  }else applyOrbit();
+  sky.position.copy(camera.position);
+
+  renderer.render(scene,camera);
+}
+camAt(0); camera.position.copy(camPos); camera.lookAt(camTgt); setSun(0);
+setChapter(0); ci=0; measureChrome();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
