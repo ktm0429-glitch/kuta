@@ -3,11 +3,11 @@ import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { saveProfile } from '../profile'
 import { registerStaffFn } from '../firebase'
+import { stores } from '../data/stores'
 
 export default function Login() {
   const navigate = useNavigate()
   const [storeId, setStoreId] = useState('')
-  const [storeName, setStoreName] = useState('')
   const [staffId, setStaffId] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [error, setError] = useState('')
@@ -17,13 +17,19 @@ export default function Login() {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    if (!idPattern.test(storeId) || !idPattern.test(staffId)) {
-      setError('店舗IDとスタッフIDは半角英数字・ハイフン・アンダースコアのみで入力してください。')
+    if (!storeId) {
+      setError('店舗を選択してください。')
+      return
+    }
+    if (!idPattern.test(staffId)) {
+      setError('スタッフIDは半角英数字・ハイフン・アンダースコアのみで入力してください。')
       return
     }
     setError('')
     setSubmitting(true)
     try {
+      const store = stores.find((s) => s.id === storeId)
+      const storeName = store?.name ?? storeId
       await registerStaffFn({ storeId, storeName, staffId, displayName })
       saveProfile({ storeId, storeName, staffId, displayName })
       navigate('/modules')
@@ -38,25 +44,25 @@ export default function Login() {
     <div className="page">
       <h1>接客力向上トレーニング</h1>
       <p className="lead">
-        店舗IDとスタッフIDを入力してスタートしてください。研修を最後まで終えると1ptを獲得できます。
+        店舗を選択し、スタッフIDを入力してスタートしてください。研修を最後まで終えると1ptを獲得できます。
       </p>
       <form onSubmit={handleSubmit} className="form">
         <label>
-          店舗ID(店舗から配布されたID)
-          <input
+          店舗
+          <select
             value={storeId}
-            onChange={(e) => setStoreId(e.target.value.trim())}
-            placeholder="例: store01"
+            onChange={(e) => setStoreId(e.target.value)}
             required
-          />
-        </label>
-        <label>
-          店舗名(任意)
-          <input
-            value={storeName}
-            onChange={(e) => setStoreName(e.target.value)}
-            placeholder="例: 〇〇店"
-          />
+          >
+            <option value="" disabled>
+              選択してください
+            </option>
+            {stores.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
         </label>
         <label>
           スタッフID(社員番号など)

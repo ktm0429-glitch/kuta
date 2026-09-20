@@ -33,11 +33,14 @@ h1 {
   color: #333;
 }
 
-.form input {
+.form input,
+.form select {
   padding: 0.7rem;
   font-size: 1rem;
   border: 1px solid #ccc;
   border-radius: 8px;
+  background: #fff;
+  font-family: inherit;
 }
 
 button,
