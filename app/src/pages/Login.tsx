@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { saveProfile } from '../profile'
+import { loadProfile, saveProfile } from '../profile'
 import { registerStaffFn } from '../firebase'
 import { stores } from '../data/stores'
 
@@ -11,6 +11,14 @@ export default function Login() {
   const [fullName, setFullName] = useState('')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+
+  // 一度登録したスタッフは、次回以降はログイン画面を出さず
+  // 研修メニューに直接進む(端末に登録情報が残っている間のみ)。
+  useEffect(() => {
+    if (loadProfile()) {
+      navigate('/modules', { replace: true })
+    }
+  }, [navigate])
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -41,6 +49,10 @@ export default function Login() {
     } finally {
       setSubmitting(false)
     }
+  }
+
+  if (loadProfile()) {
+    return null
   }
 
   return (
