@@ -50,3 +50,19 @@ export const getMyStatusFn = httpsCallable<MyStatusRequest, MyStatusResponse>(
   functions,
   'getMyStatus',
 )
+
+export interface RegisterStaffRequest {
+  storeId: string
+  storeName: string
+  staffId: string
+  displayName: string
+}
+
+export interface RegisterStaffResponse {
+  points: number
+}
+
+export const registerStaffFn = httpsCallable<
+  RegisterStaffRequest,
+  RegisterStaffResponse
+>(functions, 'registerStaff')

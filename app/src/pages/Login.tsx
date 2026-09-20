@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { saveProfile } from '../profile'
+import { registerStaffFn } from '../firebase'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -10,17 +11,27 @@ export default function Login() {
   const [staffId, setStaffId] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [error, setError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
 
   const idPattern = /^[A-Za-z0-9_-]{1,64}$/
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     if (!idPattern.test(storeId) || !idPattern.test(staffId)) {
       setError('店舗IDとスタッフIDは半角英数字・ハイフン・アンダースコアのみで入力してください。')
       return
     }
-    saveProfile({ storeId, storeName, staffId, displayName })
-    navigate('/modules')
+    setError('')
+    setSubmitting(true)
+    try {
+      await registerStaffFn({ storeId, storeName, staffId, displayName })
+      saveProfile({ storeId, storeName, staffId, displayName })
+      navigate('/modules')
+    } catch {
+      setError('IDの登録に失敗しました。通信環境を確認してもう一度お試しください。')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -65,7 +76,9 @@ export default function Login() {
           />
         </label>
         {error && <p className="error">{error}</p>}
-        <button type="submit">はじめる</button>
+        <button type="submit" disabled={submitting}>
+          {submitting ? '登録中...' : 'はじめる'}
+        </button>
       </form>
     </div>
   )

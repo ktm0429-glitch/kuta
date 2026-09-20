@@ -30,6 +30,59 @@ interface AnswerInput {
 }
 
 /**
+ * スタッフIDをログイン時に登録する。
+ * 既に登録済みのIDの場合はポイントを変更せず、表示名・店舗名だけ更新する。
+ * 研修を1つも完了していない段階でも、管理ダッシュボードにID・店舗・0ptが
+ * 表示されるようにするための明示的な登録ステップ。
+ */
+export const registerStaff = onCall(
+  { region: 'asia-northeast1' },
+  async (request) => {
+    const data = request.data ?? {}
+    const storeId = sanitizeId(data.storeId, 'storeId')
+    const staffId = sanitizeId(data.staffId, 'staffId')
+    const storeName =
+      typeof data.storeName === 'string' ? data.storeName.slice(0, 100) : ''
+    const displayName =
+      typeof data.displayName === 'string' ? data.displayName.slice(0, 100) : ''
+
+    const sDocId = staffDocId(storeId, staffId)
+    const staffRef = db.collection('staff').doc(sDocId)
+    const storeRef = db.collection('stores').doc(storeId)
+
+    const points = await db.runTransaction(async (tx) => {
+      const snap = await tx.get(staffRef)
+      if (!snap.exists) {
+        tx.set(staffRef, {
+          storeId,
+          staffId,
+          displayName,
+          points: 0,
+          createdAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+        })
+        return 0
+      }
+      tx.set(
+        staffRef,
+        {
+          storeId,
+          staffId,
+          displayName,
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true },
+      )
+      return snap.data()?.points ?? 0
+    })
+
+    await storeRef.set({ storeId, storeName: storeName || storeId }, { merge: true })
+
+    return { points }
+  },
+)
+
+/**
  * スタッフが研修モジュールを完了したときに呼び出す。
  * 採点はサーバー側の answerKeys を正として行い、
  * completions ドキュメントの存在チェックで二重付与を防ぐ。

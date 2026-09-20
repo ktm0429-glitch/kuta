@@ -16,17 +16,24 @@ export interface ModuleAnswerKey {
 export const answerKeys: ModuleAnswerKey[] = [
   {
     moduleId: 'young-customer-basics',
-    quizzes: [{ quizId: 'young-quiz-1', correctChoiceId: 'b' }],
+    quizzes: [
+      { quizId: 'young-quiz-1', correctChoiceId: 'a' },
+      { quizId: 'young-quiz-2', correctChoiceId: 'a' },
+    ],
   },
   {
     moduleId: 'middle-customer-conversation',
-    quizzes: [{ quizId: 'middle-quiz-1', correctChoiceId: 'a' }],
+    quizzes: [
+      { quizId: 'middle-quiz-1', correctChoiceId: 'a' },
+      { quizId: 'middle-quiz-2', correctChoiceId: 'a' },
+    ],
   },
   {
     moduleId: 'senior-customer-conversation',
     quizzes: [
       { quizId: 'senior-quiz-1', correctChoiceId: 'b' },
       { quizId: 'senior-quiz-2', correctChoiceId: 'b' },
+      { quizId: 'senior-quiz-3', correctChoiceId: 'b' },
     ],
   },
 ]
