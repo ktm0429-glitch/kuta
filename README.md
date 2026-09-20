@@ -104,9 +104,33 @@ firebase deploy
 ```
 
 デプロイ後、Firebase Hostingが発行するURL(`https://<project-id>.web.app`)を
-スタッフに共有してください。管理ダッシュボードは `https://<project-id>.web.app/admin/login`
-からアクセスできます。独自ドメインを使いたい場合はFirebase HostingのカスタムドメインOR設定から
-設定できます。
+スタッフに共有してください。管理ダッシュボードは `https://<project-id>.web.app/#/admin/login`
+からアクセスできます(URLに `#` が入るのは下記「自社ホームページへの設置」と方式を
+統一しているためです)。独自ドメインを使いたい場合はFirebase Hostingのカスタムドメイン
+設定から設定できます。
+
+### 自社ホームページ(WordPress等)への設置
+
+Firebase Hostingを使わず、既存のホームページのフォルダにアップロードして使うことも
+できます。データ(ポイント管理)は引き続きFirebase(Firestore / Cloud Functions)を
+使うので、上記の「セットアップ手順」「デプロイ手順」の `firebase deploy` のうち
+Functions・Firestoreルールのデプロイ(`firebase deploy --only functions,firestore`)は
+同様に必要ですが、画面(フロントエンド)だけを自社サイトに置く形になります。
+
+1. `app/.env` にFirebaseの設定値を入力した状態で `cd app && npm run build` を実行する
+2. `app/dist/` フォルダの中身一式(`index.html` や `assets/` フォルダなど)を、
+   FTPやレンタルサーバーのファイルマネージャーで、公開フォルダの中に作った
+   任意のフォルダ(例: `public_html/training/`)にそのままアップロードする
+3. `https://自社ドメイン/training/` にアクセスすると動作する。管理ダッシュボードは
+   `https://自社ドメイン/training/#/admin/login`
+
+WordPress本体とは別のただの静的ファイル置き場として動くため、WordPressのプラグイン
+インストールなどは不要です。ページ内のリンクはすべて `#` を使った形式(例:
+`.../training/#/modules`)になっており、レンタルサーバー側で特別なリライト設定
+(.htaccess等)をしなくてもそのまま動くようにしてあります。
+
+研修問題の内容やお知らせなど、更新のたびに再度ビルド(`npm run build`)して
+アップロードし直す必要があります。
 
 ### 今後の拡張案
 
