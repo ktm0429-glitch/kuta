@@ -7,29 +7,20 @@ export interface QuizChoice {
   feedback: string
 }
 
-export interface QuizStep {
-  type: 'quiz'
+export interface QuizQuestion {
   id: string
+  ageBand: AgeBand
   situation: string
   customerLine: string
   choices: QuizChoice[]
 }
-
-export interface LessonStep {
-  type: 'lesson'
-  id: string
-  title: string
-  body: string[]
-}
-
-export type TrainingStep = LessonStep | QuizStep
 
 export interface TrainingModule {
   id: string
   ageBand: AgeBand
   title: string
   summary: string
-  steps: TrainingStep[]
+  tip: string
 }
 
 export interface StaffProfile {

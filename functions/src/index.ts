@@ -3,7 +3,7 @@ import { getFirestore, FieldValue } from 'firebase-admin/firestore'
 import { onCall, onRequest, HttpsError } from 'firebase-functions/v2/https'
 import { defineSecret } from 'firebase-functions/params'
 import corsLib from 'cors'
-import { getAnswerKey } from './answerKeys'
+import { getAnswerKey } from './questionBank'
 
 initializeApp()
 const db = getFirestore()

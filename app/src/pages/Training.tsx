@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { getModuleById } from '../data/trainingContent'
+import { getModuleById, getModuleQuestions } from '../data/trainingContent'
 import { loadProfile } from '../profile'
 import { completeTrainingFn } from '../firebase'
 import type { CompleteTrainingResponse } from '../firebase'
@@ -10,6 +10,7 @@ export default function Training() {
   const navigate = useNavigate()
   const profile = loadProfile()
   const module = useMemo(() => (moduleId ? getModuleById(moduleId) : undefined), [moduleId])
+  const questions = useMemo(() => (module ? getModuleQuestions(module) : []), [module])
 
   const [stepIndex, setStepIndex] = useState(0)
   const [answers, setAnswers] = useState<Record<string, string>>({})
@@ -30,8 +31,11 @@ export default function Training() {
     )
   }
 
-  const step = module.steps[stepIndex]
-  const isLastStep = stepIndex === module.steps.length - 1
+  // ステップ0は解説(tip)、以降は questions を1問ずつ表示する
+  const totalSteps = 1 + questions.length
+  const isLessonStep = stepIndex === 0
+  const currentQuestion = isLessonStep ? undefined : questions[stepIndex - 1]
+  const isLastStep = stepIndex === totalSteps - 1
 
   function handleChoice(quizId: string, choiceId: string) {
     setAnswers((prev) => ({ ...prev, [quizId]: choiceId }))
@@ -108,30 +112,28 @@ export default function Training() {
     <div className="page">
       <h1>{module.title}</h1>
       <p className="step-indicator">
-        {stepIndex + 1} / {module.steps.length}
+        {stepIndex + 1} / {totalSteps}
       </p>
 
-      {step.type === 'lesson' ? (
+      {isLessonStep || !currentQuestion ? (
         <div className="lesson-card">
-          <h2>{step.title}</h2>
-          {step.body.map((line, i) => (
-            <p key={i}>{line}</p>
-          ))}
+          <h2>ポイント</h2>
+          <p>{module.tip}</p>
         </div>
       ) : (
         <div className="quiz-card">
-          <p className="situation">{step.situation}</p>
-          <p className="customer-line">お客様「{step.customerLine}」</p>
+          <p className="situation">{currentQuestion.situation}</p>
+          <p className="customer-line">お客様「{currentQuestion.customerLine}」</p>
           <div className="choices">
-            {step.choices.map((choice) => {
-              const selected = answers[step.id] === choice.id
-              const showFeedback = revealed[step.id] && selected
+            {currentQuestion.choices.map((choice) => {
+              const selected = answers[currentQuestion.id] === choice.id
+              const showFeedback = revealed[currentQuestion.id] && selected
               return (
                 <div key={choice.id}>
                   <button
                     className={`choice-button${selected ? ' selected' : ''}`}
-                    onClick={() => handleChoice(step.id, choice.id)}
-                    disabled={revealed[step.id]}
+                    onClick={() => handleChoice(currentQuestion.id, choice.id)}
+                    disabled={revealed[currentQuestion.id]}
                   >
                     {choice.label}
                   </button>
@@ -153,7 +155,7 @@ export default function Training() {
         className="button"
         onClick={handleNext}
         disabled={
-          submitting || (step.type === 'quiz' && !answers[step.id])
+          submitting || (!!currentQuestion && !answers[currentQuestion.id])
         }
       >
         {submitting ? '送信中...' : isLastStep ? '研修を完了する' : '次へ'}
