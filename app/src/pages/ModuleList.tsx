@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { trainingModules } from '../data/trainingContent'
 import { loadProfile, clearProfile } from '../profile'
-import { getMyStatusFn } from '../firebase'
+import { getMyStatus } from '../api'
 
 const ageBandLabel: Record<string, string> = {
   young: '20代のお客様向け',
@@ -23,10 +23,10 @@ export default function ModuleList() {
       navigate('/')
       return
     }
-    getMyStatusFn({ storeId: profile.storeId, staffId: profile.staffId })
+    getMyStatus({ storeId: profile.storeId, staffId: profile.staffId })
       .then((res) => {
-        setPoints(res.data.points)
-        setCompletedIds(res.data.completedModuleIds)
+        setPoints(res.points)
+        setCompletedIds(res.completedModuleIds)
       })
       .catch(() => setLoadError('現在のポイント状況を取得できませんでした。ネットワーク環境をご確認ください。'))
       .finally(() => setLoading(false))

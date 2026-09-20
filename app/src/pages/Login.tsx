@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { loadProfile, saveProfile } from '../profile'
-import { registerStaffFn } from '../firebase'
+import { registerStaff } from '../api'
 import { stores } from '../data/stores'
 
 export default function Login() {
@@ -36,7 +36,7 @@ export default function Login() {
     try {
       const store = stores.find((s) => s.id === storeId)
       const storeName = store?.name ?? storeId
-      await registerStaffFn({
+      await registerStaff({
         storeId,
         storeName,
         staffId: trimmedName,

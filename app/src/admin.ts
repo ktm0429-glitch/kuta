@@ -1,3 +1,5 @@
+import { API_URL } from './config'
+
 const ADMIN_KEY_STORAGE = 'sekkyaku-training-admin-key'
 
 export function saveAdminKey(key: string) {
@@ -12,13 +14,6 @@ export function clearAdminKey() {
   sessionStorage.removeItem(ADMIN_KEY_STORAGE)
 }
 
-const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID
-const region = 'asia-northeast1'
-
-function functionsBaseUrl(): string {
-  return `https://${region}-${projectId}.cloudfunctions.net`
-}
-
 export interface AdminStaffRow {
   storeId: string
   storeName: string
@@ -28,16 +23,21 @@ export interface AdminStaffRow {
 }
 
 export async function fetchStaffList(adminKey: string): Promise<AdminStaffRow[]> {
-  const res = await fetch(`${functionsBaseUrl()}/adminListStaff`, {
-    headers: { 'x-admin-key': adminKey },
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ action: 'adminList', adminKey }),
   })
-  if (res.status === 401) {
-    throw new Error('unauthorized')
-  }
   if (!res.ok) {
     throw new Error('failed to fetch')
   }
   const data = await res.json()
+  if (data.error === 'unauthorized') {
+    throw new Error('unauthorized')
+  }
+  if (data.error) {
+    throw new Error(data.error)
+  }
   return data.staff as AdminStaffRow[]
 }
 
@@ -48,16 +48,13 @@ export async function redeemPoints(
   amount: number,
   note: string,
 ): Promise<number> {
-  const res = await fetch(`${functionsBaseUrl()}/adminRedeemPoints`, {
+  const res = await fetch(API_URL, {
     method: 'POST',
-    headers: {
-      'x-admin-key': adminKey,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ storeId, staffId, amount, note }),
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ action: 'adminRedeem', adminKey, storeId, staffId, amount, note }),
   })
   const data = await res.json()
-  if (!res.ok) {
+  if (!res.ok || data.error) {
     throw new Error(data.error ?? 'failed to redeem')
   }
   return data.totalPoints as number

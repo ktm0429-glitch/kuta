@@ -2,8 +2,8 @@ import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { getModuleById, getModuleQuestions } from '../data/trainingContent'
 import { loadProfile } from '../profile'
-import { completeTrainingFn } from '../firebase'
-import type { CompleteTrainingResponse } from '../firebase'
+import { completeTraining } from '../api'
+import type { CompleteTrainingResponse } from '../api'
 
 export default function Training() {
   const { moduleId } = useParams()
@@ -54,7 +54,7 @@ export default function Training() {
         quizId,
         choiceId,
       }))
-      const res = await completeTrainingFn({
+      const res = await completeTraining({
         storeId: profile!.storeId,
         storeName: profile!.storeName,
         staffId: profile!.staffId,
@@ -62,7 +62,7 @@ export default function Training() {
         moduleId: module!.id,
         answers: quizAnswers,
       })
-      setResult(res.data)
+      setResult(res)
     } catch {
       setSubmitError('送信に失敗しました。通信環境を確認してもう一度お試しください。')
     } finally {
