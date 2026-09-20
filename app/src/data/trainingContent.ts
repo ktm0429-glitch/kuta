@@ -1,10 +1,8 @@
 import type { TrainingModule } from '../types'
-import { getQuestionsByAgeBand } from './questionBank'
 
-// 年代別モジュールの定義。問題本体は questionBank.ts で管理し、
-// ここでは ageBand に応じて自動的に出題される。
-// 新しい年代区分を追加したい場合はここにモジュールを1件追加し、
-// AgeBand の型(types.ts)にも値を追加すること。
+// 年代別モジュールの定義(タイトル・概要・冒頭の解説のみ)。
+// 実際に出題される問題は、Googleスプレッドシートの「問題」シートから
+// ageBand に応じて取得する(app/src/api.ts の listQuestions を参照)。
 export const trainingModules: TrainingModule[] = [
   {
     id: 'young-customer-basics',
@@ -34,8 +32,4 @@ export const trainingModules: TrainingModule[] = [
 
 export function getModuleById(id: string): TrainingModule | undefined {
   return trainingModules.find((m) => m.id === id)
-}
-
-export function getModuleQuestions(mod: TrainingModule) {
-  return getQuestionsByAgeBand(mod.ageBand)
 }

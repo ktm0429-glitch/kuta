@@ -1,16 +1,19 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { getModuleById, getModuleQuestions } from '../data/trainingContent'
+import { getModuleById } from '../data/trainingContent'
 import { loadProfile } from '../profile'
-import { completeTraining } from '../api'
+import { completeTraining, listQuestions } from '../api'
 import type { CompleteTrainingResponse } from '../api'
+import type { QuizQuestion } from '../types'
 
 export default function Training() {
   const { moduleId } = useParams()
   const navigate = useNavigate()
   const profile = loadProfile()
   const module = useMemo(() => (moduleId ? getModuleById(moduleId) : undefined), [moduleId])
-  const questions = useMemo(() => (module ? getModuleQuestions(module) : []), [module])
+
+  const [questions, setQuestions] = useState<QuizQuestion[] | null>(null)
+  const [loadError, setLoadError] = useState('')
 
   const [stepIndex, setStepIndex] = useState(0)
   const [answers, setAnswers] = useState<Record<string, string>>({})
@@ -18,6 +21,17 @@ export default function Training() {
   const [submitting, setSubmitting] = useState(false)
   const [result, setResult] = useState<CompleteTrainingResponse | null>(null)
   const [submitError, setSubmitError] = useState('')
+
+  useEffect(() => {
+    if (!module) return
+    setQuestions(null)
+    setLoadError('')
+    listQuestions()
+      .then((res) => {
+        setQuestions(res.questions.filter((q) => q.ageBand === module.ageBand))
+      })
+      .catch(() => setLoadError('研修問題の取得に失敗しました。通信環境を確認してもう一度お試しください。'))
+  }, [module])
 
   if (!profile) {
     navigate('/')
@@ -27,6 +41,25 @@ export default function Training() {
     return (
       <div className="page">
         <p>研修が見つかりませんでした。</p>
+      </div>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <div className="page">
+        <p className="error">{loadError}</p>
+        <button className="link-button" onClick={() => navigate('/modules')}>
+          研修メニューに戻る
+        </button>
+      </div>
+    )
+  }
+
+  if (!questions) {
+    return (
+      <div className="page">
+        <p>読み込み中...</p>
       </div>
     )
   }

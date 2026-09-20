@@ -1,4 +1,5 @@
 import { API_URL } from './config'
+import type { QuizQuestion } from './types'
 
 interface ApiErrorBody {
   error?: string
@@ -76,4 +77,14 @@ export interface MyStatusResponse {
 
 export function getMyStatus(req: MyStatusRequest): Promise<MyStatusResponse> {
   return callApi('status', req)
+}
+
+export interface ListQuestionsResponse {
+  questions: QuizQuestion[]
+}
+
+// 研修問題はコードには持たず、スプレッドシートの「問題」シートから
+// 毎回取得する(担当者がシートに行を追加するだけで問題を増やせるようにするため)。
+export function listQuestions(): Promise<ListQuestionsResponse> {
+  return callApi('listQuestions', {})
 }
