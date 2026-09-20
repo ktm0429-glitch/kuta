@@ -8,12 +8,9 @@ import { stores } from '../data/stores'
 export default function Login() {
   const navigate = useNavigate()
   const [storeId, setStoreId] = useState('')
-  const [staffId, setStaffId] = useState('')
-  const [displayName, setDisplayName] = useState('')
+  const [fullName, setFullName] = useState('')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
-
-  const idPattern = /^[A-Za-z0-9_-]{1,64}$/
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -21,8 +18,9 @@ export default function Login() {
       setError('店舗を選択してください。')
       return
     }
-    if (!idPattern.test(staffId)) {
-      setError('スタッフIDは半角英数字・ハイフン・アンダースコアのみで入力してください。')
+    const trimmedName = fullName.trim()
+    if (!trimmedName) {
+      setError('お名前(フルネーム)を入力してください。')
       return
     }
     setError('')
@@ -30,11 +28,16 @@ export default function Login() {
     try {
       const store = stores.find((s) => s.id === storeId)
       const storeName = store?.name ?? storeId
-      await registerStaffFn({ storeId, storeName, staffId, displayName })
-      saveProfile({ storeId, storeName, staffId, displayName })
+      await registerStaffFn({
+        storeId,
+        storeName,
+        staffId: trimmedName,
+        displayName: trimmedName,
+      })
+      saveProfile({ storeId, storeName, staffId: trimmedName, displayName: trimmedName })
       navigate('/modules')
     } catch {
-      setError('IDの登録に失敗しました。通信環境を確認してもう一度お試しください。')
+      setError('登録に失敗しました。通信環境を確認してもう一度お試しください。')
     } finally {
       setSubmitting(false)
     }
@@ -44,7 +47,7 @@ export default function Login() {
     <div className="page">
       <h1>接客力向上トレーニング</h1>
       <p className="lead">
-        店舗を選択し、スタッフIDを入力してスタートしてください。研修を最後まで終えると1ptを獲得できます。
+        店舗を選択し、お名前(フルネーム)を入力してスタートしてください。研修を最後まで終えると1ptを獲得できます。
       </p>
       <form onSubmit={handleSubmit} className="form">
         <label>
@@ -65,20 +68,12 @@ export default function Login() {
           </select>
         </label>
         <label>
-          スタッフID(社員番号など)
+          お名前(フルネーム)
           <input
-            value={staffId}
-            onChange={(e) => setStaffId(e.target.value.trim())}
-            placeholder="例: A1234"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            placeholder="例: 山田 太郎"
             required
-          />
-        </label>
-        <label>
-          お名前(任意・ニックネーム可)
-          <input
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            placeholder="例: たなか"
           />
         </label>
         {error && <p className="error">{error}</p>}

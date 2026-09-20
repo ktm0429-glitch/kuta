@@ -20,6 +20,26 @@ function sanitizeId(value: unknown, field: string): string {
   return value
 }
 
+// スタッフの識別には(社員番号のような英数字IDではなく)フルネームを使う。
+// Firestoreのドキュメント名として使えるよう、日本語を含む文字列を
+// 最低限のルールだけで検証する。
+function sanitizeStaffName(value: unknown, field: string): string {
+  if (typeof value !== 'string') {
+    throw new HttpsError('invalid-argument', `${field} が不正です`)
+  }
+  const trimmed = value.trim().replace(/\s+/g, ' ')
+  if (
+    trimmed.length === 0 ||
+    trimmed.length > 100 ||
+    trimmed === '.' ||
+    trimmed === '..' ||
+    /[/\u0000-\u001f\u007f]/.test(trimmed)
+  ) {
+    throw new HttpsError('invalid-argument', `${field} が不正です`)
+  }
+  return trimmed
+}
+
 function staffDocId(storeId: string, staffId: string): string {
   return `${storeId}__${staffId}`
 }
@@ -30,9 +50,10 @@ interface AnswerInput {
 }
 
 /**
- * スタッフIDをログイン時に登録する。
- * 既に登録済みのIDの場合はポイントを変更せず、表示名・店舗名だけ更新する。
- * 研修を1つも完了していない段階でも、管理ダッシュボードにID・店舗・0ptが
+ * スタッフをログイン時に登録する。識別子は社員番号のようなIDではなく
+ * フルネームを使う(staffIdフィールドにフルネームを格納する)。
+ * 既に登録済みの場合はポイントを変更せず、表示名・店舗名だけ更新する。
+ * 研修を1つも完了していない段階でも、管理ダッシュボードに氏名・店舗・0ptが
  * 表示されるようにするための明示的な登録ステップ。
  */
 export const registerStaff = onCall(
@@ -40,7 +61,7 @@ export const registerStaff = onCall(
   async (request) => {
     const data = request.data ?? {}
     const storeId = sanitizeId(data.storeId, 'storeId')
-    const staffId = sanitizeId(data.staffId, 'staffId')
+    const staffId = sanitizeStaffName(data.staffId, 'staffId')
     const storeName =
       typeof data.storeName === 'string' ? data.storeName.slice(0, 100) : ''
     const displayName =
@@ -92,7 +113,7 @@ export const completeTraining = onCall(
   async (request) => {
     const data = request.data ?? {}
     const storeId = sanitizeId(data.storeId, 'storeId')
-    const staffId = sanitizeId(data.staffId, 'staffId')
+    const staffId = sanitizeStaffName(data.staffId, 'staffId')
     const moduleId = sanitizeId(data.moduleId, 'moduleId')
     const storeName =
       typeof data.storeName === 'string' ? data.storeName.slice(0, 100) : ''
@@ -200,7 +221,7 @@ export const getMyStatus = onCall(
   async (request) => {
     const data = request.data ?? {}
     const storeId = sanitizeId(data.storeId, 'storeId')
-    const staffId = sanitizeId(data.staffId, 'staffId')
+    const staffId = sanitizeStaffName(data.staffId, 'staffId')
     const sDocId = staffDocId(storeId, staffId)
 
     const [staffSnap, completionsSnap] = await Promise.all([
@@ -281,7 +302,7 @@ export const adminRedeemPoints = onRequest(
       }
       try {
         const storeId = sanitizeId(req.body?.storeId, 'storeId')
-        const staffId = sanitizeId(req.body?.staffId, 'staffId')
+        const staffId = sanitizeStaffName(req.body?.staffId, 'staffId')
         const amount = Number(req.body?.amount)
         const note = typeof req.body?.note === 'string' ? req.body.note.slice(0, 200) : ''
 
