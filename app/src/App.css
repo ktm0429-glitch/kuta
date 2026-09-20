@@ -1,0 +1,217 @@
+.page {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem 3rem;
+}
+
+.page.wide {
+  max-width: 900px;
+}
+
+h1 {
+  font-size: 1.4rem;
+  margin-bottom: 0.5rem;
+}
+
+.lead {
+  color: #555;
+  margin-bottom: 1.5rem;
+  line-height: 1.6;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+  color: #333;
+}
+
+.form input {
+  padding: 0.7rem;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+}
+
+button,
+.button {
+  display: inline-block;
+  background: #d0342c;
+  color: #fff;
+  border: none;
+  padding: 0.8rem 1.2rem;
+  font-size: 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: center;
+  text-decoration: none;
+  margin-top: 0.5rem;
+}
+
+button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.link-button {
+  background: none;
+  color: #555;
+  padding: 0.4rem 0.6rem;
+  text-decoration: underline;
+  margin-left: 0.5rem;
+}
+
+.error {
+  color: #c0392b;
+  font-size: 0.9rem;
+}
+
+.header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.points-badge {
+  background: #fff3e0;
+  border: 1px solid #ffcc80;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1.25rem;
+  font-weight: bold;
+}
+
+.module-list {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.module-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.module-card-header {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.age-band-tag {
+  background: #e3f2fd;
+  color: #1565c0;
+  font-size: 0.75rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+}
+
+.done-tag {
+  background: #e8f5e9;
+  color: #2e7d32;
+  font-size: 0.75rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+}
+
+.step-indicator {
+  color: #888;
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.lesson-card,
+.quiz-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 1.25rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  margin-bottom: 1rem;
+}
+
+.situation {
+  color: #666;
+  margin-bottom: 0.5rem;
+}
+
+.customer-line {
+  font-weight: bold;
+  margin-bottom: 1rem;
+}
+
+.choices {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.choice-button {
+  background: #fff;
+  color: #222;
+  border: 1px solid #ccc;
+  text-align: left;
+  white-space: normal;
+  width: 100%;
+}
+
+.choice-button.selected {
+  border-color: #d0342c;
+  background: #fff5f5;
+}
+
+.feedback {
+  font-size: 0.9rem;
+  color: #c0392b;
+  margin: 0.35rem 0 0;
+}
+
+.feedback.best {
+  color: #2e7d32;
+}
+
+.result-card {
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.result-card.success {
+  background: #e8f5e9;
+}
+
+.result-card.retry {
+  background: #fff3e0;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.admin-table th,
+.admin-table td {
+  padding: 0.6rem 0.8rem;
+  border-bottom: 1px solid #eee;
+  text-align: left;
+  font-size: 0.9rem;
+}
+
+.admin-table th {
+  background: #fafafa;
+}
