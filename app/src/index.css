@@ -4,10 +4,11 @@
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Yu Gothic',
-    sans-serif;
-  background: #f5f6f8;
-  color: #222;
+  font-family: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Hiragino Sans',
+    'Yu Gothic', sans-serif;
+  background: linear-gradient(160deg, #fff4de 0%, #ffe1ec 45%, #f5e0ff 100%);
+  background-attachment: fixed;
+  color: #3a2e2a;
 }
 
 #root {

@@ -1,3 +1,19 @@
+:root {
+  --accent-start: #ff6a3d;
+  --accent-end: #ff3d88;
+  --accent-solid: #ff4d78;
+  --gold: #ffb703;
+  --gold-dark: #b3790a;
+  --gold-soft: #fff3d6;
+  --good: #16a34a;
+  --good-soft: #e3f9ea;
+  --bad: #e0245e;
+  --bad-soft: #ffe9f1;
+  --text: #3a2e2a;
+  --text-muted: #8b7a72;
+  --card-shadow: 0 10px 28px rgba(255, 77, 120, 0.16);
+}
+
 .page {
   max-width: 480px;
   margin: 0 auto;
@@ -9,14 +25,22 @@
 }
 
 h1 {
-  font-size: 1.4rem;
+  font-family: 'Zen Maru Gothic', 'Noto Sans JP', sans-serif;
+  font-weight: 900;
+  font-size: 1.5rem;
+  color: var(--accent-solid);
   margin-bottom: 0.5rem;
 }
 
+h2 {
+  font-family: 'Zen Maru Gothic', 'Noto Sans JP', sans-serif;
+  font-weight: 700;
+}
+
 .lead {
-  color: #555;
+  color: var(--text-muted);
   margin-bottom: 1.5rem;
-  line-height: 1.6;
+  line-height: 1.7;
 }
 
 .form {
@@ -30,50 +54,72 @@ h1 {
   flex-direction: column;
   gap: 0.35rem;
   font-size: 0.9rem;
-  color: #333;
+  font-weight: 700;
+  color: var(--text);
 }
 
 .form input,
 .form select {
-  padding: 0.7rem;
+  padding: 0.8rem 0.9rem;
   font-size: 1rem;
-  border: 1px solid #ccc;
-  border-radius: 8px;
+  border: 2px solid #ffd4c2;
+  border-radius: 14px;
   background: #fff;
   font-family: inherit;
+  color: var(--text);
+}
+
+.form input:focus,
+.form select:focus {
+  outline: none;
+  border-color: var(--accent-solid);
 }
 
 button,
 .button {
   display: inline-block;
-  background: #d0342c;
+  background: linear-gradient(135deg, var(--accent-start), var(--accent-end));
   color: #fff;
   border: none;
-  padding: 0.8rem 1.2rem;
-  font-size: 1rem;
-  border-radius: 8px;
+  padding: 0.9rem 1.4rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  border-radius: 999px;
   cursor: pointer;
   text-align: center;
   text-decoration: none;
   margin-top: 0.5rem;
+  box-shadow: 0 8px 20px rgba(255, 61, 136, 0.35);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+button:active,
+.button:active {
+  transform: translateY(1px) scale(0.99);
+  box-shadow: 0 4px 12px rgba(255, 61, 136, 0.3);
 }
 
 button:disabled {
-  background: #ccc;
+  background: #e8e0dc;
+  color: #a99b93;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
 .link-button {
   background: none;
-  color: #555;
+  color: var(--text-muted);
   padding: 0.4rem 0.6rem;
   text-decoration: underline;
   margin-left: 0.5rem;
+  box-shadow: none;
+  font-weight: 500;
 }
 
 .error {
-  color: #c0392b;
+  color: var(--bad);
   font-size: 0.9rem;
+  font-weight: 700;
 }
 
 .header-row {
@@ -85,18 +131,27 @@ button:disabled {
 }
 
 .points-badge {
-  background: #fff3e0;
-  border: 1px solid #ffcc80;
-  border-radius: 8px;
-  padding: 0.75rem 1rem;
+  background: linear-gradient(135deg, var(--gold-soft), #ffe6a8);
+  border: 2px solid var(--gold);
+  border-radius: 16px;
+  padding: 0.9rem 1.1rem;
   margin-bottom: 1.25rem;
-  font-weight: bold;
+  font-weight: 900;
+  font-size: 1.05rem;
+  color: var(--gold-dark);
+  box-shadow: 0 6px 16px rgba(255, 183, 3, 0.25);
+}
+
+.points-badge::before {
+  content: '★ ';
+  color: var(--gold);
 }
 
 .daily-note {
-  color: #666;
-  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-size: 0.88rem;
   margin: -0.75rem 0 1.25rem;
+  line-height: 1.6;
 }
 
 .module-list {
@@ -109,9 +164,15 @@ button:disabled {
 
 .module-card {
   background: #fff;
-  border-radius: 12px;
-  padding: 1rem;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  border-radius: 20px;
+  padding: 1.4rem;
+  box-shadow: var(--card-shadow);
+  border-top: 5px solid var(--accent-solid);
+}
+
+.module-card h2 {
+  color: var(--accent-solid);
+  margin-top: 0;
 }
 
 .module-card-header {
@@ -129,35 +190,38 @@ button:disabled {
 }
 
 .done-tag {
-  background: #e8f5e9;
-  color: #2e7d32;
+  background: var(--good-soft);
+  color: var(--good);
   font-size: 0.75rem;
   padding: 0.15rem 0.5rem;
   border-radius: 999px;
 }
 
 .step-indicator {
-  color: #888;
-  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-weight: 700;
+  font-size: 0.9rem;
   margin-bottom: 1rem;
 }
 
 .lesson-card,
 .quiz-card {
   background: #fff;
-  border-radius: 12px;
-  padding: 1.25rem;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  border-radius: 20px;
+  padding: 1.4rem;
+  box-shadow: var(--card-shadow);
   margin-bottom: 1rem;
 }
 
 .situation {
-  color: #666;
+  color: var(--text-muted);
   margin-bottom: 0.5rem;
 }
 
 .customer-line {
-  font-weight: bold;
+  font-family: 'Zen Maru Gothic', 'Noto Sans JP', sans-serif;
+  font-weight: 700;
+  font-size: 1.05rem;
   margin-bottom: 1rem;
 }
 
@@ -168,59 +232,75 @@ button:disabled {
 }
 
 .choice-button {
-  background: #fff;
-  color: #222;
-  border: 1px solid #ccc;
+  background: #fffaf6;
+  color: var(--text);
+  border: 2px solid #ffe1d1;
   text-align: left;
   white-space: normal;
   width: 100%;
+  border-radius: 14px;
+  box-shadow: none;
+  font-weight: 500;
+}
+
+.choice-button:active {
+  transform: none;
 }
 
 .choice-button.selected {
-  border-color: #d0342c;
-  background: #fff5f5;
+  border-color: var(--accent-solid);
+  background: #fff0f5;
 }
 
 .feedback {
   font-size: 0.9rem;
-  color: #c0392b;
-  margin: 0.35rem 0 0;
+  font-weight: 700;
+  color: var(--bad);
+  background: var(--bad-soft);
+  border-radius: 10px;
+  padding: 0.5rem 0.75rem;
+  margin: 0.5rem 0 0;
 }
 
 .feedback.best {
-  color: #2e7d32;
+  color: var(--good);
+  background: var(--good-soft);
 }
 
 .result-card {
-  border-radius: 12px;
-  padding: 1.25rem;
+  border-radius: 20px;
+  padding: 1.5rem;
   margin-bottom: 1rem;
+  box-shadow: var(--card-shadow);
 }
 
 .result-card.success {
-  background: #e8f5e9;
+  background: linear-gradient(135deg, var(--good-soft), #d5f5e0);
 }
 
 .result-card.retry {
-  background: #fff3e0;
+  background: linear-gradient(135deg, var(--gold-soft), #ffe6c2);
 }
 
 .admin-table {
   width: 100%;
   border-collapse: collapse;
   background: #fff;
-  border-radius: 8px;
+  border-radius: 16px;
   overflow: hidden;
+  box-shadow: var(--card-shadow);
 }
 
 .admin-table th,
 .admin-table td {
-  padding: 0.6rem 0.8rem;
-  border-bottom: 1px solid #eee;
+  padding: 0.7rem 0.9rem;
+  border-bottom: 1px solid #ffe6ee;
   text-align: left;
   font-size: 0.9rem;
 }
 
 .admin-table th {
-  background: #fafafa;
+  background: linear-gradient(135deg, var(--accent-start), var(--accent-end));
+  color: #fff;
+  font-weight: 700;
 }
