@@ -117,9 +117,9 @@ export default function Training() {
         {result.success ? (
           <div className="result-card success">
             {result.alreadyCompleted ? (
-              <p>この研修はすでに完了済みです。ポイントは付与済みのため、追加のポイントはありません。</p>
+              <p>お疲れ様でした!ただし、本日分の1ptはすでに獲得済みのため、追加のポイントはありません(1日1ptが上限です)。</p>
             ) : (
-              <p>研修を完了しました!1pt獲得しました。</p>
+              <p>研修を完了しました!本日分の1ptを獲得しました。</p>
             )}
             <p>正解数: {result.correctCount} / {result.total}</p>
             {typeof result.totalPoints === 'number' && (

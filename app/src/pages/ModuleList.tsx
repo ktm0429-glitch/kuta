@@ -15,6 +15,7 @@ export default function ModuleList() {
   const profile = loadProfile()
   const [points, setPoints] = useState<number | null>(null)
   const [completedIds, setCompletedIds] = useState<string[]>([])
+  const [awardedToday, setAwardedToday] = useState(false)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
 
@@ -27,6 +28,7 @@ export default function ModuleList() {
       .then((res) => {
         setPoints(res.points)
         setCompletedIds(res.completedModuleIds)
+        setAwardedToday(res.awardedToday)
       })
       .catch(() => setLoadError('現在のポイント状況を取得できませんでした。ネットワーク環境をご確認ください。'))
       .finally(() => setLoading(false))
@@ -57,6 +59,13 @@ export default function ModuleList() {
       <div className="points-badge">
         {loading ? '読み込み中...' : loadError ? loadError : `現在の保有ポイント: ${points} pt`}
       </div>
+      {!loading && !loadError && (
+        <p className="daily-note">
+          {awardedToday
+            ? '本日分の1ptはすでに獲得済みです。また明日挑戦してください!'
+            : '研修を1つ完了すると、本日分の1ptを獲得できます(1日1ptが上限です)。'}
+        </p>
+      )}
 
       <ul className="module-list">
         {trainingModules.map((m) => {

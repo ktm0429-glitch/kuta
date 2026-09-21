@@ -93,6 +93,12 @@ button:disabled {
   font-weight: bold;
 }
 
+.daily-note {
+  color: #666;
+  font-size: 0.85rem;
+  margin: -0.75rem 0 1.25rem;
+}
+
 .module-list {
   list-style: none;
   padding: 0;

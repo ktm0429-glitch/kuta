@@ -73,6 +73,7 @@ export interface MyStatusRequest {
 export interface MyStatusResponse {
   points: number
   completedModuleIds: string[]
+  awardedToday: boolean
 }
 
 export function getMyStatus(req: MyStatusRequest): Promise<MyStatusResponse> {

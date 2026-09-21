@@ -285,6 +285,14 @@ function findRowIndex_(sheet, storeIdColIdx, staffIdColIdx, storeId, staffId) {
   return -1;
 }
 
+function isSameDay_(a, b) {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
 function sanitizeText_(value, maxLen) {
   if (typeof value !== 'string') return '';
   var trimmed = value.trim().replace(/\s+/g, ' ');
@@ -399,22 +407,26 @@ function handleComplete_(body) {
   }
 
   var sheetSet = sheets_();
+  var now = new Date();
 
-  // 完了記録の重複チェック(同じ研修で二重にポイントが付かないようにする)
+  // 1日1人1ptが上限。今日すでに(どの研修であっても)ポイントを
+  // 獲得済みかどうかを、このスタッフの完了記録全体から判定する。
   var compData = sheetSet.completions.getDataRange().getValues();
-  var alreadyCompleted = false;
+  var alreadyAwardedToday = false;
   for (var r = 1; r < compData.length; r++) {
-    if (compData[r][0] === storeId && compData[r][1] === staffId && compData[r][2] === moduleId) {
-      alreadyCompleted = true;
-      break;
+    if (compData[r][0] === storeId && compData[r][1] === staffId) {
+      var completedAt = compData[r][5];
+      if (completedAt instanceof Date && isSameDay_(completedAt, now)) {
+        alreadyAwardedToday = true;
+        break;
+      }
     }
   }
 
-  var now = new Date();
+  // 完了したこと自体は(ポイントの有無にかかわらず)毎回記録に残す。
+  sheetSet.completions.appendRow([storeId, staffId, moduleId, correctCount, total, now]);
 
-  if (!alreadyCompleted) {
-    sheetSet.completions.appendRow([storeId, staffId, moduleId, correctCount, total, now]);
-
+  if (!alreadyAwardedToday) {
     var staffRowIndex = findRowIndex_(sheetSet.staff, 0, 2, storeId, staffId);
     if (staffRowIndex === -1) {
       sheetSet.staff.appendRow([storeId, storeName || storeId, staffId, displayName, 1, now]);
@@ -435,8 +447,8 @@ function handleComplete_(body) {
 
   return {
     success: true,
-    alreadyCompleted: alreadyCompleted,
-    pointsAwarded: alreadyCompleted ? 0 : 1,
+    alreadyCompleted: alreadyAwardedToday,
+    pointsAwarded: alreadyAwardedToday ? 0 : 1,
     correctCount: correctCount,
     total: total,
     totalPoints: totalPoints
@@ -456,13 +468,19 @@ function handleStatus_(body) {
 
   var compData = sheetSet.completions.getDataRange().getValues();
   var completedModuleIds = [];
+  var awardedToday = false;
+  var now = new Date();
   for (var r = 1; r < compData.length; r++) {
     if (compData[r][0] === storeId && compData[r][1] === staffId) {
       completedModuleIds.push(compData[r][2]);
+      var completedAt = compData[r][5];
+      if (completedAt instanceof Date && isSameDay_(completedAt, now)) {
+        awardedToday = true;
+      }
     }
   }
 
-  return { points: points, completedModuleIds: completedModuleIds };
+  return { points: points, completedModuleIds: completedModuleIds, awardedToday: awardedToday };
 }
 
 function checkAdminKey_(body) {
