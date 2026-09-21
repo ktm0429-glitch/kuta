@@ -1,16 +1,20 @@
-import { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import { getModuleById } from '../data/trainingContent'
+import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { loadProfile } from '../profile'
 import { completeTraining, listQuestions } from '../api'
 import type { CompleteTrainingResponse } from '../api'
 import type { QuizQuestion } from '../types'
 
+const QUESTIONS_PER_CHALLENGE = 5
+
+function pickRandomQuestions(all: QuizQuestion[], count: number): QuizQuestion[] {
+  const shuffled = [...all].sort(() => Math.random() - 0.5)
+  return shuffled.slice(0, count)
+}
+
 export default function Training() {
-  const { moduleId } = useParams()
   const navigate = useNavigate()
   const profile = loadProfile()
-  const module = useMemo(() => (moduleId ? getModuleById(moduleId) : undefined), [moduleId])
 
   const [questions, setQuestions] = useState<QuizQuestion[] | null>(null)
   const [loadError, setLoadError] = useState('')
@@ -23,26 +27,23 @@ export default function Training() {
   const [submitError, setSubmitError] = useState('')
 
   useEffect(() => {
-    if (!module) return
     setQuestions(null)
     setLoadError('')
     listQuestions()
       .then((res) => {
-        setQuestions(res.questions.filter((q) => q.ageBand === module.ageBand))
+        if (res.questions.length < QUESTIONS_PER_CHALLENGE) {
+          setLoadError('出題できる問題数が足りません。問題を追加してから再度お試しください。')
+          return
+        }
+        setQuestions(pickRandomQuestions(res.questions, QUESTIONS_PER_CHALLENGE))
       })
       .catch(() => setLoadError('研修問題の取得に失敗しました。通信環境を確認してもう一度お試しください。'))
-  }, [module])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   if (!profile) {
     navigate('/')
     return null
-  }
-  if (!module) {
-    return (
-      <div className="page">
-        <p>研修が見つかりませんでした。</p>
-      </div>
-    )
   }
 
   if (loadError) {
@@ -64,11 +65,8 @@ export default function Training() {
     )
   }
 
-  // ステップ0は解説(tip)、以降は questions を1問ずつ表示する
-  const totalSteps = 1 + questions.length
-  const isLessonStep = stepIndex === 0
-  const currentQuestion = isLessonStep ? undefined : questions[stepIndex - 1]
-  const isLastStep = stepIndex === totalSteps - 1
+  const currentQuestion = questions[stepIndex]
+  const isLastStep = stepIndex === questions.length - 1
 
   function handleChoice(quizId: string, choiceId: string) {
     setAnswers((prev) => ({ ...prev, [quizId]: choiceId }))
@@ -92,7 +90,6 @@ export default function Training() {
         storeName: profile!.storeName,
         staffId: profile!.staffId,
         displayName: profile!.displayName,
-        moduleId: module!.id,
         answers: quizAnswers,
       })
       setResult(res)
@@ -108,18 +105,22 @@ export default function Training() {
     setStepIndex(0)
     setAnswers({})
     setRevealed({})
+    setQuestions(null)
+    listQuestions()
+      .then((res) => setQuestions(pickRandomQuestions(res.questions, QUESTIONS_PER_CHALLENGE)))
+      .catch(() => setLoadError('研修問題の取得に失敗しました。通信環境を確認してもう一度お試しください。'))
   }
 
   if (result) {
     return (
       <div className="page">
-        <h1>{module.title}</h1>
+        <h1>接客力向上トレーニング</h1>
         {result.success ? (
           <div className="result-card success">
             {result.alreadyCompleted ? (
               <p>お疲れ様でした!ただし、本日分の1ptはすでに獲得済みのため、追加のポイントはありません(1日1ptが上限です)。</p>
             ) : (
-              <p>研修を完了しました!本日分の1ptを獲得しました。</p>
+              <p>5問すべて正解しました!本日分の1ptを獲得しました。</p>
             )}
             <p>正解数: {result.correctCount} / {result.total}</p>
             {typeof result.totalPoints === 'number' && (
@@ -129,9 +130,9 @@ export default function Training() {
         ) : (
           <div className="result-card retry">
             <p>
-              惜しい!正解数 {result.correctCount} / {result.total} でした。もう一度学び直してから再挑戦してください。
+              惜しい!正解数 {result.correctCount} / {result.total} でした。5問すべて正解でポイント獲得です。もう一度挑戦してください。
             </p>
-            <button onClick={handleRetry}>もう一度学ぶ</button>
+            <button onClick={handleRetry}>もう一度挑戦する</button>
           </div>
         )}
         <button className="link-button" onClick={() => navigate('/modules')}>
@@ -143,53 +144,44 @@ export default function Training() {
 
   return (
     <div className="page">
-      <h1>{module.title}</h1>
+      <h1>接客力向上トレーニング</h1>
       <p className="step-indicator">
-        {stepIndex + 1} / {totalSteps}
+        {stepIndex + 1} / {questions.length}
       </p>
 
-      {isLessonStep || !currentQuestion ? (
-        <div className="lesson-card">
-          <h2>ポイント</h2>
-          <p>{module.tip}</p>
+      <div className="quiz-card">
+        <p className="situation">{currentQuestion.situation}</p>
+        <p className="customer-line">お客様「{currentQuestion.customerLine}」</p>
+        <div className="choices">
+          {currentQuestion.choices.map((choice) => {
+            const selected = answers[currentQuestion.id] === choice.id
+            const showFeedback = revealed[currentQuestion.id] && selected
+            return (
+              <div key={choice.id}>
+                <button
+                  className={`choice-button${selected ? ' selected' : ''}`}
+                  onClick={() => handleChoice(currentQuestion.id, choice.id)}
+                  disabled={revealed[currentQuestion.id]}
+                >
+                  {choice.label}
+                </button>
+                {showFeedback && (
+                  <p className={`feedback${choice.isBest ? ' best' : ''}`}>
+                    {choice.feedback}
+                  </p>
+                )}
+              </div>
+            )
+          })}
         </div>
-      ) : (
-        <div className="quiz-card">
-          <p className="situation">{currentQuestion.situation}</p>
-          <p className="customer-line">お客様「{currentQuestion.customerLine}」</p>
-          <div className="choices">
-            {currentQuestion.choices.map((choice) => {
-              const selected = answers[currentQuestion.id] === choice.id
-              const showFeedback = revealed[currentQuestion.id] && selected
-              return (
-                <div key={choice.id}>
-                  <button
-                    className={`choice-button${selected ? ' selected' : ''}`}
-                    onClick={() => handleChoice(currentQuestion.id, choice.id)}
-                    disabled={revealed[currentQuestion.id]}
-                  >
-                    {choice.label}
-                  </button>
-                  {showFeedback && (
-                    <p className={`feedback${choice.isBest ? ' best' : ''}`}>
-                      {choice.feedback}
-                    </p>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
+      </div>
 
       {submitError && <p className="error">{submitError}</p>}
 
       <button
         className="button"
         onClick={handleNext}
-        disabled={
-          submitting || (!!currentQuestion && !answers[currentQuestion.id])
-        }
+        disabled={submitting || !answers[currentQuestion.id]}
       >
         {submitting ? '送信中...' : isLastStep ? '研修を完了する' : '次へ'}
       </button>

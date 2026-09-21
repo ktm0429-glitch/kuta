@@ -26,6 +26,11 @@
  *   選択肢2 / 正解2 / 解説2 / 選択肢3 / 正解3 / 解説3
  * 各問題は選択肢を3つ持ち、そのうち1つだけ「正解」の列に "○" を入れてください。
  * 保存すればすぐに反映されます(再デプロイは不要です)。
+ *
+ * ■ 出題・ポイントのルール
+ * スタッフが研修に挑戦すると、「問題」シートの中からランダムに5問が出題されます。
+ * 5問すべてに正解すると1pt獲得できます(1問でも間違えると、その回はポイントなし)。
+ * ポイントは1日1人1ptが上限で、同じ日に何回挑戦しても2pt以上にはなりません。
  */
 
 // ここを好きな文字列に変更してください(第三者に推測されにくいものを推奨します)
@@ -37,7 +42,7 @@ var SHEET_REDEMPTIONS = 'ポイント調整履歴';
 var SHEET_QUESTIONS = '問題';
 
 var STAFF_HEADERS = ['店舗ID', '店舗名', '氏名', '表示名', 'ポイント', '更新日時'];
-var COMPLETION_HEADERS = ['店舗ID', '氏名', 'モジュールID', '正解数', '問題数', '完了日時'];
+var COMPLETION_HEADERS = ['店舗ID', '氏名', '出題した問題ID', '正解数', '問題数', '完了日時'];
 var REDEMPTION_HEADERS = ['店舗ID', '氏名', '消費ポイント', 'メモ', '日時'];
 var QUESTION_HEADERS = [
   'ID(空欄可)', '年代', '場面', 'お客様のセリフ',
@@ -45,13 +50,6 @@ var QUESTION_HEADERS = [
   '選択肢2', '正解2(○)', '解説2',
   '選択肢3', '正解3(○)', '解説3'
 ];
-
-// モジュールID(app/src/data/trainingContent.ts と一致させること)と年代の対応。
-var MODULE_AGE_BAND = {
-  'young-customer-basics': 'young',
-  'middle-customer-conversation': 'middle',
-  'senior-customer-conversation': 'senior'
-};
 
 var AGE_BAND_LABEL_JA = { young: '20代', middle: '30〜50代', senior: '60〜70代' };
 var AGE_BAND_FROM_JA = { '20代': 'young', '30〜50代': 'middle', '60〜70代': 'senior' };
@@ -266,14 +264,6 @@ function getQuestionsFromSheet_() {
   return questions;
 }
 
-function getQuestionsForModule_(moduleId) {
-  var ageBand = MODULE_AGE_BAND[moduleId];
-  if (!ageBand) return null;
-  return getQuestionsFromSheet_().filter(function (q) {
-    return q.ageBand === ageBand;
-  });
-}
-
 // ---- 汎用ヘルパー ----
 function findRowIndex_(sheet, storeIdColIdx, staffIdColIdx, storeId, staffId) {
   var data = sheet.getDataRange().getValues();
@@ -372,29 +362,40 @@ function handleListQuestions_(body) {
   return { questions: getQuestionsFromSheet_() };
 }
 
+var QUESTIONS_PER_CHALLENGE = 5;
+
 function handleComplete_(body) {
   var storeId = sanitizeText_(body.storeId, 50);
   var storeName = sanitizeText_(body.storeName, 100);
   var staffId = sanitizeText_(body.staffId, 100);
   var displayName = sanitizeText_(body.displayName, 100);
-  var moduleId = sanitizeText_(body.moduleId, 100);
   var answers = Array.isArray(body.answers) ? body.answers : [];
 
-  var moduleQuestions = getQuestionsForModule_(moduleId);
-  if (!moduleQuestions) {
-    return { error: '存在しない研修モジュールです' };
+  // 送られてきた回答に重複がないかも確認する(同じ問題を2回答えて
+  // 水増しすることを防ぐ)。
+  var uniqueQuizIds = [];
+  answers.forEach(function (a) {
+    if (uniqueQuizIds.indexOf(a.quizId) === -1) uniqueQuizIds.push(a.quizId);
+  });
+  if (uniqueQuizIds.length !== QUESTIONS_PER_CHALLENGE) {
+    return { error: QUESTIONS_PER_CHALLENGE + '問分の回答が必要です' };
   }
 
+  var allQuestions = getQuestionsFromSheet_();
+  var questionById = {};
+  allQuestions.forEach(function (q) { questionById[q.id] = q; });
+
   var correctCount = 0;
-  moduleQuestions.forEach(function (q) {
+  answers.forEach(function (a) {
+    var q = questionById[a.quizId];
+    if (!q) return;
     var best = q.choices.filter(function (c) { return c.isBest; })[0];
-    var submitted = answers.filter(function (a) { return a.quizId === q.id; })[0];
-    if (submitted && best && submitted.choiceId === best.id) {
+    if (best && a.choiceId === best.id) {
       correctCount++;
     }
   });
-  var total = moduleQuestions.length;
-  var passed = total === 0 || correctCount === total;
+  var total = QUESTIONS_PER_CHALLENGE;
+  var passed = correctCount === total;
 
   if (!passed) {
     return {
@@ -408,6 +409,7 @@ function handleComplete_(body) {
 
   var sheetSet = sheets_();
   var now = new Date();
+  var quizIdsLabel = uniqueQuizIds.join(',');
 
   // 1日1人1ptが上限。今日すでに(どの研修であっても)ポイントを
   // 獲得済みかどうかを、このスタッフの完了記録全体から判定する。
@@ -424,7 +426,7 @@ function handleComplete_(body) {
   }
 
   // 完了したこと自体は(ポイントの有無にかかわらず)毎回記録に残す。
-  sheetSet.completions.appendRow([storeId, staffId, moduleId, correctCount, total, now]);
+  sheetSet.completions.appendRow([storeId, staffId, quizIdsLabel, correctCount, total, now]);
 
   if (!alreadyAwardedToday) {
     var staffRowIndex = findRowIndex_(sheetSet.staff, 0, 2, storeId, staffId);
@@ -467,20 +469,19 @@ function handleStatus_(body) {
   }
 
   var compData = sheetSet.completions.getDataRange().getValues();
-  var completedModuleIds = [];
   var awardedToday = false;
   var now = new Date();
   for (var r = 1; r < compData.length; r++) {
     if (compData[r][0] === storeId && compData[r][1] === staffId) {
-      completedModuleIds.push(compData[r][2]);
       var completedAt = compData[r][5];
       if (completedAt instanceof Date && isSameDay_(completedAt, now)) {
         awardedToday = true;
+        break;
       }
     }
   }
 
-  return { points: points, completedModuleIds: completedModuleIds, awardedToday: awardedToday };
+  return { points: points, awardedToday: awardedToday };
 }
 
 function checkAdminKey_(body) {

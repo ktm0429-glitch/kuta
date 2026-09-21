@@ -11,7 +11,7 @@ function App() {
     <Routes>
       <Route path="/" element={<Login />} />
       <Route path="/modules" element={<ModuleList />} />
-      <Route path="/training/:moduleId" element={<Training />} />
+      <Route path="/training" element={<Training />} />
       <Route path="/admin/login" element={<AdminLogin />} />
       <Route path="/admin" element={<AdminDashboard />} />
       <Route path="*" element={<Navigate to="/" replace />} />

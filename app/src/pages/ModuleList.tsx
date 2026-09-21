@@ -1,20 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { trainingModules } from '../data/trainingContent'
 import { loadProfile, clearProfile } from '../profile'
 import { getMyStatus } from '../api'
-
-const ageBandLabel: Record<string, string> = {
-  young: '20代のお客様向け',
-  middle: '30〜50代のお客様向け',
-  senior: '60〜70代のお客様向け',
-}
 
 export default function ModuleList() {
   const navigate = useNavigate()
   const profile = loadProfile()
   const [points, setPoints] = useState<number | null>(null)
-  const [completedIds, setCompletedIds] = useState<string[]>([])
   const [awardedToday, setAwardedToday] = useState(false)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
@@ -27,7 +19,6 @@ export default function ModuleList() {
     getMyStatus({ storeId: profile.storeId, staffId: profile.staffId })
       .then((res) => {
         setPoints(res.points)
-        setCompletedIds(res.completedModuleIds)
         setAwardedToday(res.awardedToday)
       })
       .catch(() => setLoadError('現在のポイント状況を取得できませんでした。ネットワーク環境をご確認ください。'))
@@ -63,28 +54,17 @@ export default function ModuleList() {
         <p className="daily-note">
           {awardedToday
             ? '本日分の1ptはすでに獲得済みです。また明日挑戦してください!'
-            : '研修を1つ完了すると、本日分の1ptを獲得できます(1日1ptが上限です)。'}
+            : '研修に挑戦して5問すべて正解すると、本日分の1ptを獲得できます(1日1ptが上限です)。'}
         </p>
       )}
 
-      <ul className="module-list">
-        {trainingModules.map((m) => {
-          const done = completedIds.includes(m.id)
-          return (
-            <li key={m.id} className="module-card">
-              <div className="module-card-header">
-                <span className="age-band-tag">{ageBandLabel[m.ageBand]}</span>
-                {done && <span className="done-tag">完了済み</span>}
-              </div>
-              <h2>{m.title}</h2>
-              <p>{m.summary}</p>
-              <Link to={`/training/${m.id}`} className="button">
-                {done ? 'もう一度学ぶ' : 'この研修をはじめる'}
-              </Link>
-            </li>
-          )
-        })}
-      </ul>
+      <div className="module-card">
+        <h2>接客力向上トレーニング</h2>
+        <p>お客様との会話をテーマにした問題が、全体の中からランダムに5問出題されます。5問すべて正解すると1pt獲得です。</p>
+        <Link to="/training" className="button">
+          研修に挑戦する
+        </Link>
+      </div>
     </div>
   )
 }

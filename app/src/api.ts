@@ -46,7 +46,6 @@ export interface CompleteTrainingRequest {
   storeName: string
   staffId: string
   displayName: string
-  moduleId: string
   answers: { quizId: string; choiceId: string }[]
 }
 
@@ -72,7 +71,6 @@ export interface MyStatusRequest {
 
 export interface MyStatusResponse {
   points: number
-  completedModuleIds: string[]
   awardedToday: boolean
 }
 
