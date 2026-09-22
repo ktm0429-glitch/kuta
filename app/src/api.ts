@@ -50,7 +50,6 @@ export interface CompleteTrainingRequest {
     quizId: string
     passed: boolean
     contentScore: number
-    expressionScore: number
     voiceScore: number
     transcript: string
   }[]

@@ -3,7 +3,7 @@ import type { AnswerScore, QuizQuestion } from './types'
 // ---- テキスト類似度(文字bigramのDice係数。日本語は分かち書きが難しいため、
 //      形態素解析なしでも動く簡易な方式を採用している) ----
 function bigrams(text: string): Set<string> {
-  const cleaned = text.replace(/[\s、。,.!?！?「」『』()（）・\n]/g, '')
+  const cleaned = text.replace(/[\s、。,.!?！？「」『』()（）・\n]/g, '')
   const grams = new Set<string>()
   for (let i = 0; i < cleaned.length - 1; i++) {
     grams.add(cleaned.slice(i, i + 2))
@@ -32,21 +32,6 @@ export function scoreContent(transcript: string, question: QuizQuestion): number
   return Math.max(0, Math.min(100, Math.round(similarity * 260)))
 }
 
-export interface ExpressionSample {
-  faceDetected: boolean
-  smile: number // 0-1
-}
-
-export function scoreExpression(samples: ExpressionSample[]): number {
-  if (samples.length === 0) return 0
-  const faceRatio = samples.filter((s) => s.faceDetected).length / samples.length
-  const avgSmile =
-    samples.reduce((sum, s) => sum + (s.faceDetected ? s.smile : 0), 0) /
-    Math.max(1, samples.filter((s) => s.faceDetected).length)
-  const score = faceRatio * 40 + Math.min(1, avgSmile * 1.6) * 60
-  return Math.max(0, Math.min(100, Math.round(score)))
-}
-
 export interface VoiceStats {
   avgVolume: number // 0-1 目安のRMS平均
   pitchStdDev: number // Hz。声の抑揚(ばらつき)
@@ -64,47 +49,37 @@ export function scoreVoice(stats: VoiceStats): number {
   return Math.max(0, Math.min(100, Math.round(score)))
 }
 
+// 内容(発話の中身)を重視し、声のトーンは補助的な位置づけにする
+const CONTENT_WEIGHT = 0.75
+const VOICE_WEIGHT = 0.25
 const PASS_THRESHOLD = 55
+// 内容だけで合格ラインに届いていれば、声のトーンが多少弱くても合格にする
+// (「内容が正しければ通したい」という運用方針のため)
+const CONTENT_ONLY_PASS_THRESHOLD = 70
 
 export function buildAnswerScore(
   question: QuizQuestion,
   transcript: string,
-  expression: ExpressionSample[],
   voice: VoiceStats,
   speechSupported: boolean,
 ): AnswerScore {
-  const contentScore = speechSupported ? scoreContent(transcript, question) : 50
-  const expressionScore = scoreExpression(expression)
+  const contentScore = speechSupported ? scoreContent(transcript, question) : 0
   const voiceScore = scoreVoice(voice)
 
-  const overallScore = speechSupported
-    ? Math.round(contentScore * 0.5 + expressionScore * 0.25 + voiceScore * 0.25)
-    : Math.round(expressionScore * 0.5 + voiceScore * 0.5)
+  const overallScore = Math.round(contentScore * CONTENT_WEIGHT + voiceScore * VOICE_WEIGHT)
 
   const best = question.choices.find((c) => c.isBest)
   const goodPoints: string[] = []
   const improvePoints: string[] = []
 
-  if (speechSupported) {
-    if (contentScore >= 55) {
-      goodPoints.push(`会話の内容が良かったです。${best ? best.feedback : ''}`)
-    } else {
-      improvePoints.push(
-        `この場面では、例えば「${best ? best.label : ''}」のような一言が効果的です。${
-          best ? best.feedback : ''
-        }`,
-      )
-    }
+  if (contentScore >= 55) {
+    goodPoints.push(`会話の内容が良かったです。${best ? best.feedback : ''}`)
   } else {
     improvePoints.push(
-      'このブラウザでは発話内容の自動読み取りに対応していないため、内容面は今回の採点に含まれていません(表情・声のみで判定しています)。',
+      `この場面では、例えば「${best ? best.label : ''}」のような一言が効果的です。${
+        best ? best.feedback : ''
+      }`,
     )
-  }
-
-  if (expressionScore >= 60) {
-    goodPoints.push('表情が明るく、カメラにもしっかり顔が映っていました。')
-  } else {
-    improvePoints.push('表情が硬め、またはカメラに顔が映っていない時間が多いようです。少し口角を上げて、カメラの方を見て話してみましょう。')
   }
 
   if (voiceScore >= 60) {
@@ -113,14 +88,15 @@ export function buildAnswerScore(
     improvePoints.push('声が単調だったり小さめだったりするようです。少しはっきりめに、抑揚をつけて話すとより伝わりやすくなります。')
   }
 
+  const passed = overallScore >= PASS_THRESHOLD || contentScore >= CONTENT_ONLY_PASS_THRESHOLD
+
   return {
     quizId: question.id,
     transcript,
     contentScore,
-    expressionScore,
     voiceScore,
     overallScore,
-    passed: overallScore >= PASS_THRESHOLD,
+    passed,
     goodPoints,
     improvePoints,
   }

@@ -15,12 +15,11 @@ export interface QuizQuestion {
   choices: QuizChoice[]
 }
 
-// 1問分の「音声・表情での回答」を採点した結果
+// 1問分の「音声での回答」を採点した結果
 export interface AnswerScore {
   quizId: string
   transcript: string
   contentScore: number // 0-100
-  expressionScore: number // 0-100
   voiceScore: number // 0-100
   overallScore: number // 0-100
   passed: boolean

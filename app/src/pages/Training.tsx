@@ -6,7 +6,6 @@ import type { CompleteTrainingResponse } from '../api'
 import type { AnswerScore, QuizQuestion } from '../types'
 import { buildAnswerScore } from '../scoring'
 import { SpeechToText, isSpeechRecognitionSupported } from '../media/speechToText'
-import { FaceAnalyzer } from '../media/faceAnalyzer'
 import { VoiceAnalyzer } from '../media/voiceAnalyzer'
 import { getUnsupportedReason } from '../media/browserSupport'
 
@@ -39,10 +38,8 @@ export default function Training() {
   const [result, setResult] = useState<CompleteTrainingResponse | null>(null)
   const [submitError, setSubmitError] = useState('')
 
-  const videoRef = useRef<HTMLVideoElement | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const speechRef = useRef<SpeechToText | null>(null)
-  const faceRef = useRef<FaceAnalyzer | null>(null)
   const voiceRef = useRef<VoiceAnalyzer | null>(null)
   const startedAtRef = useRef<number>(0)
   const maxTimerRef = useRef<number | null>(null)
@@ -64,7 +61,7 @@ export default function Training() {
   }, [])
 
   useEffect(() => {
-    // ページを離れる時は必ずカメラ・マイクを解放する
+    // ページを離れる時は必ずマイクを解放する
     return () => stopMediaTracks()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -121,33 +118,20 @@ export default function Training() {
     setPermissionErrorMsg('')
     let stream: MediaStream
     try {
-      stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: { ideal: 480 }, height: { ideal: 360 } },
-        audio: true,
-      })
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true })
     } catch {
       setPhase('permission-error')
       setPermissionErrorMsg(
-        'カメラ・マイクへのアクセスが許可されませんでした。ブラウザの設定で許可してから、もう一度お試しください。',
+        'マイクへのアクセスが許可されませんでした。ブラウザの設定で許可してから、もう一度お試しください。',
       )
       return
     }
 
     streamRef.current = stream
-    if (videoRef.current) {
-      videoRef.current.srcObject = stream
-      videoRef.current.play().catch(() => {})
-    }
 
     const speech = new SpeechToText()
     speech.start((full, interim) => setLiveTranscript((full + interim).trim()))
     speechRef.current = speech
-
-    const face = new FaceAnalyzer()
-    faceRef.current = face
-    if (videoRef.current) {
-      face.start(videoRef.current).catch(() => {})
-    }
 
     const voice = new VoiceAnalyzer()
     voice.start(stream)
@@ -169,14 +153,12 @@ export default function Training() {
   function finishRecording() {
     setPhase('scoring')
     const transcript = speechRef.current?.stop() ?? ''
-    const expressionSamples = faceRef.current?.stop() ?? []
     const voiceStats = voiceRef.current?.stop() ?? { avgVolume: 0, pitchStdDev: 0 }
     stopMediaTracks()
 
     const score = buildAnswerScore(
       currentQuestion,
       transcript,
-      expressionSamples,
       voiceStats,
       isSpeechRecognitionSupported(),
     )
@@ -203,7 +185,6 @@ export default function Training() {
         quizId: s.quizId,
         passed: s.passed,
         contentScore: s.contentScore,
-        expressionScore: s.expressionScore,
         voiceScore: s.voiceScore,
         transcript: s.transcript,
       }))
@@ -278,11 +259,11 @@ export default function Training() {
         {phase === 'intro' && (
           <>
             <p className="daily-note" style={{ margin: '0 0 1rem' }}>
-              カメラとマイクを使って、実際にお客様に話しかけるつもりで声に出して答えてください。
-              表情も含めて採点します(映像・音声は保存されません)。
+              マイクを使って、実際にお客様に話しかけるつもりで声に出して答えてください。
+              話した内容を中心に採点します(音声は保存されません)。
             </p>
             <button className="button" onClick={handleStartRecording}>
-              録画して回答する
+              録音して回答する
             </button>
           </>
         )}
@@ -298,9 +279,8 @@ export default function Training() {
 
         {(phase === 'recording' || phase === 'scoring') && (
           <div className="recording-box">
-            <video ref={videoRef} className="camera-preview" muted playsInline autoPlay />
             <p className="recording-indicator">
-              ● 録画中 {Math.floor(elapsedMs / 1000)}秒
+              ● 録音中 {Math.floor(elapsedMs / 1000)}秒
               {phase === 'scoring' && '(採点中...)'}
             </p>
             {liveTranscript && <p className="live-transcript">認識中の発話: {liveTranscript}</p>}
@@ -318,7 +298,6 @@ export default function Training() {
           <div className="score-box">
             <div className="score-bars">
               <ScoreBar label="内容" value={currentScore.contentScore} />
-              <ScoreBar label="表情" value={currentScore.expressionScore} />
               <ScoreBar label="声のトーン" value={currentScore.voiceScore} />
             </div>
             <p className={`overall-score${currentScore.passed ? ' pass' : ' fail'}`}>
