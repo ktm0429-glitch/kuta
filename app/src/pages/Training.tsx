@@ -8,6 +8,7 @@ import { buildAnswerScore } from '../scoring'
 import { SpeechToText, isSpeechRecognitionSupported } from '../media/speechToText'
 import { FaceAnalyzer } from '../media/faceAnalyzer'
 import { VoiceAnalyzer } from '../media/voiceAnalyzer'
+import { getUnsupportedReason } from '../media/browserSupport'
 
 const QUESTIONS_PER_CHALLENGE = 5
 const MAX_RECORD_MS = 30000
@@ -78,6 +79,19 @@ export default function Training() {
   if (!profile) {
     navigate('/')
     return null
+  }
+
+  const unsupportedReason = getUnsupportedReason()
+  if (unsupportedReason) {
+    return (
+      <div className="page">
+        <h1>接客力向上トレーニング</h1>
+        <p className="error">{unsupportedReason}</p>
+        <button className="link-button" onClick={() => navigate('/modules')}>
+          研修メニューに戻る
+        </button>
+      </div>
+    )
   }
 
   if (loadError) {
