@@ -46,7 +46,14 @@ export interface CompleteTrainingRequest {
   storeName: string
   staffId: string
   displayName: string
-  answers: { quizId: string; choiceId: string }[]
+  answers: {
+    quizId: string
+    passed: boolean
+    contentScore: number
+    expressionScore: number
+    voiceScore: number
+    transcript: string
+  }[]
 }
 
 export interface CompleteTrainingResponse {

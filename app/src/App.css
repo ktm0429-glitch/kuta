@@ -282,6 +282,136 @@ button:disabled {
   background: linear-gradient(135deg, var(--gold-soft), #ffe6c2);
 }
 
+.recording-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.camera-preview {
+  width: 100%;
+  max-width: 320px;
+  aspect-ratio: 4 / 3;
+  border-radius: 16px;
+  background: #222;
+  object-fit: cover;
+  transform: scaleX(-1);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+}
+
+.recording-indicator {
+  color: var(--bad);
+  font-weight: 700;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.live-transcript {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  background: var(--gold-soft);
+  border-radius: 10px;
+  padding: 0.5rem 0.75rem;
+  width: 100%;
+  margin: 0;
+}
+
+.score-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.score-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.score-bar-row {
+  display: grid;
+  grid-template-columns: 4.5rem 1fr 2.2rem;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.score-bar-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.score-bar-track {
+  height: 10px;
+  background: #ffe6ee;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.score-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-start), var(--accent-end));
+  border-radius: 999px;
+}
+
+.score-bar-value {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.overall-score {
+  font-weight: 900;
+  font-size: 1.05rem;
+  margin: 0;
+}
+
+.overall-score.pass {
+  color: var(--good);
+}
+
+.overall-score.fail {
+  color: var(--gold-dark);
+}
+
+.point-list {
+  border-radius: 14px;
+  padding: 0.75rem 0.9rem;
+}
+
+.point-list.good {
+  background: var(--good-soft);
+}
+
+.point-list.improve {
+  background: var(--gold-soft);
+}
+
+.point-list-title {
+  font-weight: 700;
+  font-size: 0.85rem;
+  margin: 0 0 0.35rem;
+  color: var(--text);
+}
+
+.point-list ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.point-list li {
+  font-size: 0.85rem;
+  line-height: 1.55;
+  color: var(--text);
+}
+
 .admin-table {
   width: 100%;
   border-collapse: collapse;

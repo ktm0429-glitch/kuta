@@ -29,8 +29,18 @@
  *
  * ■ 出題・ポイントのルール
  * スタッフが研修に挑戦すると、「問題」シートの中からランダムに5問が出題されます。
- * 5問すべてに正解すると1pt獲得できます(1問でも間違えると、その回はポイントなし)。
+ * 各問題は選択式ではなく、スタッフがカメラ・マイクに向かって実際に声に出して
+ * 回答する方式です(発話内容・表情・声のトーンをスタッフの端末(ブラウザ)側で
+ * 解析し、合格/不合格を判定します。映像・音声そのものはサーバーに送信・保存されません)。
+ * 5問すべて合格基準を満たすと1pt獲得できます(1問でも基準未達だと、その回はポイントなし)。
  * ポイントは1日1人1ptが上限で、同じ日に何回挑戦しても2pt以上にはなりません。
+ *
+ * ■ 採点についての注意
+ * 発話内容・表情・声のトーンの解析と合否判定は、Apps Script側(サーバー)ではなく
+ * スタッフの端末(ブラウザ)側で行われ、その判定結果(合否・スコア・発話テキスト)を
+ * このスクリプトに送信しています。「完了記録」シートには参考情報として平均スコアと
+ * 発話内容の要約を記録しますが、選択式クイズだった頃のようなサーバー側での
+ * 厳密な正誤検証はできない点にご留意ください。
  */
 
 // ここを好きな文字列に変更してください(第三者に推測されにくいものを推奨します)
@@ -42,7 +52,10 @@ var SHEET_REDEMPTIONS = 'ポイント調整履歴';
 var SHEET_QUESTIONS = '問題';
 
 var STAFF_HEADERS = ['店舗ID', '店舗名', '氏名', '表示名', 'ポイント', '更新日時'];
-var COMPLETION_HEADERS = ['店舗ID', '氏名', '出題した問題ID', '正解数', '問題数', '完了日時'];
+var COMPLETION_HEADERS = [
+  '店舗ID', '氏名', '出題した問題ID', '合格数', '問題数', '完了日時',
+  '平均内容スコア', '平均表情スコア', '平均声スコア', '発話内容(監査用・参考)'
+];
 var REDEMPTION_HEADERS = ['店舗ID', '氏名', '消費ポイント', 'メモ', '日時'];
 var QUESTION_HEADERS = [
   'ID(空欄可)', '年代', '場面', 'お客様のセリフ',
@@ -385,17 +398,39 @@ function handleComplete_(body) {
   var questionById = {};
   allQuestions.forEach(function (q) { questionById[q.id] = q; });
 
+  // 音声・表情による採点は、カメラ/マイクを使った解析をスタッフの端末(ブラウザ)側で
+  // 行っており、Apps Script側(サーバー)では発話内容や表情そのものを検証できない。
+  // そのため、各問題の合否(passed)はクライアントが計算した結果をそのまま信頼する。
+  // (これは従来の「選択式クイズの正誤をサーバー側で検証する」方式より
+  // 不正操作への耐性は下がるが、無料の範囲でこの機能を実現するための仕様上の制約)
   var correctCount = 0;
+  var contentScores = [];
+  var expressionScores = [];
+  var voiceScores = [];
+  var transcriptParts = [];
   answers.forEach(function (a) {
     var q = questionById[a.quizId];
     if (!q) return;
-    var best = q.choices.filter(function (c) { return c.isBest; })[0];
-    if (best && a.choiceId === best.id) {
-      correctCount++;
-    }
+    if (a.passed === true) correctCount++;
+    if (typeof a.contentScore === 'number') contentScores.push(a.contentScore);
+    if (typeof a.expressionScore === 'number') expressionScores.push(a.expressionScore);
+    if (typeof a.voiceScore === 'number') voiceScores.push(a.voiceScore);
+    var t = sanitizeText_(a.transcript, 200);
+    if (t) transcriptParts.push(t);
   });
   var total = QUESTIONS_PER_CHALLENGE;
   var passed = correctCount === total;
+
+  function avg_(arr) {
+    if (arr.length === 0) return '';
+    var sum = 0;
+    for (var i = 0; i < arr.length; i++) sum += arr[i];
+    return Math.round(sum / arr.length);
+  }
+  var avgContent = avg_(contentScores);
+  var avgExpression = avg_(expressionScores);
+  var avgVoice = avg_(voiceScores);
+  var transcriptSummary = sanitizeText_(transcriptParts.join(' / '), 2000);
 
   if (!passed) {
     return {
@@ -426,7 +461,10 @@ function handleComplete_(body) {
   }
 
   // 完了したこと自体は(ポイントの有無にかかわらず)毎回記録に残す。
-  sheetSet.completions.appendRow([storeId, staffId, quizIdsLabel, correctCount, total, now]);
+  sheetSet.completions.appendRow([
+    storeId, staffId, quizIdsLabel, correctCount, total, now,
+    avgContent, avgExpression, avgVoice, transcriptSummary
+  ]);
 
   if (!alreadyAwardedToday) {
     var staffRowIndex = findRowIndex_(sheetSet.staff, 0, 2, storeId, staffId);
