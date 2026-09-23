@@ -57,6 +57,24 @@ const PASS_THRESHOLD = 55
 // (「内容が正しければ通したい」という運用方針のため)
 const CONTENT_ONLY_PASS_THRESHOLD = 70
 
+function contentFeedback(question: QuizQuestion, contentScore: number): {
+  good: string[]
+  improve: string[]
+} {
+  const best = question.choices.find((c) => c.isBest)
+  if (contentScore >= 55) {
+    return { good: [`会話の内容が良かったです。${best ? best.feedback : ''}`], improve: [] }
+  }
+  return {
+    good: [],
+    improve: [
+      `この場面では、例えば「${best ? best.label : ''}」のような一言が効果的です。${
+        best ? best.feedback : ''
+      }`,
+    ],
+  }
+}
+
 export function buildAnswerScore(
   question: QuizQuestion,
   transcript: string,
@@ -68,19 +86,9 @@ export function buildAnswerScore(
 
   const overallScore = Math.round(contentScore * CONTENT_WEIGHT + voiceScore * VOICE_WEIGHT)
 
-  const best = question.choices.find((c) => c.isBest)
-  const goodPoints: string[] = []
-  const improvePoints: string[] = []
-
-  if (contentScore >= 55) {
-    goodPoints.push(`会話の内容が良かったです。${best ? best.feedback : ''}`)
-  } else {
-    improvePoints.push(
-      `この場面では、例えば「${best ? best.label : ''}」のような一言が効果的です。${
-        best ? best.feedback : ''
-      }`,
-    )
-  }
+  const content = contentFeedback(question, contentScore)
+  const goodPoints = [...content.good]
+  const improvePoints = [...content.improve]
 
   if (voiceScore >= 60) {
     goodPoints.push('声の抑揚・声量がちょうど良く、聞き取りやすい話し方でした。')
@@ -99,5 +107,25 @@ export function buildAnswerScore(
     passed,
     goodPoints,
     improvePoints,
+    mode: 'voice',
+  }
+}
+
+// テキスト入力での回答(音声認識非対応ブラウザ向けの代替手段)を採点する。
+// 声のトーンは評価しようがないため、内容スコアのみで合否を判定する。
+export function buildTextAnswerScore(question: QuizQuestion, text: string): AnswerScore {
+  const contentScore = scoreContent(text, question)
+  const content = contentFeedback(question, contentScore)
+
+  return {
+    quizId: question.id,
+    transcript: text,
+    contentScore,
+    voiceScore: 0,
+    overallScore: contentScore,
+    passed: contentScore >= PASS_THRESHOLD,
+    goodPoints: content.good,
+    improvePoints: content.improve,
+    mode: 'text',
   }
 }

@@ -1,35 +1,19 @@
 import { isSpeechRecognitionSupported } from './speechToText'
 
-// このアプリは音声認識(Web Speech API)を使う。ブラウザの「名前」ではなく、
-// 実際に必要な機能(音声認識・マイク)が使えるかどうかで判定する。
-// これにより、Chromeに限らずEdge・Samsung Internetなど対応ブラウザなら
-// 問題なく利用できる(逆に本当に非対応のFirefox・iOS系は引き続きブロックされる)。
+// このアプリは音声認識(Web Speech API)に対応したブラウザでは「マイクで回答する」
+// (録音+自動文字起こし+声のトーン採点)を使う。対応していないブラウザ(iPhone/iPad・
+// Firefoxなど)では、締め出さずにテキスト入力での代替手段を案内する
+// (iPhoneならキーボード標準のマイクボタンで音声入力もできる)。
 
-function isIOS(): boolean {
+export function isIOS(): boolean {
   const ua = navigator.userAgent
   if (/iPad|iPhone|iPod/.test(ua)) return true
   // iPadOS はデスクトップ版Safariと同じUAを返すことがあるため、タッチ対応のMacとして判定する
   return navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1
 }
 
-export function getUnsupportedReason(): string | null {
-  const hasSpeech = isSpeechRecognitionSupported()
-  const hasMic = !!navigator.mediaDevices?.getUserMedia
-
-  if (hasSpeech && hasMic) return null
-
-  if (isIOS()) {
-    return (
-      'iPhone/iPadでは、この研修アプリが必要とする音声認識機能に対応したブラウザがありません' +
-      '(Chromeアプリを含め、iOS上のブラウザは音声認識に対応していません)。' +
-      'お手数ですが、Androidスマホまたはパソコンで開き直してください。'
-    )
-  }
-  if (!hasSpeech) {
-    return (
-      'このブラウザは音声認識に対応していません。Google Chrome・Microsoft Edge・' +
-      'Samsung Internetなど対応ブラウザで開き直してください。'
-    )
-  }
-  return 'カメラ・マイクの機能が利用できないようです。最新版のブラウザで開き直してください。'
+// 「マイクで回答する」(録音+声のトーン採点つき)モードが使えるブラウザかどうか。
+// false の場合はテキスト入力モードにフォールバックする(締め出しはしない)。
+export function isVoiceModeSupported(): boolean {
+  return isSpeechRecognitionSupported() && !!navigator.mediaDevices?.getUserMedia
 }

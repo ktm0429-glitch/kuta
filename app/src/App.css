@@ -75,6 +75,24 @@ h2 {
   border-color: var(--accent-solid);
 }
 
+.text-answer {
+  width: 100%;
+  padding: 0.8rem 0.9rem;
+  font-size: 1rem;
+  border: 2px solid #ffd4c2;
+  border-radius: 14px;
+  background: #fff;
+  font-family: inherit;
+  color: var(--text);
+  resize: vertical;
+  margin-bottom: 0.75rem;
+}
+
+.text-answer:focus {
+  outline: none;
+  border-color: var(--accent-solid);
+}
+
 button,
 .button {
   display: inline-block;

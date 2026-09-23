@@ -4,14 +4,15 @@ import { loadProfile } from '../profile'
 import { completeTraining, listQuestions } from '../api'
 import type { CompleteTrainingResponse } from '../api'
 import type { AnswerScore, QuizQuestion } from '../types'
-import { buildAnswerScore } from '../scoring'
-import { SpeechToText, isSpeechRecognitionSupported } from '../media/speechToText'
+import { buildAnswerScore, buildTextAnswerScore } from '../scoring'
+import { SpeechToText } from '../media/speechToText'
 import { VoiceAnalyzer } from '../media/voiceAnalyzer'
-import { getUnsupportedReason } from '../media/browserSupport'
+import { isVoiceModeSupported, isIOS } from '../media/browserSupport'
 
 const QUESTIONS_PER_CHALLENGE = 5
 const MAX_RECORD_MS = 30000
 const MIN_RECORD_MS = 3000
+const MIN_TEXT_LENGTH = 2
 
 function pickRandomQuestions(all: QuizQuestion[], count: number): QuizQuestion[] {
   const shuffled = [...all].sort(() => Math.random() - 0.5)
@@ -19,6 +20,7 @@ function pickRandomQuestions(all: QuizQuestion[], count: number): QuizQuestion[]
 }
 
 type Phase = 'intro' | 'permission-error' | 'recording' | 'scoring' | 'result'
+type AnswerMode = 'voice' | 'text'
 
 export default function Training() {
   const navigate = useNavigate()
@@ -29,10 +31,18 @@ export default function Training() {
 
   const [stepIndex, setStepIndex] = useState(0)
   const [phase, setPhase] = useState<Phase>('intro')
+  // マイクで録音できる端末かどうかで、初期の回答方法を自動選択する
+  // (音声認識に対応していないiPhone/iPad等では、テキスト入力に自動で切り替わる)
+  const [answerMode, setAnswerMode] = useState<AnswerMode>(() =>
+    isVoiceModeSupported() ? 'voice' : 'text',
+  )
+  const voiceCapable = isVoiceModeSupported()
   const [scores, setScores] = useState<Record<string, AnswerScore>>({})
   const [liveTranscript, setLiveTranscript] = useState('')
   const [elapsedMs, setElapsedMs] = useState(0)
   const [permissionErrorMsg, setPermissionErrorMsg] = useState('')
+  const [textAnswer, setTextAnswer] = useState('')
+  const [textError, setTextError] = useState('')
 
   const [submitting, setSubmitting] = useState(false)
   const [result, setResult] = useState<CompleteTrainingResponse | null>(null)
@@ -78,19 +88,6 @@ export default function Training() {
     return null
   }
 
-  const unsupportedReason = getUnsupportedReason()
-  if (unsupportedReason) {
-    return (
-      <div className="page">
-        <h1>接客力向上トレーニング</h1>
-        <p className="error">{unsupportedReason}</p>
-        <button className="link-button" onClick={() => navigate('/modules')}>
-          研修メニューに戻る
-        </button>
-      </div>
-    )
-  }
-
   if (loadError) {
     return (
       <div className="page">
@@ -114,6 +111,19 @@ export default function Training() {
   const isLastStep = stepIndex === questions.length - 1
   const currentScore = scores[currentQuestion.id]
 
+  function switchToTextMode() {
+    stopMediaTracks()
+    setAnswerMode('text')
+    setPhase('intro')
+    setPermissionErrorMsg('')
+  }
+
+  function switchToVoiceMode() {
+    setAnswerMode('voice')
+    setPhase('intro')
+    setTextError('')
+  }
+
   async function handleStartRecording() {
     setPermissionErrorMsg('')
     let stream: MediaStream
@@ -124,11 +134,11 @@ export default function Training() {
       const name = err instanceof DOMException ? err.name : ''
       if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
         setPermissionErrorMsg(
-          'この端末にマイクが見つかりませんでした。マイクが内蔵・接続された端末(スマホやノートPCなど)でお試しください。',
+          'この端末にマイクが見つかりませんでした。マイクが内蔵・接続された端末(スマホやノートPCなど)でお試しいただくか、下の「文字で回答する」をお使いください。',
         )
       } else {
         setPermissionErrorMsg(
-          'マイクへのアクセスが許可されませんでした。ブラウザの設定で許可してから、もう一度お試しください。',
+          'マイクへのアクセスが許可されませんでした。ブラウザの設定で許可してからもう一度お試しいただくか、下の「文字で回答する」をお使いください。',
         )
       }
       return
@@ -163,12 +173,7 @@ export default function Training() {
     const voiceStats = voiceRef.current?.stop() ?? { avgVolume: 0, pitchStdDev: 0 }
     stopMediaTracks()
 
-    const score = buildAnswerScore(
-      currentQuestion,
-      transcript,
-      voiceStats,
-      isSpeechRecognitionSupported(),
-    )
+    const score = buildAnswerScore(currentQuestion, transcript, voiceStats, true)
     setScores((prev) => ({ ...prev, [currentQuestion.id]: score }))
     setPhase('result')
   }
@@ -178,11 +183,26 @@ export default function Training() {
     finishRecording()
   }
 
+  function handleSubmitText() {
+    const trimmed = textAnswer.trim()
+    if (trimmed.length < MIN_TEXT_LENGTH) {
+      setTextError('お客様に伝える言葉を入力(またはキーボードのマイクで音声入力)してください。')
+      return
+    }
+    setTextError('')
+    const score = buildTextAnswerScore(currentQuestion, trimmed)
+    setScores((prev) => ({ ...prev, [currentQuestion.id]: score }))
+    setTextAnswer('')
+    setPhase('result')
+  }
+
   async function handleNext() {
     if (!isLastStep) {
       setStepIndex((i) => i + 1)
       setPhase('intro')
       setLiveTranscript('')
+      setTextAnswer('')
+      setTextError('')
       return
     }
     setSubmitting(true)
@@ -252,7 +272,7 @@ export default function Training() {
         <p className="situation">{currentQuestion.situation}</p>
         <p className="customer-line">お客様「{currentQuestion.customerLine}」</p>
 
-        {phase === 'intro' && (
+        {phase === 'intro' && answerMode === 'voice' && (
           <>
             <p className="daily-note" style={{ margin: '0 0 1rem' }}>
               下のボタンを押すと、ブラウザが「マイクの使用を許可しますか?」と聞いてきます。
@@ -262,6 +282,37 @@ export default function Training() {
             <button className="button" onClick={handleStartRecording}>
               マイクで回答する
             </button>
+            <button className="link-button" onClick={switchToTextMode}>
+              うまく録音できない場合は、文字で回答する
+            </button>
+          </>
+        )}
+
+        {phase === 'intro' && answerMode === 'text' && (
+          <>
+            <p className="daily-note" style={{ margin: '0 0 1rem' }}>
+              お客様に話しかけるつもりで、下の欄に言葉を入力してください。
+              {isIOS()
+                ? ' 入力欄をタップし、キーボードのマイクのアイコンを押すと、声で入力することもできます。'
+                : ' お使いの端末に音声入力機能があれば、それを使って入力することもできます。'}
+            </p>
+            <textarea
+              className="text-answer"
+              rows={4}
+              maxLength={500}
+              value={textAnswer}
+              placeholder="お客様に話しかけるつもりで、言葉を入力してください"
+              onChange={(e) => setTextAnswer(e.target.value)}
+            />
+            {textError && <p className="error">{textError}</p>}
+            <button className="button" onClick={handleSubmitText}>
+              回答する
+            </button>
+            {voiceCapable && (
+              <button className="link-button" onClick={switchToVoiceMode}>
+                マイクで話して回答する方法に切り替える
+              </button>
+            )}
           </>
         )}
 
@@ -270,6 +321,9 @@ export default function Training() {
             <p className="error">{permissionErrorMsg}</p>
             <button className="button" onClick={handleStartRecording}>
               もう一度試す
+            </button>
+            <button className="link-button" onClick={switchToTextMode}>
+              文字で回答する
             </button>
           </>
         )}
@@ -298,13 +352,15 @@ export default function Training() {
         {phase === 'result' && currentScore && (
           <div className="score-box">
             <p className="recognized-transcript">
-              ✓ 回答を受け付けました。認識された発話:「
+              ✓ 回答を受け付けました。{currentScore.mode === 'voice' ? '認識された発話' : '入力された内容'}:「
               {currentScore.transcript || '(聞き取れませんでした)'}
               」
             </p>
             <div className="score-bars">
               <ScoreBar label="内容" value={currentScore.contentScore} />
-              <ScoreBar label="声のトーン" value={currentScore.voiceScore} />
+              {currentScore.mode === 'voice' && (
+                <ScoreBar label="声のトーン" value={currentScore.voiceScore} />
+              )}
             </div>
             <p className={`overall-score${currentScore.passed ? ' pass' : ' fail'}`}>
               総合スコア: {currentScore.overallScore}点 {currentScore.passed ? '(合格)' : '(あと一歩)'}
