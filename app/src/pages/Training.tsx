@@ -255,8 +255,9 @@ export default function Training() {
         {phase === 'intro' && (
           <>
             <p className="daily-note" style={{ margin: '0 0 1rem' }}>
-              マイクを使って、実際にお客様に話しかけるつもりで声に出して答えてください。
-              話した内容を中心に採点します(音声は保存されません)。
+              下のボタンを押すと、ブラウザが「マイクの使用を許可しますか?」と聞いてきます。
+              「許可」を選ぶと録音が始まります。実際にお客様に話しかけるつもりで声に出して
+              答えてください。話した内容を中心に採点します(音声は保存されません)。
             </p>
             <button className="button" onClick={handleStartRecording}>
               マイクで回答する
@@ -276,7 +277,7 @@ export default function Training() {
         {(phase === 'recording' || phase === 'scoring') && (
           <div className="recording-box">
             <p className="recording-indicator">
-              ● 回答中 {Math.floor(elapsedMs / 1000)}秒
+              ● 録音中です。話し終えたら下のボタンを押してください({Math.floor(elapsedMs / 1000)}秒経過)
               {phase === 'scoring' && '(採点中...)'}
             </p>
             {liveTranscript && <p className="live-transcript">認識中の発話: {liveTranscript}</p>}
@@ -285,13 +286,22 @@ export default function Training() {
               onClick={handleStopRecording}
               disabled={phase === 'scoring' || elapsedMs < MIN_RECORD_MS}
             >
-              {phase === 'scoring' ? '採点中...' : '回答を終える'}
+              {phase === 'scoring'
+                ? '採点中...'
+                : elapsedMs < MIN_RECORD_MS
+                  ? `もう少しお待ちください(あと${Math.ceil((MIN_RECORD_MS - elapsedMs) / 1000)}秒)`
+                  : '回答を終える'}
             </button>
           </div>
         )}
 
         {phase === 'result' && currentScore && (
           <div className="score-box">
+            <p className="recognized-transcript">
+              ✓ 回答を受け付けました。認識された発話:「
+              {currentScore.transcript || '(聞き取れませんでした)'}
+              」
+            </p>
             <div className="score-bars">
               <ScoreBar label="内容" value={currentScore.contentScore} />
               <ScoreBar label="声のトーン" value={currentScore.voiceScore} />
