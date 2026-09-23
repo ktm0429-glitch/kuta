@@ -430,6 +430,31 @@ button:disabled {
   color: var(--text);
 }
 
+.store-filter {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+
+.store-filter select {
+  padding: 0.5rem 0.7rem;
+  font-size: 0.95rem;
+  border: 2px solid #ffd4c2;
+  border-radius: 12px;
+  background: #fff;
+  font-family: inherit;
+  color: var(--text);
+}
+
+.table-scroll {
+  overflow-x: auto;
+  border-radius: 16px;
+}
+
 .admin-table {
   width: 100%;
   border-collapse: collapse;
@@ -451,4 +476,17 @@ button:disabled {
   background: linear-gradient(135deg, var(--accent-start), var(--accent-end));
   color: #fff;
   font-weight: 700;
+}
+
+/* スマホでは折り返さずに表ごと横スクロールさせる(店舗名が1文字ずつ縦に並ぶのを防ぐ) */
+.admin-table th,
+.admin-table td {
+  white-space: nowrap;
+}
+
+.admin-table button {
+  padding: 0.45rem 0.9rem;
+  font-size: 0.88rem;
+  margin-top: 0;
+  box-shadow: none;
 }

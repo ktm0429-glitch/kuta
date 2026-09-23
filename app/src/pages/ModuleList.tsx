@@ -2,19 +2,16 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { loadProfile, clearProfile } from '../profile'
 import { getMyStatus } from '../api'
-import { readCache, writeCache } from '../cache'
-
-interface CachedStatus {
-  points: number
-  awardedToday: boolean
-}
+import { readCache, statusCacheKey, writeCache } from '../cache'
+import type { CachedStatus } from '../cache'
+import { isVoiceModeSupported } from '../media/browserSupport'
 
 export default function ModuleList() {
   const navigate = useNavigate()
   const profile = loadProfile()
   // 前回表示したポイント状況がキャッシュにあれば、通信を待たずにすぐ表示する。
   // 裏側では常に最新の状況を取得し、届き次第画面を静かに更新する。
-  const cacheKey = profile ? `status:${profile.storeId}:${profile.staffId}` : null
+  const cacheKey = profile ? statusCacheKey(profile.storeId, profile.staffId) : null
   const cached = cacheKey ? readCache<CachedStatus>(cacheKey) : null
 
   const [points, setPoints] = useState<number | null>(cached?.points ?? null)
@@ -78,7 +75,9 @@ export default function ModuleList() {
         <h2>接客力向上トレーニング</h2>
         <p>
           お客様との会話をテーマにした問題が、全体の中からランダムに5問出題されます。
-          マイクに向かって声に出して回答し、5問に答えると1pt獲得です。
+          {isVoiceModeSupported()
+            ? 'マイクに向かって声に出して回答し、5問に答えると1pt獲得です。'
+            : 'お客様に話しかけるつもりで言葉を入力(キーボードのマイクで音声入力も可)して回答し、5問に答えると1pt獲得です。'}
         </p>
         <Link to="/training" className="button">
           研修に挑戦する

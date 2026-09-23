@@ -1,4 +1,4 @@
-import type { AnswerScore, QuizQuestion } from './types'
+import type { AnswerScore, QuizChoice, QuizQuestion } from './types'
 
 // ---- テキスト類似度(文字bigramのDice係数。日本語は分かち書きが難しいため、
 //      形態素解析なしでも動く簡易な方式を採用している) ----
@@ -22,14 +22,36 @@ function diceSimilarity(a: string, b: string): number {
   return (2 * overlap) / (setA.size + setB.size)
 }
 
-// 模範解答(正解の選択肢+解説)とどれだけ近い内容を話せていたかを 0-100 で採点する。
-// 完全一致でなくても、近い言い回しであれば高めのスコアが出るよう緩めに増幅している。
+// 選択肢の文の中の「」で囲まれた部分(=実際にお客様に言うセリフ)を取り出す
+function spokenLines(label: string): string[] {
+  return [...label.matchAll(/「([^」]+)」/g)].map((m) => m[1])
+}
+
+// 選択肢の文全体と、その中のセリフ部分のうち、最も近いものとの類似度
+function similarityToChoice(transcript: string, choice: QuizChoice): number {
+  const refs = [choice.label, ...spokenLines(choice.label)]
+  return Math.max(...refs.map((r) => diceSimilarity(transcript, r)))
+}
+
+// 模範解答にどれだけ近い内容を話せていたかを 0-100 で採点する。
+// 不正解の選択肢(NG例)の方により近い場合は減点する。
 export function scoreContent(transcript: string, question: QuizQuestion): number {
   const best = question.choices.find((c) => c.isBest)
   if (!best || !transcript.trim()) return 0
-  const referenceText = `${best.label} ${best.feedback}`
-  const similarity = diceSimilarity(transcript, referenceText)
-  return Math.max(0, Math.min(100, Math.round(similarity * 260)))
+  const bestSim = similarityToChoice(transcript, best)
+  const wrongSim = Math.max(
+    0,
+    ...question.choices.filter((c) => !c.isBest).map((c) => similarityToChoice(transcript, c)),
+  )
+  let score = bestSim * 200
+  if (wrongSim > bestSim) score *= 0.5
+  return Math.max(0, Math.min(100, Math.round(score)))
+}
+
+// 解説文は選択式クイズ時代の「正解です。〜」という書き出しのものがあるため、
+// 自由回答のフィードバックに使う際は、その書き出しを取り除いて理由部分だけを使う
+function explanationOf(choice: QuizChoice): string {
+  return choice.feedback.replace(/^(正解です|不正解です)[。.]?\s*/, '')
 }
 
 export interface VoiceStats {
@@ -62,16 +84,20 @@ function contentFeedback(question: QuizQuestion, contentScore: number): {
   improve: string[]
 } {
   const best = question.choices.find((c) => c.isBest)
-  if (contentScore >= 55) {
-    return { good: [`会話の内容が良かったです。${best ? best.feedback : ''}`], improve: [] }
+  if (!best) return { good: [], improve: [] }
+  const reason = explanationOf(best)
+  if (contentScore >= PASS_THRESHOLD) {
+    return { good: [`会話の内容が良かったです。${reason}`], improve: [] }
   }
-  return {
-    good: [],
-    // best.feedback は「正解を選んだ人向けの解説」として書かれているため、
-    // ここに混ぜると「正解です」等の文言が低い点数と矛盾して見えてしまう。
-    // そのため改善点では模範解答の言い回し(label)のみを提示する。
-    improve: [`この場面では、例えば「${best ? best.label : ''}」のような一言が効果的です。`],
+  // 選択肢の文自体に「」が含まれることが多いため、外側をさらに「」で囲まない
+  const modelAnswer = `模範解答の例: ${best.label}${reason ? `(${reason})` : ''}`
+  if (contentScore >= 30) {
+    return {
+      good: ['方向性は合っています。'],
+      improve: [`もう一歩、場面に合った言葉を意識してみましょう。${modelAnswer}`],
+    }
   }
+  return { good: [], improve: [modelAnswer] }
 }
 
 export function buildAnswerScore(

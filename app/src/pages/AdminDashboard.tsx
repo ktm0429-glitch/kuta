@@ -25,8 +25,11 @@ export default function AdminDashboard() {
   const [error, setError] = useState('')
   const [redeemState, setRedeemState] = useState<Record<string, string>>({})
   const [busyKey, setBusyKey] = useState<string | null>(null)
+  const [storeFilter, setStoreFilter] = useState('')
 
   const adminKey = loadAdminKey()
+  const storeNames = [...new Set(rows.map((r) => r.storeName))].sort((a, b) => a.localeCompare(b, 'ja'))
+  const visibleRows = storeFilter ? rows.filter((r) => r.storeName === storeFilter) : rows
 
   function load() {
     setLoading(true)
@@ -85,7 +88,7 @@ export default function AdminDashboard() {
   }
 
   function handleDownloadCsv() {
-    const csv = toCsv(rows)
+    const csv = toCsv(visibleRows)
     const blob = new Blob([`﻿${csv}`], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -98,7 +101,7 @@ export default function AdminDashboard() {
   return (
     <div className="page wide">
       <div className="header-row">
-        <h1>スタッフ ポイント管理ダッシュボード</h1>
+        <h1>ポイント管理</h1>
         <div>
           <button className="link-button" onClick={handleDownloadCsv} disabled={rows.length === 0}>
             CSVダウンロード
@@ -119,24 +122,39 @@ export default function AdminDashboard() {
       {error && <p className="error">{error}</p>}
 
       {!loading && !error && (
+        <>
+        <label className="store-filter" htmlFor="store-filter">
+          店舗で絞り込む
+          <select
+            id="store-filter"
+            value={storeFilter}
+            onChange={(e) => setStoreFilter(e.target.value)}
+          >
+            <option value="">全店舗({rows.length}人)</option>
+            {storeNames.map((name) => (
+              <option key={name} value={name}>
+                {name}({rows.filter((r) => r.storeName === name).length}人)
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className="table-scroll">
         <table className="admin-table">
           <thead>
             <tr>
               <th>店舗</th>
-              <th>スタッフID</th>
               <th>氏名</th>
               <th>保有ポイント</th>
               <th>景品交換</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => {
+            {visibleRows.map((r) => {
               const key = rowKey(r)
               return (
                 <tr key={key}>
                   <td>{r.storeName}</td>
-                  <td>{r.staffId}</td>
-                  <td>{r.displayName || '-'}</td>
+                  <td>{r.displayName || r.staffId}</td>
                   <td>{r.points} pt</td>
                   <td>
                     <input
@@ -162,6 +180,8 @@ export default function AdminDashboard() {
             })}
           </tbody>
         </table>
+        </div>
+        </>
       )}
     </div>
   )

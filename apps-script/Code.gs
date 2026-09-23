@@ -26,6 +26,11 @@
  *   選択肢2 / 正解2 / 解説2 / 選択肢3 / 正解3 / 解説3
  * 各問題は選択肢を3つ持ち、そのうち1つだけ「正解」の列に "○" を入れてください。
  * 保存すればすぐに反映されます(再デプロイは不要です)。
+ * 【採点精度を上げるコツ】正解の選択肢には、実際にお客様に言うセリフを
+ * 「」で囲んで書いてください(例: 「今日もありがとうございました」と声をかける)。
+ * スタッフの回答は主にこの「」内のセリフと比べて採点されます。「」がない
+ * 説明文だけの選択肢(例: さりげなく声かけをする)だと、正しい回答でも
+ * 点数が低く出やすくなります。
  *
  * ■ 出題・ポイントのルール
  * スタッフが研修に挑戦すると、「問題」シートの中からランダムに5問が出題されます。
@@ -41,8 +46,9 @@
  * スタッフの端末(ブラウザ)側で行われ、その判定結果(合否・スコア・発話テキスト)を
  * このスクリプトに送信しています。「完了記録」シートには参考情報として平均スコアと
  * 発話内容の要約を記録しますが、選択式クイズだった頃のようなサーバー側での
- * 厳密な正誤検証はできない点にご留意ください。このアプリは音声認識のためGoogle Chrome
- * (パソコン・Android)限定で、iPhone/iPadは非対応です。
+ * 厳密な正誤検証はできない点にご留意ください。
+ * Android・パソコンはマイクで声で回答(内容+声のトーンで採点)、iPhone/iPadは
+ * 文字入力(キーボードの音声入力も可)で回答(内容のみで採点)します。
  */
 
 // ここを好きな文字列に変更してください(第三者に推測されにくいものを推奨します)
@@ -117,7 +123,7 @@ var DEFAULT_QUESTIONS = [
     ] },
   { ageBand: 'middle', situation: '出玉が伸びず、少し不機嫌そうな表情です。', line: '(無言でイライラした様子)',
     choices: [
-      ['さりげなくドリンクや灰皿交換の声かけをして様子を伺う', true, '正解です。さりげない気配りが緊張をほぐし、もう少し続けてみようという気持ちの余裕につながります。'],
+      ['「お飲み物のおかわりはいかがですか?灰皿もお取り替えしますね」とさりげなく声をかけて様子を伺う', true, '正解です。さりげない気配りが緊張をほぐし、もう少し続けてみようという気持ちの余裕につながります。'],
       ['機嫌が悪そうなので近づかない', false, 'こういう時こそさりげない気配りが効果的です。避けると機会を逃します。'],
       ['「この台まだ行けますよ」と根拠なく声をかける', false, '根拠のない声かけは信頼を損ねることがあります。']
     ] },
@@ -172,19 +178,19 @@ var DEFAULT_QUESTIONS = [
     ] },
   { ageBand: 'senior', situation: '耳が少し遠いお客様に、台の操作方法を説明することになりました。', line: '「ん?何て言ったかね?」',
     choices: [
-      ['正面から向き合い、低めの声でゆっくりはっきりと話す', true, '正解です。高齢のお客様には高い声や早口が聞き取りにくいことがあります。低めの声でゆっくり、口の動きが見える正面から話すと伝わりやすくなります。'],
+      ['正面から向き合い、低めの声でゆっくりと「こちらのボタンを押すと始まりますよ」とはっきり話す', true, '正解です。高齢のお客様には高い声や早口が聞き取りにくいことがあります。低めの声でゆっくり、口の動きが見える正面から話すと伝わりやすくなります。'],
       ['声のトーンや速さは変えずに、同じ説明を繰り返す', false, '同じ話し方を繰り返すだけでは伝わらないことがあります。話し方そのものを調整することが大切です。'],
       ['少し離れた場所から大声で話す', false, '大声よりも、近づいて低めの声でゆっくり話す方が聞き取りやすく、失礼にもなりません。']
     ] },
   { ageBand: 'senior', situation: '車椅子を利用しているお客様に話しかける場面です。', line: '(座ったまま、こちらを見上げている)',
     choices: [
-      ['しゃがんで相手と目線の高さを合わせてから話す', true, '正解です。相手と同じ目線の高さに合わせることで、聞き取りやすくなるだけでなく、安心感も伝わります。'],
+      ['しゃがんで目線の高さを合わせてから「何かお手伝いできることはありますか?」と話しかける', true, '正解です。相手と同じ目線の高さに合わせることで、聞き取りやすくなるだけでなく、安心感も伝わります。'],
       ['立ったまま見下ろす形で話す', false, '見下ろす形での会話は、威圧的な印象を与えてしまうことがあります。'],
       ['目を合わせずに手元の作業をしながら話す', false, '目線を合わせることは、相手を大切に思う気持ちを伝える基本です。']
     ] },
   { ageBand: 'senior', situation: 'お客様が昔の話を、ゆっくりと繰り返し話しています。', line: '「昔はこの辺りも随分違ったんだよ…」(と、ゆっくり話し続ける)',
     choices: [
-      ['急かさず、最後まで落ち着いて耳を傾ける', true, '正解です。傾聴の基本は、相手の話すペースを尊重し、最後まで真摯に耳を傾けることです。'],
+      ['「そうだったんですね」と相づちを打ちながら、急かさず最後まで落ち着いて耳を傾ける', true, '正解です。傾聴の基本は、相手の話すペースを尊重し、最後まで真摯に耳を傾けることです。'],
       ['「それで、結論は何ですか」と話を急がせる', false, '話を急がせると、話しにくさを感じさせてしまいます。'],
       ['途中で別の話題に変える', false, '相手が話している内容をまず受け止めることが大切です。']
     ] },
@@ -314,12 +320,33 @@ function findRowIndex_(sheet, storeIdColIdx, staffIdColIdx, storeId, staffId) {
   return -1;
 }
 
-function isSameDay_(a, b) {
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  );
+// 「1日」の区切りは、スクリプトのタイムゾーン設定に左右されないよう常に日本時間で判定する
+function dayKeyJst_(date) {
+  return Utilities.formatDate(date, 'Asia/Tokyo', 'yyyy-MM-dd');
+}
+
+// このスタッフが今日(日本時間)すでにポイントを獲得済みかどうか。
+// 「完了記録」シートは日付順に追記されていくため、末尾から少しずつ読み、
+// 今日より前の日付の行に到達した時点で打ち切る。こうすることで、記録が
+// 何万行に増えても読み込む量は「今日の分」だけで済み、通信が遅くならない。
+var COMPLETION_SCAN_CHUNK_ = 200;
+function hasCompletedToday_(completionsSheet, storeId, staffId) {
+  var todayKey = dayKeyJst_(new Date());
+  var lastRow = completionsSheet.getLastRow();
+  var end = lastRow;
+  while (end >= 2) {
+    var start = Math.max(2, end - COMPLETION_SCAN_CHUNK_ + 1);
+    var rows = completionsSheet.getRange(start, 1, end - start + 1, 6).getValues();
+    for (var i = rows.length - 1; i >= 0; i--) {
+      var completedAt = rows[i][5];
+      if (!(completedAt instanceof Date)) continue;
+      var key = dayKeyJst_(completedAt);
+      if (key < todayKey) return false;
+      if (key === todayKey && rows[i][0] === storeId && rows[i][1] === staffId) return true;
+    }
+    end = start - 1;
+  }
+  return false;
 }
 
 function sanitizeText_(value, maxLen) {
@@ -351,7 +378,9 @@ function doPost(e) {
   var lock = null;
   if (WRITE_ACTIONS_[body.action]) {
     lock = LockService.getScriptLock();
-    lock.waitLock(10000);
+    if (!lock.tryLock(15000)) {
+      return jsonResponse_({ error: '混み合っています。少し時間をおいてもう一度お試しください。' });
+    }
   }
   try {
     switch (body.action) {
@@ -370,6 +399,10 @@ function doPost(e) {
       default:
         return jsonResponse_({ error: 'unknown action' });
     }
+  } catch (err) {
+    // 想定外のエラーでもHTMLのエラーページではなくJSONで返し、アプリ側で案内を出せるようにする
+    console.error(err);
+    return jsonResponse_({ error: 'サーバーでエラーが発生しました。もう一度お試しください。' });
   } finally {
     if (lock) lock.releaseLock();
   }
@@ -428,22 +461,17 @@ function handleComplete_(body) {
     return { error: QUESTIONS_PER_CHALLENGE + '問分の回答が必要です' };
   }
 
-  var allQuestions = getQuestionsFromSheet_();
-  var questionById = {};
-  allQuestions.forEach(function (q) { questionById[q.id] = q; });
-
   // 音声による採点は、マイクを使った解析をスタッフの端末(ブラウザ)側で行っており、
   // Apps Script側(サーバー)では発話内容そのものを検証できない。そのため、各問題の
   // 合否(passed)はクライアントが計算した結果をそのまま信頼する。
   // (これは従来の「選択式クイズの正誤をサーバー側で検証する」方式より
-  // 不正操作への耐性は下がるが、無料の範囲でこの機能を実現するための仕様上の制約)
+  // 不正操作への耐性は下がるが、無料の範囲でこの機能を実現するための仕様上の制約。
+  // 同じ理由で、問題IDが「問題」シートに存在するかの照合も省略して通信を速くしている)
   var correctCount = 0;
   var contentScores = [];
   var voiceScores = [];
   var transcriptParts = [];
   answers.forEach(function (a) {
-    var q = questionById[a.quizId];
-    if (!q) return;
     if (a.passed === true) correctCount++;
     if (typeof a.contentScore === 'number') contentScores.push(a.contentScore);
     if (typeof a.voiceScore === 'number') voiceScores.push(a.voiceScore);
@@ -468,19 +496,8 @@ function handleComplete_(body) {
   var now = new Date();
   var quizIdsLabel = uniqueQuizIds.join(',');
 
-  // 1日1人1ptが上限。今日すでに(どの研修であっても)ポイントを
-  // 獲得済みかどうかを、このスタッフの完了記録全体から判定する。
-  var compData = sheetSet.completions.getDataRange().getValues();
-  var alreadyAwardedToday = false;
-  for (var r = 1; r < compData.length; r++) {
-    if (compData[r][0] === storeId && compData[r][1] === staffId) {
-      var completedAt = compData[r][5];
-      if (completedAt instanceof Date && isSameDay_(completedAt, now)) {
-        alreadyAwardedToday = true;
-        break;
-      }
-    }
-  }
+  // 1日1人1ptが上限。今日すでにポイントを獲得済みかどうかを判定する。
+  var alreadyAwardedToday = hasCompletedToday_(sheetSet.completions, storeId, staffId);
 
   // 完了したこと自体は(ポイントの有無にかかわらず)毎回記録に残す。
   sheetSet.completions.appendRow([
@@ -488,23 +505,24 @@ function handleComplete_(body) {
     avgContent, avgVoice, transcriptSummary
   ]);
 
-  if (!alreadyAwardedToday) {
-    var staffRowIndex = findRowIndex_(sheetSet.staff, 0, 2, storeId, staffId);
-    if (staffRowIndex === -1) {
-      sheetSet.staff.appendRow([storeId, storeName || storeId, staffId, displayName, 1, now]);
-    } else {
-      var currentPoints = Number(sheetSet.staff.getRange(staffRowIndex, 5).getValue()) || 0;
-      sheetSet.staff.getRange(staffRowIndex, 5).setValue(currentPoints + 1);
-      sheetSet.staff.getRange(staffRowIndex, 6).setValue(now);
-      if (storeName) sheetSet.staff.getRange(staffRowIndex, 2).setValue(storeName);
-      if (displayName) sheetSet.staff.getRange(staffRowIndex, 4).setValue(displayName);
-    }
-  }
-
-  var totalPoints = 0;
-  var finalRowIndex = findRowIndex_(sheetSet.staff, 0, 2, storeId, staffId);
-  if (finalRowIndex !== -1) {
-    totalPoints = Number(sheetSet.staff.getRange(finalRowIndex, 5).getValue()) || 0;
+  var staffRowIndex = findRowIndex_(sheetSet.staff, 0, 2, storeId, staffId);
+  var totalPoints;
+  if (staffRowIndex === -1) {
+    totalPoints = alreadyAwardedToday ? 0 : 1;
+    sheetSet.staff.appendRow([storeId, storeName || storeId, staffId, displayName, totalPoints, now]);
+  } else {
+    // 店舗名〜更新日時(2〜6列目)をまとめて1回で読み書きする
+    var range = sheetSet.staff.getRange(staffRowIndex, 2, 1, 5);
+    var values = range.getValues()[0];
+    var currentPoints = Number(values[3]) || 0;
+    totalPoints = alreadyAwardedToday ? currentPoints : currentPoints + 1;
+    range.setValues([[
+      storeName || values[0],
+      values[1],
+      displayName || values[2],
+      totalPoints,
+      now
+    ]]);
   }
 
   return {
@@ -528,18 +546,7 @@ function handleStatus_(body) {
     points = Number(sheetSet.staff.getRange(staffRowIndex, 5).getValue()) || 0;
   }
 
-  var compData = sheetSet.completions.getDataRange().getValues();
-  var awardedToday = false;
-  var now = new Date();
-  for (var r = 1; r < compData.length; r++) {
-    if (compData[r][0] === storeId && compData[r][1] === staffId) {
-      var completedAt = compData[r][5];
-      if (completedAt instanceof Date && isSameDay_(completedAt, now)) {
-        awardedToday = true;
-        break;
-      }
-    }
-  }
+  var awardedToday = hasCompletedToday_(sheetSet.completions, storeId, staffId);
 
   return { points: points, awardedToday: awardedToday };
 }

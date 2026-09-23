@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { loadProfile } from '../profile'
 import { completeTraining, listQuestions } from '../api'
-import { readCache, writeCache } from '../cache'
+import { readCache, statusCacheKey, writeCache } from '../cache'
+import type { CachedStatus } from '../cache'
 import type { CompleteTrainingResponse } from '../api'
 import type { AnswerScore, QuizQuestion } from '../types'
 import { buildAnswerScore, buildTextAnswerScore } from '../scoring'
@@ -16,8 +17,13 @@ const MAX_RECORD_MS = 30000
 const MIN_RECORD_MS = 3000
 const MIN_TEXT_LENGTH = 2
 
+// Fisher-Yatesシャッフル(sort+Math.randomは並びに偏りが出るため使わない)
 function pickRandomQuestions(all: QuizQuestion[], count: number): QuizQuestion[] {
-  const shuffled = [...all].sort(() => Math.random() - 0.5)
+  const shuffled = [...all]
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+  }
   return shuffled.slice(0, count)
 }
 
@@ -213,6 +219,13 @@ export default function Training() {
     setPhase('result')
   }
 
+  function handleRetry() {
+    setPhase('intro')
+    setLiveTranscript('')
+    setTextAnswer('')
+    setTextError('')
+  }
+
   async function handleNext() {
     if (!isLastStep) {
       setStepIndex((i) => i + 1)
@@ -240,6 +253,13 @@ export default function Training() {
         answers: quizAnswers,
       })
       setResult(res)
+      // 研修メニューに戻った時に、古いポイント数が一瞬表示されないようにする
+      if (res.success && typeof res.totalPoints === 'number') {
+        writeCache<CachedStatus>(statusCacheKey(profile!.storeId, profile!.staffId), {
+          points: res.totalPoints,
+          awardedToday: true,
+        })
+      }
     } catch {
       setSubmitError('送信に失敗しました。通信環境を確認してもう一度お試しください。')
     } finally {
@@ -409,9 +429,14 @@ export default function Training() {
       {submitError && <p className="error">{submitError}</p>}
 
       {phase === 'result' && (
-        <button className="button" onClick={handleNext} disabled={submitting}>
-          {submitting ? '送信中...' : isLastStep ? '研修を完了する' : '次へ'}
-        </button>
+        <>
+          <button className="button" onClick={handleNext} disabled={submitting}>
+            {submitting ? '送信中...' : isLastStep ? '研修を完了する' : '次へ'}
+          </button>
+          <button className="link-button" onClick={handleRetry} disabled={submitting}>
+            模範解答を参考に、もう一度答える
+          </button>
+        </>
       )}
     </div>
   )

@@ -14,6 +14,15 @@ export function readCache<T>(key: string): T | null {
   }
 }
 
+export interface CachedStatus {
+  points: number
+  awardedToday: boolean
+}
+
+export function statusCacheKey(storeId: string, staffId: string): string {
+  return `status:${storeId}:${staffId}`
+}
+
 export function writeCache<T>(key: string, value: T): void {
   try {
     localStorage.setItem(PREFIX + key, JSON.stringify(value))
