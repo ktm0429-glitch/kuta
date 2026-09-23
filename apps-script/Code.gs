@@ -203,8 +203,18 @@ var DEFAULT_QUESTIONS = [
 ];
 
 // ---- シート初期化 ----
+// SpreadsheetApp.getActiveSpreadsheet() は呼び出しごとに実コストがかかるため、
+// 1回の実行(1リクエスト)の中では使い回す。
+var activeSpreadsheet_ = null;
+function getSpreadsheet_() {
+  if (!activeSpreadsheet_) {
+    activeSpreadsheet_ = SpreadsheetApp.getActiveSpreadsheet();
+  }
+  return activeSpreadsheet_;
+}
+
 function ensureSheet_(name, headers) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = getSpreadsheet_();
   var sheet = ss.getSheetByName(name);
   if (!sheet) {
     sheet = ss.insertSheet(name);
@@ -325,17 +335,25 @@ function jsonResponse_(obj) {
 }
 
 // ---- 入り口 ----
-function doPost(e) {
-  var lock = LockService.getScriptLock();
-  lock.waitLock(10000);
-  try {
-    var body = {};
-    try {
-      body = JSON.parse(e.postData.contents);
-    } catch (err) {
-      return jsonResponse_({ error: 'invalid request body' });
-    }
+// スプレッドシートへの「書き込み」を行うアクションだけ排他ロックをかける。
+// status・listQuestions・adminList のような読み取り専用アクションまで同じ
+// ロックで直列化すると、書き込み処理の完了を待たされて無駄に遅くなるため。
+var WRITE_ACTIONS_ = { register: true, complete: true, adminRedeem: true };
 
+function doPost(e) {
+  var body = {};
+  try {
+    body = JSON.parse(e.postData.contents);
+  } catch (err) {
+    return jsonResponse_({ error: 'invalid request body' });
+  }
+
+  var lock = null;
+  if (WRITE_ACTIONS_[body.action]) {
+    lock = LockService.getScriptLock();
+    lock.waitLock(10000);
+  }
+  try {
     switch (body.action) {
       case 'register':
         return jsonResponse_(handleRegister_(body));
@@ -353,7 +371,7 @@ function doPost(e) {
         return jsonResponse_({ error: 'unknown action' });
     }
   } finally {
-    lock.releaseLock();
+    if (lock) lock.releaseLock();
   }
 }
 
