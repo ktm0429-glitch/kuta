@@ -67,11 +67,10 @@ function contentFeedback(question: QuizQuestion, contentScore: number): {
   }
   return {
     good: [],
-    improve: [
-      `この場面では、例えば「${best ? best.label : ''}」のような一言が効果的です。${
-        best ? best.feedback : ''
-      }`,
-    ],
+    // best.feedback は「正解を選んだ人向けの解説」として書かれているため、
+    // ここに混ぜると「正解です」等の文言が低い点数と矛盾して見えてしまう。
+    // そのため改善点では模範解答の言い回し(label)のみを提示する。
+    improve: [`この場面では、例えば「${best ? best.label : ''}」のような一言が効果的です。`],
   }
 }
 
