@@ -233,13 +233,27 @@ function ensureQuestionsSheet_() {
   return sheet;
 }
 
+// 各アクションが実際に使うシートだけにアクセスするよう、遅延読み込みにしている。
+// (例えば status アクションは staff と completions しか使わないのに、
+//  毎回4シート全部にアクセスしていたのが応答の遅さの一因だったため)
 function sheets_() {
-  return {
-    staff: ensureSheet_(SHEET_STAFF, STAFF_HEADERS),
-    completions: ensureSheet_(SHEET_COMPLETIONS, COMPLETION_HEADERS),
-    redemptions: ensureSheet_(SHEET_REDEMPTIONS, REDEMPTION_HEADERS),
-    questions: ensureQuestionsSheet_()
-  };
+  var cache = {};
+  function lazy(key, factory) {
+    Object.defineProperty(cache, key, {
+      configurable: true,
+      enumerable: true,
+      get: function () {
+        var value = factory();
+        Object.defineProperty(cache, key, { value: value, enumerable: true, configurable: true });
+        return value;
+      }
+    });
+  }
+  lazy('staff', function () { return ensureSheet_(SHEET_STAFF, STAFF_HEADERS); });
+  lazy('completions', function () { return ensureSheet_(SHEET_COMPLETIONS, COMPLETION_HEADERS); });
+  lazy('redemptions', function () { return ensureSheet_(SHEET_REDEMPTIONS, REDEMPTION_HEADERS); });
+  lazy('questions', function () { return ensureQuestionsSheet_(); });
+  return cache;
 }
 
 // ---- 問題データの読み取り ----
