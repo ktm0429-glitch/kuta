@@ -119,11 +119,18 @@ export default function Training() {
     let stream: MediaStream
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-    } catch {
+    } catch (err) {
       setPhase('permission-error')
-      setPermissionErrorMsg(
-        'マイクへのアクセスが許可されませんでした。ブラウザの設定で許可してから、もう一度お試しください。',
-      )
+      const name = err instanceof DOMException ? err.name : ''
+      if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+        setPermissionErrorMsg(
+          'この端末にマイクが見つかりませんでした。マイクが内蔵・接続された端末(スマホやノートPCなど)でお試しください。',
+        )
+      } else {
+        setPermissionErrorMsg(
+          'マイクへのアクセスが許可されませんでした。ブラウザの設定で許可してから、もう一度お試しください。',
+        )
+      }
       return
     }
 
@@ -252,7 +259,7 @@ export default function Training() {
               話した内容を中心に採点します(音声は保存されません)。
             </p>
             <button className="button" onClick={handleStartRecording}>
-              録音して回答する
+              マイクで回答する
             </button>
           </>
         )}
@@ -269,7 +276,7 @@ export default function Training() {
         {(phase === 'recording' || phase === 'scoring') && (
           <div className="recording-box">
             <p className="recording-indicator">
-              ● 録音中 {Math.floor(elapsedMs / 1000)}秒
+              ● 回答中 {Math.floor(elapsedMs / 1000)}秒
               {phase === 'scoring' && '(採点中...)'}
             </p>
             {liveTranscript && <p className="live-transcript">認識中の発話: {liveTranscript}</p>}
