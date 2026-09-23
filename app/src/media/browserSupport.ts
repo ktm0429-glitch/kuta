@@ -15,5 +15,10 @@ export function isIOS(): boolean {
 // 「マイクで回答する」(録音+声のトーン採点つき)モードが使えるブラウザかどうか。
 // false の場合はテキスト入力モードにフォールバックする(締め出しはしない)。
 export function isVoiceModeSupported(): boolean {
+  // iOS/iPadOSは window.webkitSpeechRecognition が「存在するだけで実際には
+  // 結果を返さないダミー」になっている場合があり、存在チェックだけでは
+  // 誤判定してしまう(録音しても毎回「聞き取れませんでした」になる不具合の原因)。
+  // そのためiOSでは機能検出の結果に関わらず、常にテキスト入力モードを使う。
+  if (isIOS()) return false
   return isSpeechRecognitionSupported() && !!navigator.mediaDevices?.getUserMedia
 }
