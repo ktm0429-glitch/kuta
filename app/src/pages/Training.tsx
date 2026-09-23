@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { loadProfile } from '../profile'
 import { completeTraining, listQuestions } from '../api'
+import { readCache, writeCache } from '../cache'
 import type { CompleteTrainingResponse } from '../api'
 import type { AnswerScore, QuizQuestion } from '../types'
 import { buildAnswerScore, buildTextAnswerScore } from '../scoring'
@@ -10,6 +11,7 @@ import { VoiceAnalyzer } from '../media/voiceAnalyzer'
 import { isVoiceModeSupported, isIOS } from '../media/browserSupport'
 
 const QUESTIONS_PER_CHALLENGE = 5
+const QUESTIONS_CACHE_KEY = 'questions'
 const MAX_RECORD_MS = 30000
 const MIN_RECORD_MS = 3000
 const MIN_TEXT_LENGTH = 2
@@ -56,17 +58,32 @@ export default function Training() {
   const tickTimerRef = useRef<number | null>(null)
 
   useEffect(() => {
-    setQuestions(null)
-    setLoadError('')
+    // 前回取得した問題一覧がキャッシュにあれば、通信を待たずにすぐ出題する
+    // (問題はスプレッドシート側の担当者操作でしか変わらないため、多少古くても
+    // 実害はない)。裏側では常に最新の問題一覧を取得し、次回のためにキャッシュを
+    // 更新する。
+    const cached = readCache<QuizQuestion[]>(QUESTIONS_CACHE_KEY)
+    if (cached && cached.length >= QUESTIONS_PER_CHALLENGE) {
+      setQuestions(pickRandomQuestions(cached, QUESTIONS_PER_CHALLENGE))
+      setLoadError('')
+    } else {
+      setQuestions(null)
+      setLoadError('')
+    }
     listQuestions()
       .then((res) => {
         if (res.questions.length < QUESTIONS_PER_CHALLENGE) {
-          setLoadError('出題できる問題数が足りません。問題を追加してから再度お試しください。')
+          if (!cached) setLoadError('出題できる問題数が足りません。問題を追加してから再度お試しください。')
           return
         }
-        setQuestions(pickRandomQuestions(res.questions, QUESTIONS_PER_CHALLENGE))
+        writeCache(QUESTIONS_CACHE_KEY, res.questions)
+        if (!cached) {
+          setQuestions(pickRandomQuestions(res.questions, QUESTIONS_PER_CHALLENGE))
+        }
       })
-      .catch(() => setLoadError('研修問題の取得に失敗しました。通信環境を確認してもう一度お試しください。'))
+      .catch(() => {
+        if (!cached) setLoadError('研修問題の取得に失敗しました。通信環境を確認してもう一度お試しください。')
+      })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

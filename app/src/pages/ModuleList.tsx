@@ -2,13 +2,24 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { loadProfile, clearProfile } from '../profile'
 import { getMyStatus } from '../api'
+import { readCache, writeCache } from '../cache'
+
+interface CachedStatus {
+  points: number
+  awardedToday: boolean
+}
 
 export default function ModuleList() {
   const navigate = useNavigate()
   const profile = loadProfile()
-  const [points, setPoints] = useState<number | null>(null)
-  const [awardedToday, setAwardedToday] = useState(false)
-  const [loading, setLoading] = useState(true)
+  // 前回表示したポイント状況がキャッシュにあれば、通信を待たずにすぐ表示する。
+  // 裏側では常に最新の状況を取得し、届き次第画面を静かに更新する。
+  const cacheKey = profile ? `status:${profile.storeId}:${profile.staffId}` : null
+  const cached = cacheKey ? readCache<CachedStatus>(cacheKey) : null
+
+  const [points, setPoints] = useState<number | null>(cached?.points ?? null)
+  const [awardedToday, setAwardedToday] = useState(cached?.awardedToday ?? false)
+  const [loading, setLoading] = useState(!cached)
   const [loadError, setLoadError] = useState('')
 
   useEffect(() => {
@@ -20,9 +31,14 @@ export default function ModuleList() {
       .then((res) => {
         setPoints(res.points)
         setAwardedToday(res.awardedToday)
+        setLoadError('')
+        if (cacheKey) writeCache(cacheKey, { points: res.points, awardedToday: res.awardedToday })
       })
-      .catch(() => setLoadError('現在のポイント状況を取得できませんでした。ネットワーク環境をご確認ください。'))
+      .catch(() => {
+        if (!cached) setLoadError('現在のポイント状況を取得できませんでした。ネットワーク環境をご確認ください。')
+      })
       .finally(() => setLoading(false))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate, profile])
 
   if (!profile) return null
