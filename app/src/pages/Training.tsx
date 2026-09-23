@@ -207,17 +207,26 @@ export default function Training() {
     return (
       <div className="page">
         <h1>接客力向上トレーニング</h1>
-        <div className="result-card success">
-          {result.alreadyCompleted ? (
-            <p>お疲れ様でした!ただし、本日分の1ptはすでに獲得済みのため、追加のポイントはありません(1日1ptが上限です)。</p>
-          ) : (
-            <p>5問に回答しました!本日分の1ptを獲得しました。</p>
-          )}
-          <p>参考: 合格の目安を満たした問題数 {result.correctCount} / {result.total}</p>
-          {typeof result.totalPoints === 'number' && (
-            <p>現在の保有ポイント: {result.totalPoints} pt</p>
-          )}
-        </div>
+        {result.success ? (
+          <div className="result-card success">
+            {result.alreadyCompleted ? (
+              <p>お疲れ様でした!ただし、本日分の1ptはすでに獲得済みのため、追加のポイントはありません(1日1ptが上限です)。</p>
+            ) : (
+              <p>5問に回答しました!本日分の1ptを獲得しました。</p>
+            )}
+            <p>参考: 合格の目安を満たした問題数 {result.correctCount} / {result.total}</p>
+            {typeof result.totalPoints === 'number' && (
+              <p>現在の保有ポイント: {result.totalPoints} pt</p>
+            )}
+          </div>
+        ) : (
+          <div className="result-card retry">
+            <p>
+              送信は完了しましたが、ポイントの付与に失敗しました。バックエンド(Apps Script)が
+              最新版になっていない可能性があります。担当者にご確認のうえ、もう一度お試しください。
+            </p>
+          </div>
+        )}
         <button className="link-button" onClick={() => navigate('/modules')}>
           研修メニューに戻る
         </button>
