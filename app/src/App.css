@@ -278,10 +278,6 @@ button:disabled {
   background: linear-gradient(135deg, var(--good-soft), #d5f5e0);
 }
 
-.result-card.retry {
-  background: linear-gradient(135deg, var(--gold-soft), #ffe6c2);
-}
-
 .recording-box {
   display: flex;
   flex-direction: column;

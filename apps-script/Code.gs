@@ -31,8 +31,9 @@
  * スタッフが研修に挑戦すると、「問題」シートの中からランダムに5問が出題されます。
  * 各問題は選択式ではなく、スタッフがマイクに向かって実際に声に出して回答する方式です
  * (発話内容を中心に、声のトーンも補助的にスタッフの端末(ブラウザ)側で解析し、
- * 合格/不合格を判定します。音声そのものはサーバーに送信・保存されません)。
- * 5問すべて合格基準を満たすと1pt獲得できます(1問でも基準未達だと、その回はポイントなし)。
+ * 参考スコアを算出します。音声そのものはサーバーに送信・保存されません)。
+ * **5問に回答する(最後まで挑戦する)と1pt獲得できます。** 各問題の内容・声のトーンの
+ * 出来はスコアとして記録・表示されますが、点数の高低にかかわらず5問答えれば1ptです。
  * ポイントは1日1人1ptが上限で、同じ日に何回挑戦しても2pt以上にはなりません。
  *
  * ■ 採点についての注意
@@ -418,7 +419,6 @@ function handleComplete_(body) {
     if (t) transcriptParts.push(t);
   });
   var total = QUESTIONS_PER_CHALLENGE;
-  var passed = correctCount === total;
 
   function avg_(arr) {
     if (arr.length === 0) return '';
@@ -430,16 +430,8 @@ function handleComplete_(body) {
   var avgVoice = avg_(voiceScores);
   var transcriptSummary = sanitizeText_(transcriptParts.join(' / '), 2000);
 
-  if (!passed) {
-    return {
-      success: false,
-      alreadyCompleted: false,
-      pointsAwarded: 0,
-      correctCount: correctCount,
-      total: total
-    };
-  }
-
+  // 以前は5問すべて合格が必須だったが、現在は「5問に回答したこと」自体で
+  // ポイントを付与する(合格数はスコアの目安として記録・表示するのみ)。
   var sheetSet = sheets_();
   var now = new Date();
   var quizIdsLabel = uniqueQuizIds.join(',');

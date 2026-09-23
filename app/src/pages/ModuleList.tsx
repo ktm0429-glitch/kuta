@@ -54,7 +54,7 @@ export default function ModuleList() {
         <p className="daily-note">
           {awardedToday
             ? '本日分の1ptはすでに獲得済みです。また明日挑戦してください!'
-            : '研修に挑戦して5問すべて合格基準を満たすと、本日分の1ptを獲得できます(1日1ptが上限です)。'}
+            : '研修に挑戦して5問に回答すると、本日分の1ptを獲得できます(1日1ptが上限です)。'}
         </p>
       )}
 
@@ -62,7 +62,7 @@ export default function ModuleList() {
         <h2>接客力向上トレーニング</h2>
         <p>
           お客様との会話をテーマにした問題が、全体の中からランダムに5問出題されます。
-          マイクに向かって声に出して回答し、5問すべてで合格基準を満たすと1pt獲得です。
+          マイクに向かって声に出して回答し、5問に答えると1pt獲得です。
         </p>
         <Link to="/training" className="button">
           研修に挑戦する
