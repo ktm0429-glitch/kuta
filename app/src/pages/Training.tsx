@@ -83,11 +83,48 @@ export default function Training() {
   const maxTimerRef = useRef<number | null>(null)
   const tickTimerRef = useRef<number | null>(null)
   const sessionStartedRef = useRef(false)
+  const poolRef = useRef<QuizQuestion[]>([])
+  const sessionQuestionIdsRef = useRef<string[]>([])
+  const answeredCountRef = useRef(0)
+
+  // 新しい研修(5問)を始める。途中経過はリセットする
+  function beginNewSession(pool: QuizQuestion[]) {
+    if (!profile) return
+    const { storeId, staffId } = profile
+    speechRef.current?.stop()
+    voiceRef.current?.stop()
+    stopMediaTracks()
+    clearProgress(storeId, staffId)
+    const picked = pickQuestions(pool, QUESTIONS_PER_CHALLENGE, storeId, staffId)
+    const sessionId = newSessionId()
+    sessionQuestionIdsRef.current = picked.questions.map((q) => q.id)
+    answeredCountRef.current = 0
+    setSession({ sessionId, questions: picked.questions, reviewId: picked.reviewId, resumed: false })
+    setStepIndex(0)
+    setScores({})
+    setReviewMarks({})
+    setPhase('intro')
+    setSubmitError('')
+    setLiveTranscript('')
+    setTextAnswer('')
+    setTextError('')
+    setRecognizedEmpty(false)
+    sendProgress({
+      sessionId,
+      storeId,
+      storeName: profile.storeName,
+      staffId,
+      displayName: profile.displayName,
+      quizIds: sessionQuestionIdsRef.current,
+      answers: [],
+    })
+  }
 
   useEffect(() => {
     if (!profile) return
 
     function startSession(pool: QuizQuestion[]) {
+      poolRef.current = pool
       if (sessionStartedRef.current) return
       sessionStartedRef.current = true
       const { storeId, staffId } = profile!
@@ -97,6 +134,8 @@ export default function Training() {
       const savedQuestions = saved?.questionIds.map((id) => pool.find((q) => q.id === id))
       if (saved && savedQuestions && savedQuestions.every((q) => q)) {
         const questions = savedQuestions as QuizQuestion[]
+        sessionQuestionIdsRef.current = saved.questionIds
+        answeredCountRef.current = Object.keys(saved.scores).length
         setSession({ sessionId: saved.sessionId, questions, reviewId: saved.reviewId, resumed: true })
         setStepIndex(saved.stepIndex)
         setScores(saved.scores)
@@ -105,18 +144,7 @@ export default function Training() {
         return
       }
 
-      const picked = pickQuestions(pool, QUESTIONS_PER_CHALLENGE, storeId, staffId)
-      const sessionId = newSessionId()
-      setSession({ sessionId, questions: picked.questions, reviewId: picked.reviewId, resumed: false })
-      sendProgress({
-        sessionId,
-        storeId,
-        storeName: profile!.storeName,
-        staffId,
-        displayName: profile!.displayName,
-        quizIds: picked.questions.map((q) => q.id),
-        answers: [],
-      })
+      beginNewSession(pool)
     }
 
     // 前回取得した問題一覧がキャッシュにあれば、通信を待たずにすぐ始める。
@@ -132,6 +160,15 @@ export default function Training() {
           return
         }
         writeCache(QUESTIONS_CACHE_KEY, res.questions)
+        // 端末に残っていた古い問題一覧で始めていて、その問題が最新の一覧にもうない場合
+        // (問題シートの入れ替え直後など)は、まだ1問も答えていなければ最新の問題で始め直す
+        const freshIds = new Set(fresh.map((q) => q.id))
+        const outdated = sessionQuestionIdsRef.current.some((id) => !freshIds.has(id))
+        if (sessionStartedRef.current && outdated && answeredCountRef.current === 0) {
+          poolRef.current = fresh
+          beginNewSession(fresh)
+          return
+        }
         startSession(fresh)
       })
       .catch(() => {
@@ -289,6 +326,7 @@ export default function Training() {
     }
     const score = scoreAnswer(currentQuestion, trimmed, mode, mode === 'voice' ? voiceStatsRef.current : undefined)
     const nextScores = { ...scores, [currentQuestion.id]: score }
+    answeredCountRef.current = Object.keys(nextScores).length
     setScores(nextScores)
     setReviewMarks((prev) => ({ ...prev, [currentQuestion.id]: !score.passed }))
     setTextError('')
@@ -439,6 +477,7 @@ export default function Training() {
             </p>
             <textarea
               id="text-answer"
+              aria-label="回答"
               className="text-answer"
               rows={4}
               maxLength={300}
@@ -497,6 +536,7 @@ export default function Training() {
             )}
             <textarea
               id="confirm-answer"
+              aria-label="聞き取った回答(修正できます)"
               className="text-answer"
               rows={4}
               maxLength={300}
@@ -533,7 +573,16 @@ export default function Training() {
         )}
       </div>
 
-      {submitError && <p className="error">{submitError}</p>}
+      {submitError && (
+        <>
+          <p className="error">{submitError}</p>
+          {submitError.includes('やり直') && (
+            <button className="link-button" onClick={() => beginNewSession(poolRef.current)}>
+              最初からやり直す
+            </button>
+          )}
+        </>
+      )}
 
       {phase === 'result' && (
         <>
@@ -576,8 +625,10 @@ function ResultView({
         <div className="point-list caution">
           <p className="point-list-title">注意</p>
           <p className="point-text">
-            出玉や当たりを期待させる言い方(「出ますよ」「次は当たりますよ」など)や、負けを取り返すよう
-            あおる言い方が含まれています。法令や業界のルール上、問題になるおそれがあるため使わないでください。
+            出玉や当たりを期待させる言い方(「出ますよ」「次は当たりますよ」など)、負けを取り返すよう
+            あおる言い方、遊技を続けるよう直接すすめる言い方(「もう少し遊んでいってください」など)が
+            含まれています。法令や業界のルール上、問題になるおそれがあるため使わないでください。
+            遊技を続けてもらうのは、不便の解消や快適さの提供によってです。
           </p>
         </div>
       )}
