@@ -48,8 +48,8 @@ export function scoreContent(transcript: string, question: QuizQuestion): number
   return Math.max(0, Math.min(100, Math.round(score)))
 }
 
-// 解説文は選択式クイズ時代の「正解です。〜」という書き出しのものがあるため、
-// 自由回答のフィードバックに使う際は、その書き出しを取り除いて理由部分だけを使う
+// 「問題」シートの解説文は「正解です。〜」で始まるものがあるため、点数が低いときに
+// 表示しても矛盾しないよう、その書き出しを取り除いて理由部分だけを使う
 function explanationOf(choice: QuizChoice): string {
   return choice.feedback.replace(/^(正解です|不正解です)[。.]?\s*/, '')
 }

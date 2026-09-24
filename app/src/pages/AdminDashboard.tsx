@@ -39,7 +39,7 @@ export default function AdminDashboard() {
       .catch((e) => {
         if (e.message === 'unauthorized') {
           clearAdminKey()
-          navigate('/admin/login')
+          navigate('/admin/login', { state: { wrongKey: true } })
         } else {
           setError('データの取得に失敗しました。')
         }

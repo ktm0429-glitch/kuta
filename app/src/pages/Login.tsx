@@ -88,6 +88,10 @@ export default function Login() {
             required
           />
         </label>
+        <p className="daily-note" style={{ margin: 0 }}>
+          機種変更などで別の端末から使うときも、同じ店舗・同じお名前を入力すれば、
+          これまでのポイントがそのまま引き継がれます。
+        </p>
         {error && <p className="error">{error}</p>}
         <button type="submit" disabled={submitting}>
           {submitting ? '登録中...' : 'はじめる'}

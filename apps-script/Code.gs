@@ -6,13 +6,19 @@
  * 2. スプレッドシートを開き、上部メニューの「拡張機能」→「Apps Script」を選ぶ
  * 3. エディタに最初から入っているコードを全部消して、コピーした内容を貼り付ける
  * 4. すぐ下にある ADMIN_KEY を、好きな文字列(合言葉)に変更する
- * 5. 画面右上の「デプロイ」→「新しいデプロイ」を選ぶ
+ * 5. 画面右上の「デプロイ」→「新しいデプロイ」を選ぶ(初めて設置するときのみ。
+ *    すでに使っているコードを更新するときは、下の「■ コードを更新するとき」を参照)
  *    - 種類の選択(歯車アイコン)で「ウェブアプリ」を選ぶ
  *    - 「実行するユーザー」は「自分」のまま
  *    - 「アクセスできるユーザー」は「全員」にする
  *    - 「デプロイ」ボタンを押す
  * 6. 発行された「ウェブアプリのURL」をコピーし、
  *    app/src/config.ts の中の文字列に貼り付ける
+ *
+ * ■ コードを更新するとき(すでに運用中の場合)
+ * 貼り替えて保存したあと、「デプロイ」→「デプロイを管理」→ 鉛筆アイコン(編集)→
+ * バージョンで「新バージョン」を選んで「デプロイ」を押す。
+ * ※「新しいデプロイ」を選ぶとURLが変わり、アプリから接続できなくなるので注意。
  *
  * データはこのスプレッドシート自身に保存されます。実行すると
  * 「スタッフ」「完了記録」「ポイント調整履歴」「問題」という4つのシートが
@@ -34,9 +40,10 @@
  *
  * ■ 出題・ポイントのルール
  * スタッフが研修に挑戦すると、「問題」シートの中からランダムに5問が出題されます。
- * 各問題は選択式ではなく、スタッフがマイクに向かって実際に声に出して回答する方式です
- * (発話内容を中心に、声のトーンも補助的にスタッフの端末(ブラウザ)側で解析し、
- * 参考スコアを算出します。音声そのものはサーバーに送信・保存されません)。
+ * スタッフは選択肢から選ぶのではなく、自分の言葉で回答します。「問題」シートの
+ * 選択肢1〜3は画面には表示されず、正解(○)の文言が「模範解答」、それ以外が「NG例」
+ * として採点に使われます。採点はスタッフの端末(ブラウザ)側で行われ、音声そのものは
+ * サーバーに送信・保存されません。
  * **5問に回答する(最後まで挑戦する)と1pt獲得できます。** 各問題の内容・声のトーンの
  * 出来はスコアとして記録・表示されますが、点数の高低にかかわらず5問答えれば1ptです。
  * ポイントは1日1人1ptが上限で、同じ日に何回挑戦しても2pt以上にはなりません。
@@ -45,8 +52,9 @@
  * 発話内容・声のトーンの解析と合否判定は、Apps Script側(サーバー)ではなく
  * スタッフの端末(ブラウザ)側で行われ、その判定結果(合否・スコア・発話テキスト)を
  * このスクリプトに送信しています。「完了記録」シートには参考情報として平均スコアと
- * 発話内容の要約を記録しますが、選択式クイズだった頃のようなサーバー側での
- * 厳密な正誤検証はできない点にご留意ください。
+ * 発話内容の要約を記録します。採点結果をサーバー側で検証することはできませんが、
+ * ポイントは点数に関係なく「5問に回答したこと」で付与されるため、点数を偽っても
+ * ポイントを増やすことはできません。
  * Android・パソコンはマイクで声で回答(内容+声のトーンで採点)、iPhone/iPadは
  * 文字入力(キーボードの音声入力も可)で回答(内容のみで採点)します。
  */
@@ -310,10 +318,20 @@ function getQuestionsFromSheet_() {
 }
 
 // ---- 汎用ヘルパー ----
+// 氏名は「山田 太郎」「山田太郎」「山田　太郎」のようにスペースの有無・全角半角が
+// 違っても同じ人として扱う(別の端末で登録し直したときにポイントが分かれないようにするため)
+function nameKey_(name) {
+  return String(name || '').replace(/[\s\u3000]/g, '');
+}
+
+function isSameStaff_(rowStoreId, rowStaffId, storeId, staffId) {
+  return rowStoreId === storeId && nameKey_(rowStaffId) === nameKey_(staffId);
+}
+
 function findRowIndex_(sheet, storeIdColIdx, staffIdColIdx, storeId, staffId) {
   var data = sheet.getDataRange().getValues();
   for (var i = 1; i < data.length; i++) {
-    if (data[i][storeIdColIdx] === storeId && data[i][staffIdColIdx] === staffId) {
+    if (isSameStaff_(data[i][storeIdColIdx], data[i][staffIdColIdx], storeId, staffId)) {
       return i + 1; // シート上の行番号(1始まり)
     }
   }
@@ -342,7 +360,7 @@ function hasCompletedToday_(completionsSheet, storeId, staffId) {
       if (!(completedAt instanceof Date)) continue;
       var key = dayKeyJst_(completedAt);
       if (key < todayKey) return false;
-      if (key === todayKey && rows[i][0] === storeId && rows[i][1] === staffId) return true;
+      if (key === todayKey && isSameStaff_(rows[i][0], rows[i][1], storeId, staffId)) return true;
     }
     end = start - 1;
   }
@@ -461,12 +479,10 @@ function handleComplete_(body) {
     return { error: QUESTIONS_PER_CHALLENGE + '問分の回答が必要です' };
   }
 
-  // 音声による採点は、マイクを使った解析をスタッフの端末(ブラウザ)側で行っており、
-  // Apps Script側(サーバー)では発話内容そのものを検証できない。そのため、各問題の
-  // 合否(passed)はクライアントが計算した結果をそのまま信頼する。
-  // (これは従来の「選択式クイズの正誤をサーバー側で検証する」方式より
-  // 不正操作への耐性は下がるが、無料の範囲でこの機能を実現するための仕様上の制約。
-  // 同じ理由で、問題IDが「問題」シートに存在するかの照合も省略して通信を速くしている)
+  // 採点はスタッフの端末(ブラウザ)側で行っており、サーバー側では回答内容を検証
+  // できないため、各問題の合否(passed)はクライアントの計算結果をそのまま記録する。
+  // ポイントは合否に関係なく付与するので、合否を偽ってもポイントは増えない。
+  // (同じ理由で、問題IDが「問題」シートに存在するかの照合も省略して通信を速くしている)
   var correctCount = 0;
   var contentScores = [];
   var voiceScores = [];
@@ -490,8 +506,7 @@ function handleComplete_(body) {
   var avgVoice = avg_(voiceScores);
   var transcriptSummary = sanitizeText_(transcriptParts.join(' / '), 2000);
 
-  // 以前は5問すべて合格が必須だったが、現在は「5問に回答したこと」自体で
-  // ポイントを付与する(合格数はスコアの目安として記録・表示するのみ)。
+  // ポイントは「5問に回答したこと」自体で付与する(合格数は目安として記録・表示するのみ)。
   var sheetSet = sheets_();
   var now = new Date();
   var quizIdsLabel = uniqueQuizIds.join(',');
