@@ -1,12 +1,23 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { loadProfile } from '../profile'
-import { completeTraining, listQuestions } from '../api'
+import { completeTraining, listQuestions, sendProgress } from '../api'
+import type { AnswerRecord, CompleteTrainingResponse } from '../api'
+import type { AnswerScore, QuizQuestion } from '../types'
+import { scoreAnswer } from '../scoring'
+import type { VoiceStats } from '../scoring'
+import { normalizeQuestions } from '../questions'
 import { readCache, statusCacheKey, writeCache } from '../cache'
 import type { CachedStatus } from '../cache'
-import type { CompleteTrainingResponse } from '../api'
-import type { AnswerScore, QuizQuestion } from '../types'
-import { buildAnswerScore, buildTextAnswerScore } from '../scoring'
+import {
+  clearProgress,
+  loadProgress,
+  newSessionId,
+  pickQuestions,
+  recordFinishedSession,
+  saveProgress,
+  todayJst,
+} from '../trainingStore'
 import { SpeechToText } from '../media/speechToText'
 import { VoiceAnalyzer } from '../media/voiceAnalyzer'
 import { isVoiceModeSupported, isIOS } from '../media/browserSupport'
@@ -17,40 +28,48 @@ const MAX_RECORD_MS = 30000
 const MIN_RECORD_MS = 3000
 const MIN_TEXT_LENGTH = 2
 
-// Fisher-Yatesシャッフル(sort+Math.randomは並びに偏りが出るため使わない)
-function pickRandomQuestions(all: QuizQuestion[], count: number): QuizQuestion[] {
-  const shuffled = [...all]
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
-  }
-  return shuffled.slice(0, count)
+type Phase = 'intro' | 'permission-error' | 'recording' | 'confirm' | 'result'
+type AnswerMode = 'voice' | 'text'
+
+interface Session {
+  sessionId: string
+  questions: QuizQuestion[]
+  reviewId: string | null
+  resumed: boolean
 }
 
-type Phase = 'intro' | 'permission-error' | 'recording' | 'scoring' | 'result'
-type AnswerMode = 'voice' | 'text'
+function toRecord(score: AnswerScore): AnswerRecord {
+  return {
+    quizId: score.quizId,
+    passed: score.passed,
+    contentScore: score.contentScore,
+    voiceScore: score.voiceScore,
+    transcript: score.transcript,
+  }
+}
 
 export default function Training() {
   const navigate = useNavigate()
-  const profile = loadProfile()
+  const [profile] = useState(() => loadProfile())
 
-  const [questions, setQuestions] = useState<QuizQuestion[] | null>(null)
+  const [session, setSession] = useState<Session | null>(null)
   const [loadError, setLoadError] = useState('')
 
   const [stepIndex, setStepIndex] = useState(0)
   const [phase, setPhase] = useState<Phase>('intro')
   // マイクで録音できる端末かどうかで、初期の回答方法を自動選択する
-  // (音声認識に対応していないiPhone/iPad等では、テキスト入力に自動で切り替わる)
   const [answerMode, setAnswerMode] = useState<AnswerMode>(() =>
     isVoiceModeSupported() ? 'voice' : 'text',
   )
   const voiceCapable = isVoiceModeSupported()
   const [scores, setScores] = useState<Record<string, AnswerScore>>({})
+  const [reviewMarks, setReviewMarks] = useState<Record<string, boolean>>({})
   const [liveTranscript, setLiveTranscript] = useState('')
   const [elapsedMs, setElapsedMs] = useState(0)
   const [permissionErrorMsg, setPermissionErrorMsg] = useState('')
   const [textAnswer, setTextAnswer] = useState('')
   const [textError, setTextError] = useState('')
+  const [recognizedEmpty, setRecognizedEmpty] = useState(false)
 
   const [submitting, setSubmitting] = useState(false)
   const [result, setResult] = useState<CompleteTrainingResponse | null>(null)
@@ -59,39 +78,81 @@ export default function Training() {
   const streamRef = useRef<MediaStream | null>(null)
   const speechRef = useRef<SpeechToText | null>(null)
   const voiceRef = useRef<VoiceAnalyzer | null>(null)
+  const voiceStatsRef = useRef<VoiceStats | undefined>(undefined)
   const startedAtRef = useRef<number>(0)
   const maxTimerRef = useRef<number | null>(null)
   const tickTimerRef = useRef<number | null>(null)
+  const sessionStartedRef = useRef(false)
 
   useEffect(() => {
-    // 前回取得した問題一覧がキャッシュにあれば、通信を待たずにすぐ出題する
-    // (問題はスプレッドシート側の担当者操作でしか変わらないため、多少古くても
-    // 実害はない)。裏側では常に最新の問題一覧を取得し、次回のためにキャッシュを
-    // 更新する。
-    const cached = readCache<QuizQuestion[]>(QUESTIONS_CACHE_KEY)
-    if (cached && cached.length >= QUESTIONS_PER_CHALLENGE) {
-      setQuestions(pickRandomQuestions(cached, QUESTIONS_PER_CHALLENGE))
-      setLoadError('')
-    } else {
-      setQuestions(null)
-      setLoadError('')
+    if (!profile) return
+
+    function startSession(pool: QuizQuestion[]) {
+      if (sessionStartedRef.current) return
+      sessionStartedRef.current = true
+      const { storeId, staffId } = profile!
+
+      // 同じ日の途中の研修が残っていれば、続きから再開する
+      const saved = loadProgress(storeId, staffId)
+      const savedQuestions = saved?.questionIds.map((id) => pool.find((q) => q.id === id))
+      if (saved && savedQuestions && savedQuestions.every((q) => q)) {
+        const questions = savedQuestions as QuizQuestion[]
+        setSession({ sessionId: saved.sessionId, questions, reviewId: saved.reviewId, resumed: true })
+        setStepIndex(saved.stepIndex)
+        setScores(saved.scores)
+        setReviewMarks(saved.reviewMarks)
+        setPhase(saved.scores[questions[saved.stepIndex].id] ? 'result' : 'intro')
+        return
+      }
+
+      const picked = pickQuestions(pool, QUESTIONS_PER_CHALLENGE, storeId, staffId)
+      const sessionId = newSessionId()
+      setSession({ sessionId, questions: picked.questions, reviewId: picked.reviewId, resumed: false })
+      sendProgress({
+        sessionId,
+        storeId,
+        storeName: profile!.storeName,
+        staffId,
+        displayName: profile!.displayName,
+        quizIds: picked.questions.map((q) => q.id),
+        answers: [],
+      })
     }
+
+    // 前回取得した問題一覧がキャッシュにあれば、通信を待たずにすぐ始める。
+    // 裏側では常に最新の問題一覧を取得し、次回のためにキャッシュを更新する。
+    const cached = normalizeQuestions(readCache<unknown[]>(QUESTIONS_CACHE_KEY))
+    const hasCache = cached.length >= QUESTIONS_PER_CHALLENGE
+    if (hasCache) startSession(cached)
     listQuestions()
       .then((res) => {
-        if (res.questions.length < QUESTIONS_PER_CHALLENGE) {
-          if (!cached) setLoadError('出題できる問題数が足りません。問題を追加してから再度お試しください。')
+        const fresh = normalizeQuestions(res.questions)
+        if (fresh.length < QUESTIONS_PER_CHALLENGE) {
+          if (!hasCache) setLoadError('出題できる問題数が足りません。問題を追加してから再度お試しください。')
           return
         }
         writeCache(QUESTIONS_CACHE_KEY, res.questions)
-        if (!cached) {
-          setQuestions(pickRandomQuestions(res.questions, QUESTIONS_PER_CHALLENGE))
-        }
+        startSession(fresh)
       })
       .catch(() => {
-        if (!cached) setLoadError('研修問題の取得に失敗しました。通信環境を確認してもう一度お試しください。')
+        if (!hasCache) setLoadError('研修問題の取得に失敗しました。通信環境を確認してもう一度お試しください。')
       })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // 途中経過を端末に保存する(画面を閉じても、同じ日のうちなら続きから再開できる)
+  useEffect(() => {
+    if (!profile || !session || result) return
+    saveProgress(profile.storeId, profile.staffId, {
+      sessionId: session.sessionId,
+      day: todayJst(),
+      questionIds: session.questions.map((q) => q.id),
+      reviewId: session.reviewId,
+      stepIndex,
+      scores,
+      reviewMarks,
+    })
+  }, [profile, session, stepIndex, scores, reviewMarks, result])
 
   useEffect(() => {
     // ページを離れる時は必ずマイクを解放する
@@ -106,10 +167,11 @@ export default function Training() {
     if (tickTimerRef.current !== null) window.clearInterval(tickTimerRef.current)
   }
 
-  if (!profile) {
-    navigate('/')
-    return null
-  }
+  useEffect(() => {
+    if (!profile) navigate('/')
+  }, [profile, navigate])
+
+  if (!profile) return null
 
   if (loadError) {
     return (
@@ -122,7 +184,7 @@ export default function Training() {
     )
   }
 
-  if (!questions) {
+  if (!session) {
     return (
       <div className="page">
         <p>読み込み中...</p>
@@ -130,9 +192,18 @@ export default function Training() {
     )
   }
 
+  const { questions } = session
   const currentQuestion = questions[stepIndex]
   const isLastStep = stepIndex === questions.length - 1
   const currentScore = scores[currentQuestion.id]
+
+  function resetAnswerInput() {
+    setLiveTranscript('')
+    setTextAnswer('')
+    setTextError('')
+    setRecognizedEmpty(false)
+    voiceStatsRef.current = undefined
+  }
 
   function switchToTextMode() {
     stopMediaTracks()
@@ -177,9 +248,9 @@ export default function Training() {
     voice.start(stream)
     voiceRef.current = voice
 
+    resetAnswerInput()
     startedAtRef.current = Date.now()
     setElapsedMs(0)
-    setLiveTranscript('')
     setPhase('recording')
 
     tickTimerRef.current = window.setInterval(() => {
@@ -190,15 +261,15 @@ export default function Training() {
     }, MAX_RECORD_MS)
   }
 
+  // 録音を終えたら、すぐに採点せず、認識された文章を確認・修正してもらう
   function finishRecording() {
-    setPhase('scoring')
     const transcript = speechRef.current?.stop() ?? ''
-    const voiceStats = voiceRef.current?.stop() ?? { avgVolume: 0, pitchStdDev: 0 }
+    voiceStatsRef.current = voiceRef.current?.stop()
     stopMediaTracks()
-
-    const score = buildAnswerScore(currentQuestion, transcript, voiceStats, true)
-    setScores((prev) => ({ ...prev, [currentQuestion.id]: score }))
-    setPhase('result')
+    setTextAnswer(transcript)
+    setRecognizedEmpty(transcript.trim().length === 0)
+    setTextError('')
+    setPhase('confirm')
   }
 
   function handleStopRecording() {
@@ -206,68 +277,90 @@ export default function Training() {
     finishRecording()
   }
 
-  function handleSubmitText() {
+  function submitAnswer(mode: AnswerMode) {
     const trimmed = textAnswer.trim()
     if (trimmed.length < MIN_TEXT_LENGTH) {
-      setTextError('お客様に伝える言葉を入力(またはキーボードのマイクで音声入力)してください。')
+      setTextError(
+        mode === 'voice'
+          ? '回答が空欄です。もう一度録音するか、欄に文字で入力してください。'
+          : 'お客様に伝える言葉を入力(またはキーボードのマイクで音声入力)してください。',
+      )
       return
     }
+    const score = scoreAnswer(currentQuestion, trimmed, mode, mode === 'voice' ? voiceStatsRef.current : undefined)
+    const nextScores = { ...scores, [currentQuestion.id]: score }
+    setScores(nextScores)
+    setReviewMarks((prev) => ({ ...prev, [currentQuestion.id]: !score.passed }))
     setTextError('')
-    const score = buildTextAnswerScore(currentQuestion, trimmed)
-    setScores((prev) => ({ ...prev, [currentQuestion.id]: score }))
-    setTextAnswer('')
     setPhase('result')
+    sendProgress({
+      sessionId: session!.sessionId,
+      storeId: profile!.storeId,
+      storeName: profile!.storeName,
+      staffId: profile!.staffId,
+      displayName: profile!.displayName,
+      quizIds: questions.map((q) => q.id),
+      answers: questions
+        .filter((q) => nextScores[q.id])
+        .map((q) => ({ quizId: q.id, transcript: nextScores[q.id].transcript })),
+    })
   }
 
   function handleRetry() {
+    resetAnswerInput()
     setPhase('intro')
-    setLiveTranscript('')
-    setTextAnswer('')
-    setTextError('')
   }
 
   async function handleNext() {
     if (!isLastStep) {
       setStepIndex((i) => i + 1)
+      resetAnswerInput()
       setPhase('intro')
-      setLiveTranscript('')
-      setTextAnswer('')
-      setTextError('')
       return
     }
     setSubmitting(true)
     setSubmitError('')
     try {
-      const quizAnswers = Object.values(scores).map((s) => ({
-        quizId: s.quizId,
-        passed: s.passed,
-        contentScore: s.contentScore,
-        voiceScore: s.voiceScore,
-        transcript: s.transcript,
-      }))
       const res = await completeTraining({
+        sessionId: session!.sessionId,
         storeId: profile!.storeId,
         storeName: profile!.storeName,
         staffId: profile!.staffId,
         displayName: profile!.displayName,
-        answers: quizAnswers,
+        answers: questions.map((q) => toRecord(scores[q.id])),
       })
       setResult(res)
-      // 研修メニューに戻った時に、古いポイント数が一瞬表示されないようにする
-      if (res.success && typeof res.totalPoints === 'number') {
-        writeCache<CachedStatus>(statusCacheKey(profile!.storeId, profile!.staffId), {
-          points: res.totalPoints,
-          awardedToday: true,
-        })
+      if (res.success) {
+        clearProgress(profile!.storeId, profile!.staffId)
+        recordFinishedSession(
+          profile!.storeId,
+          profile!.staffId,
+          questions.map((q) => q.id),
+          reviewMarks,
+        )
+        // 研修メニューに戻った時に、古いポイント数が一瞬表示されないようにする
+        if (typeof res.totalPoints === 'number') {
+          writeCache<CachedStatus>(statusCacheKey(profile!.storeId, profile!.staffId), {
+            points: res.totalPoints,
+            awardedToday: true,
+          })
+        }
       }
-    } catch {
-      setSubmitError('送信に失敗しました。通信環境を確認してもう一度お試しください。')
+    } catch (err) {
+      // サーバーからの案内(日本語)があればそのまま表示する
+      const message = err instanceof Error ? err.message : ''
+      setSubmitError(
+        /[぀-ヿ一-龯]/.test(message) && !message.startsWith('通信に失敗')
+          ? message
+          : '送信に失敗しました。通信環境を確認して、もう一度「研修を完了する」を押してください(回答内容はこの端末に保存されています)。',
+      )
     } finally {
       setSubmitting(false)
     }
   }
 
   if (result) {
+    const reviewCount = questions.filter((q) => reviewMarks[q.id]).length
     return (
       <div className="page">
         <h1>接客力向上トレーニング</h1>
@@ -279,6 +372,7 @@ export default function Training() {
               <p>5問に回答しました!本日分の1ptを獲得しました。</p>
             )}
             <p>参考: 合格の目安を満たした問題数 {result.correctCount} / {result.total}</p>
+            {reviewCount > 0 && <p>「復習」に入れた問題は、次回の研修で1問ずつ出題されます。</p>}
             {typeof result.totalPoints === 'number' && (
               <p>現在の保有ポイント: {result.totalPoints} pt</p>
             )}
@@ -286,8 +380,7 @@ export default function Training() {
         ) : (
           <div className="result-card retry">
             <p>
-              送信は完了しましたが、ポイントの付与に失敗しました。バックエンド(Apps Script)が
-              最新版になっていない可能性があります。担当者にご確認のうえ、もう一度お試しください。
+              送信は完了しましたが、ポイントの付与に失敗しました。担当者にご確認のうえ、もう一度お試しください。
             </p>
           </div>
         )}
@@ -303,18 +396,29 @@ export default function Training() {
       <h1>接客力向上トレーニング</h1>
       <p className="step-indicator">
         {stepIndex + 1} / {questions.length}
+        {currentQuestion.id === session.reviewId && <span className="review-tag">復習</span>}
       </p>
+      {session.resumed && stepIndex > 0 && phase === 'intro' && (
+        <p className="daily-note" style={{ margin: '-0.5rem 0 1rem' }}>
+          前回の続きから再開しています。
+        </p>
+      )}
 
       <div className="quiz-card">
         <p className="situation">{currentQuestion.situation}</p>
-        <p className="customer-line">お客様「{currentQuestion.customerLine}」</p>
+        <p className="customer-line">
+          お客様
+          {/[「(（]/.test(currentQuestion.customerLine)
+            ? ` ${currentQuestion.customerLine}`
+            : `「${currentQuestion.customerLine}」`}
+        </p>
 
         {phase === 'intro' && answerMode === 'voice' && (
           <>
             <p className="daily-note" style={{ margin: '0 0 1rem' }}>
               下のボタンを押すと、ブラウザが「マイクの使用を許可しますか?」と聞いてきます。
               「許可」を選ぶと録音が始まります。実際にお客様に話しかけるつもりで声に出して
-              答えてください。話した内容を中心に採点します(音声は保存されません)。
+              答えてください。話し終えたら、聞き取った文章を確認してから採点します(音声は保存されません)。
             </p>
             <button className="button" onClick={handleStartRecording}>
               マイクで回答する
@@ -334,15 +438,16 @@ export default function Training() {
                 : ' お使いの端末に音声入力機能があれば、それを使って入力することもできます。'}
             </p>
             <textarea
+              id="text-answer"
               className="text-answer"
               rows={4}
-              maxLength={500}
+              maxLength={300}
               value={textAnswer}
               placeholder="お客様に話しかけるつもりで、言葉を入力してください"
               onChange={(e) => setTextAnswer(e.target.value)}
             />
             {textError && <p className="error">{textError}</p>}
-            <button className="button" onClick={handleSubmitText}>
+            <button className="button" onClick={() => submitAnswer('text')}>
               回答する
             </button>
             {voiceCapable && (
@@ -365,64 +470,66 @@ export default function Training() {
           </>
         )}
 
-        {(phase === 'recording' || phase === 'scoring') && (
+        {phase === 'recording' && (
           <div className="recording-box">
             <p className="recording-indicator">
               ● 録音中です。話し終えたら下のボタンを押してください({Math.floor(elapsedMs / 1000)}秒経過)
-              {phase === 'scoring' && '(採点中...)'}
             </p>
-            {liveTranscript && <p className="live-transcript">認識中の発話: {liveTranscript}</p>}
-            <button
-              className="button"
-              onClick={handleStopRecording}
-              disabled={phase === 'scoring' || elapsedMs < MIN_RECORD_MS}
-            >
-              {phase === 'scoring'
-                ? '採点中...'
-                : elapsedMs < MIN_RECORD_MS
-                  ? `もう少しお待ちください(あと${Math.ceil((MIN_RECORD_MS - elapsedMs) / 1000)}秒)`
-                  : '回答を終える'}
+            {liveTranscript && <p className="live-transcript">聞き取り中: {liveTranscript}</p>}
+            <button className="button" onClick={handleStopRecording} disabled={elapsedMs < MIN_RECORD_MS}>
+              {elapsedMs < MIN_RECORD_MS
+                ? `もう少しお待ちください(あと${Math.ceil((MIN_RECORD_MS - elapsedMs) / 1000)}秒)`
+                : '話し終えた'}
             </button>
           </div>
         )}
 
+        {phase === 'confirm' && (
+          <>
+            {recognizedEmpty ? (
+              <p className="error" style={{ marginTop: 0 }}>
+                うまく聞き取れませんでした。「録り直す」を押してもう一度話すか、下の欄に文字で入力してください。
+              </p>
+            ) : (
+              <p className="daily-note" style={{ margin: '0 0 0.75rem' }}>
+                聞き取った内容です。言い間違いや、聞き取りの間違いがあれば直してから「この内容で採点する」を押してください。
+              </p>
+            )}
+            <textarea
+              id="confirm-answer"
+              className="text-answer"
+              rows={4}
+              maxLength={300}
+              value={textAnswer}
+              placeholder="話した内容をここに入力できます"
+              onChange={(e) => {
+                setTextAnswer(e.target.value)
+                setTextError('')
+              }}
+            />
+            {textError && <p className="error">{textError}</p>}
+            <button
+              className="button"
+              onClick={() => submitAnswer('voice')}
+              disabled={textAnswer.trim().length < MIN_TEXT_LENGTH}
+            >
+              この内容で採点する
+            </button>
+            <button className="link-button" onClick={handleStartRecording}>
+              録り直す
+            </button>
+          </>
+        )}
+
         {phase === 'result' && currentScore && (
-          <div className="score-box">
-            <p className="recognized-transcript">
-              ✓ 回答を受け付けました。{currentScore.mode === 'voice' ? '認識された発話' : '入力された内容'}:「
-              {currentScore.transcript || '(聞き取れませんでした)'}
-              」
-            </p>
-            <div className="score-bars">
-              <ScoreBar label="内容" value={currentScore.contentScore} />
-              {currentScore.mode === 'voice' && (
-                <ScoreBar label="声のトーン" value={currentScore.voiceScore} />
-              )}
-            </div>
-            <p className={`overall-score${currentScore.passed ? ' pass' : ' fail'}`}>
-              総合スコア: {currentScore.overallScore}点 {currentScore.passed ? '(合格)' : '(あと一歩)'}
-            </p>
-            {currentScore.goodPoints.length > 0 && (
-              <div className="point-list good">
-                <p className="point-list-title">良かった点</p>
-                <ul>
-                  {currentScore.goodPoints.map((p, i) => (
-                    <li key={i}>{p}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            {currentScore.improvePoints.length > 0 && (
-              <div className="point-list improve">
-                <p className="point-list-title">改善点</p>
-                <ul>
-                  {currentScore.improvePoints.map((p, i) => (
-                    <li key={i}>{p}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
+          <ResultView
+            question={currentQuestion}
+            score={currentScore}
+            reviewMarked={reviewMarks[currentQuestion.id] ?? false}
+            onToggleReview={(checked) =>
+              setReviewMarks((prev) => ({ ...prev, [currentQuestion.id]: checked }))
+            }
+          />
         )}
       </div>
 
@@ -438,6 +545,91 @@ export default function Training() {
           </button>
         </>
       )}
+    </div>
+  )
+}
+
+function ResultView({
+  question,
+  score,
+  reviewMarked,
+  onToggleReview,
+}: {
+  question: QuizQuestion
+  score: AnswerScore
+  reviewMarked: boolean
+  onToggleReview: (checked: boolean) => void
+}) {
+  return (
+    <div className="score-box">
+      <p className="recognized-transcript">
+        ✓ 回答を受け付けました:「{score.transcript}」
+      </p>
+      <div className="score-bars">
+        <ScoreBar label="内容" value={score.contentScore} />
+      </div>
+      <p className={`overall-score${score.passed ? ' pass' : ' fail'}`}>
+        スコア: {score.contentScore}点 {score.passed ? '(合格の目安に達しました)' : '(あと一歩)'}
+      </p>
+
+      {score.ngHits.length > 0 && (
+        <div className="point-list caution">
+          <p className="point-list-title">注意</p>
+          <p className="point-text">
+            出玉や当たりを期待させる言い方(「出ますよ」「次は当たりますよ」など)や、負けを取り返すよう
+            あおる言い方が含まれています。法令や業界のルール上、問題になるおそれがあるため使わないでください。
+          </p>
+        </div>
+      )}
+
+      {score.matched.length > 0 && (
+        <div className="point-list good">
+          <p className="point-list-title">確認できたポイント</p>
+          <ul>
+            {score.matched.map((label) => (
+              <li key={label}>✓ {label}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {score.missing.length > 0 && (
+        <div className="point-list improve">
+          <p className="point-list-title">自動では確認できなかったポイント</p>
+          <ul>
+            {score.missing.map((m) => (
+              <li key={m.label}>
+                {m.label}
+                {m.example && <>(例:「{m.example}」)</>}
+              </li>
+            ))}
+          </ul>
+          <p className="point-note">言い方によっては、できていても自動では確認できないことがあります。</p>
+        </div>
+      )}
+
+      <div className="point-list model">
+        <p className="point-list-title">模範解答の例</p>
+        <p className="point-text">{question.modelAnswer}</p>
+        {question.explanation && <p className="point-text muted">{question.explanation}</p>}
+        {question.ngExample && <p className="point-text muted">避けたい対応: {question.ngExample}</p>}
+      </div>
+
+      {score.voiceScore !== null && (
+        <p className="voice-note">
+          参考: 声の大きさ・抑揚 {score.voiceScore}点(スコアには含みません)
+        </p>
+      )}
+
+      <label className="review-toggle" htmlFor={`review-${question.id}`}>
+        <input
+          id={`review-${question.id}`}
+          type="checkbox"
+          checked={reviewMarked}
+          onChange={(e) => onToggleReview(e.target.checked)}
+        />
+        次回の研修で、この問題を復習として出題する
+      </label>
     </div>
   )
 }

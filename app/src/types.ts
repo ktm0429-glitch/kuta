@@ -1,10 +1,9 @@
 export type AgeBand = 'young' | 'middle' | 'senior'
 
-export interface QuizChoice {
-  id: string
+// 採点の基準となる「確認ポイント」。phrases のどれか1つが回答に含まれていれば確認できたとみなす
+export interface Checkpoint {
   label: string
-  isBest: boolean
-  feedback: string
+  phrases: string[]
 }
 
 export interface QuizQuestion {
@@ -12,20 +11,21 @@ export interface QuizQuestion {
   ageBand: AgeBand
   situation: string
   customerLine: string
-  choices: QuizChoice[]
+  modelAnswer: string
+  checkpoints: Checkpoint[]
+  explanation: string
+  ngExample: string
 }
 
 // 1問分の回答を採点した結果
 export interface AnswerScore {
   quizId: string
   transcript: string
-  contentScore: number // 0-100
-  voiceScore: number // 0-100(テキスト入力モードでは未評価)
-  overallScore: number // 0-100
+  contentScore: number // 0-100(全端末共通で、回答内容だけで採点)
+  voiceScore: number | null // 声の大きさ・抑揚(マイク回答時の参考値。点数には含めない)
   passed: boolean
-  goodPoints: string[]
-  improvePoints: string[]
-  // 'voice': マイクで録音し、音声認識+声のトーンで採点
-  // 'text': テキスト入力(iPhone等、音声認識非対応ブラウザ向けの代替手段)で内容のみ採点
+  matched: string[] // 確認できたポイント
+  missing: { label: string; example: string }[] // 自動では確認できなかったポイント
+  ngHits: string[] // 含まれていた注意すべき表現
   mode: 'voice' | 'text'
 }

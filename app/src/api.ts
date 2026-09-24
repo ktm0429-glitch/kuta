@@ -1,5 +1,4 @@
 import { API_URL } from './config'
-import type { QuizQuestion } from './types'
 
 interface ApiErrorBody {
   error?: string
@@ -41,18 +40,21 @@ export function registerStaff(req: RegisterStaffRequest): Promise<RegisterStaffR
   return callApi('register', req)
 }
 
+export interface AnswerRecord {
+  quizId: string
+  passed: boolean
+  contentScore: number
+  voiceScore: number | null
+  transcript: string
+}
+
 export interface CompleteTrainingRequest {
+  sessionId: string
   storeId: string
   storeName: string
   staffId: string
   displayName: string
-  answers: {
-    quizId: string
-    passed: boolean
-    contentScore: number
-    voiceScore: number
-    transcript: string
-  }[]
+  answers: AnswerRecord[]
 }
 
 export interface CompleteTrainingResponse {
@@ -70,6 +72,22 @@ export function completeTraining(
   return callApi('complete', req)
 }
 
+export interface ProgressRequest {
+  sessionId: string
+  storeId: string
+  storeName: string
+  staffId: string
+  displayName: string
+  quizIds: string[]
+  answers: { quizId: string; transcript: string }[]
+}
+
+// 研修の開始時と1問ごとに、途中経過をサーバーに記録する。
+// 画面の操作を待たせないよう、結果は待たずに送りっぱなしにする(失敗しても研修は続けられる)。
+export function sendProgress(req: ProgressRequest): void {
+  callApi('progress', req).catch(() => {})
+}
+
 export interface MyStatusRequest {
   storeId: string
   staffId: string
@@ -85,7 +103,7 @@ export function getMyStatus(req: MyStatusRequest): Promise<MyStatusResponse> {
 }
 
 export interface ListQuestionsResponse {
-  questions: QuizQuestion[]
+  questions: unknown[]
 }
 
 // 研修問題はコードには持たず、スプレッドシートの「問題」シートから

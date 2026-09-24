@@ -59,3 +59,29 @@ export async function redeemPoints(
   }
   return data.totalPoints as number
 }
+
+export interface AdminSessionRow {
+  storeId: string
+  storeName: string
+  displayName: string
+  startedAt: string
+  answered: number
+  total: number
+  updatedAt: string
+  status: '完了' | '途中'
+}
+
+// 直近7日間の研修の取り組み状況(途中でやめた人も含む)。
+// サーバーのコードが古く未対応の場合は空の一覧を返す。
+export async function fetchSessions(adminKey: string): Promise<AdminSessionRow[]> {
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ action: 'adminSessions', adminKey }),
+  })
+  if (!res.ok) throw new Error('failed to fetch')
+  const data = await res.json()
+  if (data.error === 'unauthorized') throw new Error('unauthorized')
+  if (data.error) return []
+  return (data.sessions ?? []) as AdminSessionRow[]
+}

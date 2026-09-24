@@ -1,62 +1,50 @@
 /**
  * 接客力向上トレーニング用バックエンド(Google Apps Script)
  *
- * ■ 使い方
+ * ■ 初めて設置するとき
  * 1. このファイルの中身をすべてコピーする
  * 2. スプレッドシートを開き、上部メニューの「拡張機能」→「Apps Script」を選ぶ
  * 3. エディタに最初から入っているコードを全部消して、コピーした内容を貼り付ける
  * 4. すぐ下にある ADMIN_KEY を、好きな文字列(合言葉)に変更する
- * 5. 画面右上の「デプロイ」→「新しいデプロイ」を選ぶ(初めて設置するときのみ。
- *    すでに使っているコードを更新するときは、下の「■ コードを更新するとき」を参照)
+ * 5. 画面右上の「デプロイ」→「新しいデプロイ」を選ぶ
  *    - 種類の選択(歯車アイコン)で「ウェブアプリ」を選ぶ
  *    - 「実行するユーザー」は「自分」のまま
  *    - 「アクセスできるユーザー」は「全員」にする
  *    - 「デプロイ」ボタンを押す
- * 6. 発行された「ウェブアプリのURL」をコピーし、
- *    app/src/config.ts の中の文字列に貼り付ける
+ * 6. 発行された「ウェブアプリのURL」をコピーし、app/src/config.ts の中の文字列に貼り付ける
  *
  * ■ コードを更新するとき(すでに運用中の場合)
  * 貼り替えて保存したあと、「デプロイ」→「デプロイを管理」→ 鉛筆アイコン(編集)→
  * バージョンで「新バージョン」を選んで「デプロイ」を押す。
  * ※「新しいデプロイ」を選ぶとURLが変わり、アプリから接続できなくなるので注意。
  *
- * データはこのスプレッドシート自身に保存されます。実行すると
- * 「スタッフ」「完了記録」「ポイント調整履歴」「問題」という4つのシートが
- * 自動的に作られます(手動で列を用意する必要はありません)。
+ * ■ シート
+ * データはこのスプレッドシート自身に保存され、次のシートが自動で作られます。
+ *   スタッフ / 完了記録 / 取り組み状況 / ポイント調整履歴 / 問題
+ * 「問題」シートが以前の形式(選択肢1〜3の列がある形式)だった場合は、
+ * 「問題(旧形式)」という名前に変えて残し、新しい形式の「問題」シートを作り直します。
  *
- * ■ 研修問題を追加・変更したいとき
- * コードは一切触らず、「問題」シートに直接行を追加・編集してください。
- * 列の意味:
- *   ID(空欄でも自動でつきます) / 年代(20代・30〜50代・60〜70代のいずれか) /
- *   場面 / お客様のセリフ / 選択肢1 / 正解1(正解なら "○") / 解説1 /
- *   選択肢2 / 正解2 / 解説2 / 選択肢3 / 正解3 / 解説3
- * 各問題は選択肢を3つ持ち、そのうち1つだけ「正解」の列に "○" を入れてください。
- * 保存すればすぐに反映されます(再デプロイは不要です)。
- * 【採点精度を上げるコツ】正解の選択肢には、実際にお客様に言うセリフを
- * 「」で囲んで書いてください(例: 「今日もありがとうございました」と声をかける)。
- * スタッフの回答は主にこの「」内のセリフと比べて採点されます。「」がない
- * 説明文だけの選択肢(例: さりげなく声かけをする)だと、正しい回答でも
- * 点数が低く出やすくなります。
+ * ■ 研修の目的と問題の作り方
+ * 目的は「接客によって、お客様に快適に遊技を続けてもらうこと(遊技時間の延長)」です。
+ * 遊技中の不便・迷い(操作がわからない、音が気になる、休憩の仕方がわからない等)に
+ * 気づいて解消する受け答えを正解にします。出玉や当たりを期待させる言い方、
+ * 負けを取り返すようあおる言い方、やめたいお客様への無理な引き止めは正解にしません。
  *
- * ■ 出題・ポイントのルール
- * スタッフが研修に挑戦すると、「問題」シートの中からランダムに5問が出題されます。
- * スタッフは選択肢から選ぶのではなく、自分の言葉で回答します。「問題」シートの
- * 選択肢1〜3は画面には表示されず、正解(○)の文言が「模範解答」、それ以外が「NG例」
- * として採点に使われます。採点はスタッフの端末(ブラウザ)側で行われ、音声そのものは
- * サーバーに送信・保存されません。
- * **5問に回答する(最後まで挑戦する)と1pt獲得できます。** 各問題の内容・声のトーンの
- * 出来はスコアとして記録・表示されますが、点数の高低にかかわらず5問答えれば1ptです。
- * ポイントは1日1人1ptが上限で、同じ日に何回挑戦しても2pt以上にはなりません。
+ * 「問題」シートの列:
+ *   ID / 年代(20代・30〜50代・60〜70代) / 場面 / お客様のセリフ / 模範解答 /
+ *   確認ポイント1 / ポイント1の言い回し / 確認ポイント2 / ポイント2の言い回し /
+ *   確認ポイント3 / ポイント3の言い回し / 解説 / 避けたい対応
+ * 「言い回し」は、そのポイントができていると判断する言葉を「/」区切りで並べます
+ * (例: ご説明しますね/説明/ご案内/お手伝い)。回答にどれか1つが含まれていれば
+ * そのポイントは「確認できた」と判定されます。1つ目には、例として表示される
+ * 自然な一言を書いてください。確認ポイントは2〜3個にします。
  *
- * ■ 採点についての注意
- * 発話内容・声のトーンの解析と合否判定は、Apps Script側(サーバー)ではなく
- * スタッフの端末(ブラウザ)側で行われ、その判定結果(合否・スコア・発話テキスト)を
- * このスクリプトに送信しています。「完了記録」シートには参考情報として平均スコアと
- * 発話内容の要約を記録します。採点結果をサーバー側で検証することはできませんが、
- * ポイントは点数に関係なく「5問に回答したこと」で付与されるため、点数を偽っても
- * ポイントを増やすことはできません。
- * Android・パソコンはマイクで声で回答(内容+声のトーンで採点)、iPhone/iPadは
- * 文字入力(キーボードの音声入力も可)で回答(内容のみで採点)します。
+ * ■ ポイントのルール
+ * 挑戦するたびに5問(前回「復習に入れる」を選んだ問題1問+それ以外4問)が出題され、
+ * 5問すべてに回答すると1pt。点数の良し悪しは問いません。1人1日1ptが上限です。
+ * 採点はスタッフの端末(ブラウザ)で行い、音声そのものはどこにも送信・保存しません。
+ * サーバー側では、出題された5問すべてに回答(空欄でない文章)があることを確認してから
+ * ポイントを付与します。
  */
 
 // ここを好きな文字列に変更してください(第三者に推測されにくいものを推奨します)
@@ -64,159 +52,286 @@ var ADMIN_KEY = 'CHANGE_ME_TO_YOUR_OWN_SECRET';
 
 var SHEET_STAFF = 'スタッフ';
 var SHEET_COMPLETIONS = '完了記録';
+var SHEET_SESSIONS = '取り組み状況';
 var SHEET_REDEMPTIONS = 'ポイント調整履歴';
 var SHEET_QUESTIONS = '問題';
+var SHEET_QUESTIONS_OLD = '問題(旧形式)';
+
+var QUESTIONS_PER_CHALLENGE = 5;
+var MIN_ANSWER_LENGTH = 2;
 
 var STAFF_HEADERS = ['店舗ID', '店舗名', '氏名', '表示名', 'ポイント', '更新日時'];
 var COMPLETION_HEADERS = [
   '店舗ID', '氏名', '出題した問題ID', '合格数', '問題数', '完了日時',
-  '平均内容スコア', '平均声スコア', '発話内容(監査用・参考)'
+  '平均内容スコア', '平均声スコア(参考)', '回答内容(参考)', 'セッションID'
+];
+var SESSION_HEADERS = [
+  'セッションID', '店舗ID', '店舗名', '氏名', '開始日時', '出題した問題ID',
+  '回答数', '最終更新', '状態', '完了日時', '回答内容(参考)'
 ];
 var REDEMPTION_HEADERS = ['店舗ID', '氏名', '消費ポイント', 'メモ', '日時'];
 var QUESTION_HEADERS = [
-  'ID(空欄可)', '年代', '場面', 'お客様のセリフ',
-  '選択肢1', '正解1(○)', '解説1',
-  '選択肢2', '正解2(○)', '解説2',
-  '選択肢3', '正解3(○)', '解説3'
+  'ID', '年代', '場面', 'お客様のセリフ', '模範解答',
+  '確認ポイント1', 'ポイント1の言い回し(/区切り)',
+  '確認ポイント2', 'ポイント2の言い回し(/区切り)',
+  '確認ポイント3', 'ポイント3の言い回し(/区切り)',
+  '解説(遊技を続けてもらえる理由)', '避けたい対応'
 ];
+var QUESTION_COLS = QUESTION_HEADERS.length;
 
 var AGE_BAND_LABEL_JA = { young: '20代', middle: '30〜50代', senior: '60〜70代' };
 var AGE_BAND_FROM_JA = { '20代': 'young', '30〜50代': 'middle', '60〜70代': 'senior' };
 
+// 「お客様の意向を確認する」ポイントで共通して使う言い回し
+var ASK_PHRASES = 'よろしければ/宜しければ/よかったら/良かったら/しましょうか/ましょうか/いかがですか/如何ですか';
+var ASK_POINT = ['お客様の意向を確認する', ASK_PHRASES];
+
 // ---- 「問題」シートを初めて作るときに入れておく初期データ ----
-// (すでにシートにデータがある場合は使われません)
+// (すでに新しい形式のシートがある場合は使われません)
 var DEFAULT_QUESTIONS = [
-  { ageBand: 'young', situation: '大当たりが続かず、席を離れようか迷っている様子です。', line: 'うーん、今日はこの台厳しいかもな…',
-    choices: [
-      ['「実はこの台、この時間帯からよく動くんですよ」と一言だけ添える', true, '正解です。短く役立つ情報を添えることで、もう少し様子を見てみようという気持ちにつながります。'],
-      ['「まだ全然いけますよ、頑張ってください」と励ますだけ', false, '根拠のない励ましだけでは響きにくく、押しつけがましく感じられることもあります。'],
-      ['特に声はかけず離れる', false, 'ひとこと添えるだけで結果が変わる場面でした。']
-    ] },
-  { ageBand: 'young', situation: 'お客様が席を立ち、帰り支度を始めました。', line: '(無言でコートを着ている)',
-    choices: [
-      ['「今日もありがとうございました、またお待ちしています」と短く声をかける', true, '正解です。短くても声をかけることで印象が残り、次回の来店や「もう少しだけ」につながりやすくなります。'],
-      ['呼び止めて長々とお礼を伝える', false, '20代のお客様には長い会話はかえって負担になりがちです。'],
-      ['何も言わず見送る', false, '短い一言のチャンスを逃しています。']
-    ] },
-  { ageBand: 'young', situation: '台の調子が気になる様子で、軽くコンコンと叩いています。', line: '(無言で台を軽く叩いている)',
-    choices: [
-      ['「もしよろしければ、確認いたしましょうか?」と声をかける', true, '正解です。「もしよろしければ」はクッション言葉の一つで、声をかけられる側の心理的なハードルを下げてくれます。'],
-      ['「壊れてませんよ、大丈夫です」と決めつけて答える', false, '確認もせずに決めつけると、不信感につながることがあります。'],
-      ['気づかないふりをする', false, '気になっているサインを見逃さないことが大切です。']
-    ] },
-  { ageBand: 'young', situation: '新台の前で少し様子を見ている、あまり見かけないお客様です。', line: '「これ、結構人気なんですか?」',
-    choices: [
-      ['「はい、今週から入った新台で、SNSでも話題になっているんですよ」と話す', true, '正解です。趣味・娯楽の話題は初対面でも広がりやすく、雑談のきっかけとして有効です(FORDの法則のR=Recreation)。'],
-      ['「さあ、よくわからないです」とだけ答える', false, 'せっかく話しかけてもらえた機会を活かせていません。'],
-      ['質問に気づかず通り過ぎる', false, '声をかけてもらえた時は会話のチャンスです。']
-    ] },
-  { ageBand: 'young', situation: 'お客様が仕事帰りに立ち寄ったことを軽く話してくれました。', line: '「仕事帰りにちょっと寄ったんですよね」',
-    choices: [
-      ['「そうなんですね、お疲れ様です」と短く相槌を打つ', true, '正解です。「あいづち」は傾聴の基本テクニックの一つで、短い言葉でも相手は話を受け止めてもらえたと感じます。'],
-      ['無言でうなずくだけ', false, '相槌の言葉を添えると、より気持ちが伝わりやすくなります。'],
-      ['話を遮って台の説明を始める', false, '相手の話を最後まで受け止めることが傾聴の基本です。']
-    ] },
-  { ageBand: 'young', situation: '出玉が思ったより出ず、軽く声を漏らしています。', line: '「あ〜、全然出ないな…」',
-    choices: [
-      ['「そうですよね、見ていてこちらもハラハラしちゃいます」と短く共感を伝える', true, '正解です。相手の感情の温度に合わせて短く共感を返すことで、余計な負担をかけずに寄り添えます。'],
-      ['「まだいけますよ、頑張ってください」と根拠なく励ます', false, '気持ちを受け止めずに励ますだけでは響きにくいことがあります。'],
-      ['聞こえないふりをする', false, '短い共感の一言が言えるタイミングでした。']
-    ] },
+  { id: 'q01', age: 'young',
+    situation: '新台で遊技中のお客様が、台のボタンを何度も押して首をかしげています。',
+    line: '(ボタンを押しながら)「これ、どうやるんだろう…」',
+    model: '「何かお困りですか?よろしければ、どのボタンか教えていただければご説明しますね」',
+    points: [
+      ['困っている点を確認する', '何かお困りですか/お困り/困って/こまって/どの/どちら/どこが/わかりにく/分かりにく/わかりづら/分かりづら'],
+      ['説明・手助けを申し出る', 'ご説明しますね/説明/せつめい/ご案内/案内/お手伝い/手伝/一緒に/いっしょに/お教え/おしえ'],
+      ASK_POINT
+    ],
+    explain: '操作がわからないままだと台を楽しめず、早めに席を立つきっかけになります。困っている点を聞いてすぐ説明すれば、安心して遊技を続けてもらえます。',
+    ng: '「説明書に書いてあります」とだけ言って離れる/気づかないふりをする' },
 
-  { ageBand: 'middle', situation: '台を変えようか、このまま続けようか悩んでいる様子です。', line: 'う〜ん、どうしようかな…',
-    choices: [
-      ['「よろしければ、最近人気の台をご案内できますよ」と選択肢を示す', true, '正解です。悩みに寄り添い選択肢を示すことで、席を立たずに続ける決め手になります。'],
-      ['そっとしておく', false, '声をかけるタイミングを逃しています。'],
-      ['「そろそろ決めてください」と急かす', false, '急かす声かけは不快感につながり、逆効果です。']
-    ] },
-  { ageBand: 'middle', situation: '出玉が伸びず、少し不機嫌そうな表情です。', line: '(無言でイライラした様子)',
-    choices: [
-      ['「お飲み物のおかわりはいかがですか?灰皿もお取り替えしますね」とさりげなく声をかけて様子を伺う', true, '正解です。さりげない気配りが緊張をほぐし、もう少し続けてみようという気持ちの余裕につながります。'],
-      ['機嫌が悪そうなので近づかない', false, 'こういう時こそさりげない気配りが効果的です。避けると機会を逃します。'],
-      ['「この台まだ行けますよ」と根拠なく声をかける', false, '根拠のない声かけは信頼を損ねることがあります。']
-    ] },
-  { ageBand: 'middle', situation: '初めて来店したような様子のお客様が、台の近くで少し落ち着かない様子です。', line: '「ここ、初めて来たんですけど、賑わってますね」',
-    choices: [
-      ['「ありがとうございます、お仕事帰りですか?」と気軽に話しかける', true, '正解です。仕事の話題(FORDの法則のO=Occupation)は初対面でも聞きやすく、会話の糸口になります。'],
-      ['「そうですね」とだけ返す', false, 'せっかくの会話のきっかけを広げられていません。'],
-      ['特に反応せず離れる', false, '話しかけてもらえたタイミングを活かせていません。']
-    ] },
-  { ageBand: 'middle', situation: 'どの台にするか決めかねている様子です。', line: '「どれがいいかなあ…」',
-    choices: [
-      ['「差し支えなければ、好みの傾向を伺ってもよろしいですか?」と尋ねる', true, '正解です。「差し支えなければ」というクッション言葉を使うことで、踏み込んだ質問でも答えやすい雰囲気になります。'],
-      ['「早く決めたほうがいいですよ」と急かす', false, '急かす言葉は押しつけがましく感じられます。'],
-      ['何も聞かずにおすすめを一方的に伝える', false, '相手の好みを確認せずに勧めると、ミスマッチが起きやすくなります。']
-    ] },
-  { ageBand: 'middle', situation: '落ち着いたゆっくりとした口調で話すお客様です。', line: '「いやあ…最近、忙しくてね…なかなか来れなくて…」',
-    choices: [
-      ['相手と同じくらいゆっくりとしたペースで「そうだったんですね、お忙しい中ありがとうございます」と返す', true, '正解です。相手の話す速さやトーンに合わせる「ミラーリング」は、安心感を生み会話を続けやすくします。'],
-      ['早口で「そうなんですね!今日は新台ありますよ!」と畳みかける', false, '相手のペースを無視した早口の応対は、落ち着いて話したい相手には負担になります。'],
-      ['相槌を打たず黙って聞く', false, 'ペースを合わせつつも、相槌で反応を返すことが大切です。']
-    ] },
-  { ageBand: 'middle', situation: '特定の台をいつも利用している常連のお客様です。', line: '(いつもこの台に座っている)',
-    choices: [
-      ['「この台、いつも選ばれてますよね。どんなところが気に入ってるんですか?」と尋ねる', true, '正解です。「はい/いいえ」で終わらないオープンクエスチョンは、相手が自由に話しやすく会話が広がります。'],
-      ['「この台好きなんですか?」とだけ聞く', false, '「はい」で終わってしまいやすく、会話が広がりにくい聞き方です。'],
-      ['特に何も聞かない', false, '常連のお客様との会話を深める良い機会でした。']
-    ] },
-  { ageBand: 'middle', situation: 'なかなか当たらず、少し不満そうな様子です。', line: '「今日はほんとに当たらないなあ…」',
-    choices: [
-      ['「そうですよね、もどかしいですよね」と気持ちをまず受け止めてから様子を見る', true, '正解です。不満の言葉に対してはまず気持ちを受け止めることが基本です。否定や言い訳から入らないことが信頼につながります。'],
-      ['「そういう時もありますよ」と軽く流す', false, '気持ちを受け止めずに流してしまうと、不満が募ることがあります。'],
-      ['反応せずその場を離れる', false, '不満のサインを見逃さず、まず受け止める対応が大切です。']
-    ] },
+  { id: 'q02', age: 'young',
+    situation: '台の音が大きいのか、お客様が片耳を押さえて顔をしかめています。',
+    line: '(片耳を押さえて顔をしかめている)',
+    model: '「音が気になりますか?よろしければ、台の音量を調整する方法をご案内しますね」',
+    points: [
+      ['不快に気づいて声をかける', '音が気になりますか/音/おと/気になり/きになり/うるさ/大き/おおき'],
+      ['解決方法を示す', '音量を調整する方法をご案内しますね/音量/おんりょう/ボリューム/調整/ちょうせい/下げ/さげ/小さく/ちいさく'],
+      ASK_POINT
+    ],
+    explain: '音などの不快感を我慢したまま遊技を続けるのはつらく、早めに帰る原因になります。音量の調整方法を案内すれば、快適に遊技を続けてもらえます(調整できない台なら、空いている台への移動などを提案します)。',
+    ng: '「そういう台なので」と取り合わない' },
 
-  { ageBand: 'senior', situation: '常連のお客様が最近の体調や趣味の話を始めました。', line: '最近ちょっと膝が痛くてね、でもここに来るのは楽しみでね。',
-    choices: [
-      ['「そうですか」とだけ返し、すぐに台の説明に移る', false, '会話を大切にしたい層に対して、話を切り上げすぎるのはもったいない対応です。'],
-      ['「膝、大丈夫ですか?ゆっくりしていってくださいね」と気遣いを言葉にする', true, '正解です。話をきちんと受け止め気遣いを言葉にすることで、居心地の良さが生まれ長く楽しんでもらえます。'],
-      ['自分の話に切り替える', false, 'まずは相手の話をしっかり受け止めることが優先です。']
-    ] },
-  { ageBand: 'senior', situation: '負けが込んでいて、そろそろやめようか迷っている様子です。', line: 'う〜ん、今日はこの辺でやめておこうかな…でもこの台好きなんだよな。',
-    choices: [
-      ['「そうですね、無理せずいきましょう」とだけ言って離れる', false, '間違いではありませんが、好きな台だという言葉を受け止められておらず、会話の機会を活かせていません。'],
-      ['「この台お好きなんですね、次にいらした時にまたご案内しますね」と会話を広げる', true, '正解です。好きという気持ちを受け止めて会話を広げることで、今日もう少し、あるいは次回また楽しみに来てもらえます。無理な引き止めではなく自然な会話延長です。'],
-      ['「もう少し遊んでいってください」とだけ引き止める', false, '直接的な引き止めは押しつけがましく感じられることがあります。']
-    ] },
-  { ageBand: 'senior', situation: 'お客様が席を立とうか迷っている様子です。', line: 'そろそろ帰ろうかな…。',
-    choices: [
-      ['無言でそのまま見送る', false, 'ひとこと添えるだけで、次回来店や会話延長のきっかけを逃しています。'],
-      ['「今日もありがとうございました。また同じ台空けておきますね」と声をかける', true, '正解です。個別の気遣いと次回への自然な期待を伝えられ、もう少し話したい・遊びたい気持ちにつながります。'],
-      ['「もう少し遊んでいってください」と引き止める', false, '直接的な引き止めは押しつけがましく感じられることがあります。']
-    ] },
-  { ageBand: 'senior', situation: '耳が少し遠いお客様に、台の操作方法を説明することになりました。', line: '「ん?何て言ったかね?」',
-    choices: [
-      ['正面から向き合い、低めの声でゆっくりと「こちらのボタンを押すと始まりますよ」とはっきり話す', true, '正解です。高齢のお客様には高い声や早口が聞き取りにくいことがあります。低めの声でゆっくり、口の動きが見える正面から話すと伝わりやすくなります。'],
-      ['声のトーンや速さは変えずに、同じ説明を繰り返す', false, '同じ話し方を繰り返すだけでは伝わらないことがあります。話し方そのものを調整することが大切です。'],
-      ['少し離れた場所から大声で話す', false, '大声よりも、近づいて低めの声でゆっくり話す方が聞き取りやすく、失礼にもなりません。']
-    ] },
-  { ageBand: 'senior', situation: '車椅子を利用しているお客様に話しかける場面です。', line: '(座ったまま、こちらを見上げている)',
-    choices: [
-      ['しゃがんで目線の高さを合わせてから「何かお手伝いできることはありますか?」と話しかける', true, '正解です。相手と同じ目線の高さに合わせることで、聞き取りやすくなるだけでなく、安心感も伝わります。'],
-      ['立ったまま見下ろす形で話す', false, '見下ろす形での会話は、威圧的な印象を与えてしまうことがあります。'],
-      ['目を合わせずに手元の作業をしながら話す', false, '目線を合わせることは、相手を大切に思う気持ちを伝える基本です。']
-    ] },
-  { ageBand: 'senior', situation: 'お客様が昔の話を、ゆっくりと繰り返し話しています。', line: '「昔はこの辺りも随分違ったんだよ…」(と、ゆっくり話し続ける)',
-    choices: [
-      ['「そうだったんですね」と相づちを打ちながら、急かさず最後まで落ち着いて耳を傾ける', true, '正解です。傾聴の基本は、相手の話すペースを尊重し、最後まで真摯に耳を傾けることです。'],
-      ['「それで、結論は何ですか」と話を急がせる', false, '話を急がせると、話しにくさを感じさせてしまいます。'],
-      ['途中で別の話題に変える', false, '相手が話している内容をまず受け止めることが大切です。']
-    ] },
-  { ageBand: 'senior', situation: '何か手伝おうとした際に、お客様から少し強めの反応がありました。', line: '「自分でできるから、大丈夫だよ」',
-    choices: [
-      ['「失礼いたしました、何かあればいつでもお声がけくださいね」と伝え、見守る', true, '正解です。高齢のお客様も一人の対等な個人として接し、必要以上に手を貸そうとしないことも大切な配慮です。'],
-      ['「危ないので私がやります」と強引に手伝う', false, '本人の意思を尊重せずに手を貸すのは、対等な個人として接する姿勢に反します。'],
-      ['何も言わずにその場を離れる', false, '一言添えることで、見守っている安心感を伝えられます。']
-    ] },
-  { ageBand: 'senior', situation: 'お孫さんの話を始めました。', line: '「今度、孫が遊びに来るんだよ」',
-    choices: [
-      ['「それは楽しみですね、おいくつになられたんですか?」と話を広げる', true, '正解です。家族の話題(FORDの法則のF=Family)は信頼関係を深めやすく、年配のお客様との会話では特に喜ばれやすいテーマです。'],
-      ['「そうですか」とだけ返す', false, 'せっかくの話題を広げるチャンスを逃しています。'],
-      ['聞こえないふりをして作業を続ける', false, '話しかけてくれた際は、手を止めて向き合うことが大切です。']
-    ] }
+  { id: 'q03', age: 'young',
+    situation: '長く遊技しているお客様が、お腹をさすりながら時計を気にしています。',
+    line: '「お腹すいたな…でも台を離れたくないな」',
+    model: '「お食事休憩のルールをご案内しましょうか?ルールの時間内でしたら、台はそのままでお戻りいただけます」',
+    points: [
+      ['休憩できることを伝える', '休憩のルールをご案内しましょうか/休憩/きゅうけい/食事/しょくじ'],
+      ['離れる間の台の扱いを説明する', '台はそのままでお戻りいただけます/ルール/そのまま/戻/もど/確保/キープ/札/ふだ/時間内/じかんない'],
+      ASK_POINT
+    ],
+    explain: '休憩の方法を知らないと、無理をして遊技を続けるか、そのまま帰ってしまうことがあります。店舗の休憩ルールを案内すれば、食事の後に戻って遊技を続けてもらいやすくなります(ルールは必ず店舗の規定どおりに案内します)。',
+    ng: 'ルールにない約束をする(「何時間でも取っておきます」など)/何も案内しない' },
+
+  { id: 'q04', age: 'young',
+    situation: '呼び出しランプが点灯しています。お客様は台のエラー表示を見ながら待っています。',
+    line: '(呼び出しランプを押して待っている)',
+    model: '「お待たせして申し訳ございません。すぐに確認いたします」',
+    points: [
+      ['待たせたことをお詫びする', 'お待たせして申し訳ございません/申し訳/もうしわけ/お待たせ/おまたせ/すみません/失礼/しつれい'],
+      ['すぐに対応することを伝える', 'すぐに確認いたします/すぐ/ただいま/只今/確認/かくにん/対応/たいおう/直し/なおし']
+    ],
+    explain: '待たされる時間が長いと気持ちが冷め、遊技をやめるきっかけになります。お詫びとすばやい対応で、気持ちよく遊技に戻ってもらいます。',
+    ng: '無言で作業を始める/「少々お待ちください」と言ったまま長く待たせる' },
+
+  { id: 'q05', age: 'young',
+    situation: 'お客様が腕をさすりながら、空調の吹き出し口の方を見ています。',
+    line: '「なんか、ここ寒いな…」',
+    model: '「寒くないですか?よろしければ、空調を確認してまいりますね」',
+    points: [
+      ['寒さに気づいて声をかける', '寒くないですか/寒/さむ/冷え/ひえ/温度/おんど'],
+      ['対応を申し出る', '空調を確認してまいりますね/空調/くうちょう/エアコン/調整/ちょうせい/確認/かくにん/ひざ掛け/ひざかけ/ブランケット'],
+      ASK_POINT
+    ],
+    explain: '寒さ・暑さの不快感は、遊技を切り上げる理由になりやすいものです。気づいてすぐ対応すれば、快適な環境で長く遊技を楽しんでもらえます。',
+    ng: '「全体で決まっているので」と断るだけ' },
+
+  { id: 'q06', age: 'young',
+    situation: '新しく入った台の前で、お客様が画面をのぞき込んでいます。',
+    line: '「これ、どういう台なんですか?」',
+    model: '「今週入った新台で、演出が楽しいと好評なんですよ。よろしければ遊び方をご説明しましょうか?」',
+    points: [
+      ['台の楽しさ(演出・遊び方)を紹介する', '演出が楽しいと好評なんですよ/演出/えんしゅつ/新台/しんだい/遊び方/あそびかた/シリーズ/キャラクター/特徴/とくちょう/好評/人気'],
+      ['説明を申し出る', '遊び方をご説明しましょうか/説明/せつめい/ご案内/案内/お教え'],
+      ASK_POINT
+    ],
+    explain: '興味を持った台を気持ちよく遊び始めてもらうことが、長く楽しんでもらう第一歩です。紹介するのは演出や遊び方などの楽しさで、出玉や当たりやすさを期待させる言い方はしません(法令・業界ルール上、問題になるおそれがあります)。',
+    ng: '「この台はよく出ますよ」など、出玉や当たりを期待させる' },
+
+  { id: 'q07', age: 'young',
+    situation: '顔なじみのお客様が、仕事帰りに立ち寄ったと話してくれました。',
+    line: '「仕事帰りにちょっと寄ったんですよね」',
+    model: '「お仕事お疲れさまです。ゆっくりしていってくださいね。何かあればお声がけください」',
+    points: [
+      ['ねぎらう', 'お仕事お疲れさまです/お疲れ/おつかれ/お仕事/おしごと'],
+      ['くつろいでもらう一言', 'ゆっくりしていってくださいね/ゆっくり/くつろ/楽しんで/たのしんで'],
+      ['頼れることを伝える', '何かあればお声がけください/何かあれば/なにかあれば/お声がけ/おこえがけ/お呼び/お申し付け/おもうしつけ']
+    ],
+    explain: '疲れて立ち寄ったお客様にとって、ねぎらいの一言と「頼れる店員がいる」安心感は居心地のよさになります。居心地のよい店では、自然と滞在時間が長くなります。',
+    ng: '無言で通り過ぎる/すぐに台の宣伝を始める' },
+
+  { id: 'q08', age: 'middle',
+    situation: '出玉が伸びず、お客様が無言でイライラしている様子です。',
+    line: '(台を見つめたまま、ため息をついている)',
+    model: '「失礼いたします。何かございましたら、いつでもお声がけくださいね」(短く声をかけ、あとは少し距離を置いて見守る)',
+    points: [
+      ['控えめに声をかける', '失礼いたします/失礼/しつれい'],
+      ['いつでも頼れることを伝える', '何かございましたら、いつでもお声がけください/何か/なにか/いつでも/お声がけ/おこえがけ/お呼び/お申し付け']
+    ],
+    explain: '気分がすぐれないときに話しかけすぎると逆効果です。短く声をかけて「必要なときは頼れる」と伝え、あとは適度な距離で見守ることで、落ち着いて遊技を続けてもらいやすくなります。「まだ行けますよ」のような出玉を期待させる励ましは、根拠がないうえ法令・業界ルール上も問題になるおそれがあります。',
+    ng: '「この台まだ行けますよ」と出玉を期待させる/しつこく話しかける' },
+
+  { id: 'q09', age: 'middle',
+    situation: '台を移動しようと、空いている台を見て回っているお客様がいます。',
+    line: '「どの台にしようかなあ…」',
+    model: '「よろしければ、お好きな機種や演出のタイプを伺ってもよろしいですか?空いている台をご案内します」',
+    points: [
+      ['好みを聞く', 'お好きな機種を伺ってもよろしいですか/好み/このみ/お好き/おすき/どんな/タイプ/機種/きしゅ'],
+      ['空いている台を案内する', '空いている台をご案内します/案内/あんない/空いて/あいて/空き'],
+      ASK_POINT
+    ],
+    explain: '好みに合う台が見つからないと、そのまま帰ってしまうことがあります。好みを聞いて合う台を案内すれば、楽しい時間を長く過ごしてもらえます。台選びの基準はお客様の好み(機種・演出)で、出玉の期待で選ばせてはいけません。',
+    ng: '「こっちの台の方が出ますよ」とすすめる' },
+
+  { id: 'q10', age: 'middle',
+    situation: 'いつも同じ機種で遊技している常連のお客様です。',
+    line: '(いつもの台に座り、こちらに軽く会釈した)',
+    model: '「いつもありがとうございます。この機種の、どんなところがお好きなんですか?」',
+    points: [
+      ['感謝を伝える', 'いつもありがとうございます/ありがとう/いつも'],
+      ['質問で会話を広げる', 'どんなところがお好きなんですか/どんなところ/どういうところ/どこが/お好き/おすき/気に入/きにい']
+    ],
+    explain: '顔を覚えて話を聞いてくれる店員がいると、「居心地のいい店」になります。好きな台の話を楽しんでもらうことで店で過ごす時間の満足度が上がり、長く過ごしてもらえます。',
+    ng: '「はい/いいえ」で終わる質問だけで会話を終える' },
+
+  { id: 'q11', age: 'middle',
+    situation: '落ち着いた、ゆっくりした口調で話すお客様です。',
+    line: '「いやあ…最近、忙しくてね…なかなか来れなくて…」',
+    model: '(相手と同じくらいゆっくりと)「そうだったんですね。お忙しい中ありがとうございます。今日はゆっくりしていってくださいね」',
+    points: [
+      ['話を受け止める', 'そうだったんですね/そうなんですね/そうでしたか/そうですか'],
+      ['来店への感謝', 'お忙しい中ありがとうございます/ありがとう'],
+      ['くつろいでもらう一言', '今日はゆっくりしていってくださいね/ゆっくり/くつろ/楽しんで/たのしんで']
+    ],
+    explain: '相手の話す速さに合わせて話を受け止めると、安心感が生まれます。「今日はゆっくり」と伝えることで、久しぶりの来店を気持ちよく長く楽しんでもらえます。',
+    ng: '早口で「今日は新台ありますよ!」と畳みかける' },
+
+  { id: 'q12', age: 'middle',
+    situation: 'なかなか当たらず、お客様が不満そうにつぶやいています。',
+    line: '「今日はほんとに当たらないなあ…」',
+    model: '「そうですよね、もどかしいですよね。お飲み物など、何かあればいつでもお声がけください」',
+    points: [
+      ['気持ちを受け止める', 'もどかしいですよね/もどかし/そうですよね/残念/ざんねん/悔し/くやし/お気持ち/わかります/分かります'],
+      ['いつでも頼れることを伝える', '何かあればいつでもお声がけください/何か/なにか/いつでも/お声がけ/お呼び/お申し付け']
+    ],
+    explain: 'まず気持ちを受け止めると不満が和らぎ、落ち着いて遊技を楽しんでもらえます。「次は当たりますよ」「取り返せますよ」は根拠がなく、のめり込みをあおるおそれもあるため、絶対に言いません。',
+    ng: '「次は当たりますよ」「取り返せますよ」と言う' },
+
+  { id: 'q13', age: 'middle',
+    situation: 'お客様がたばこを取り出し、きょろきょろと周りを見ています。',
+    line: '「たばこ吸えるところって、どこだっけ?」',
+    model: '「喫煙室はあちらです。ご案内しますね。席を離れる間の台のルールもご説明します」',
+    points: [
+      ['喫煙室を案内する', '喫煙室をご案内しますね/喫煙/きつえん/たばこ/煙草/案内/あんない'],
+      ['席を離れる間の台の扱いを伝える', '席を離れる間の台のルールもご説明します/台/席/せき/そのまま/戻/もど/ルール/休憩/きゅうけい/札']
+    ],
+    explain: '店内の喫煙は決められた喫煙室だけです。喫煙室の場所と、席を離れる間の台の扱いを案内すれば、安心して一服してから遊技に戻ってもらえます。',
+    ng: '「店内は禁煙です」とだけ言って離れる/遊技台の席で吸ってよいと言う' },
+
+  { id: 'q14', age: 'middle',
+    situation: '長時間遊技しているお客様が、のどを気にしています。',
+    line: '「のど渇いたなあ…」',
+    model: '「お飲み物でしたら、自動販売機の場所をご案内しますね」',
+    points: [
+      ['飲み物に気づいて声をかける', 'お飲み物でしたら/飲み物/のみもの/飲料/ドリンク/お水/おみず/自動販売機/自販機/じはんき'],
+      ['場所・サービスを案内する', '場所をご案内しますね/案内/あんない/お持ち/おもち/ご用意/用意/場所/ばしょ']
+    ],
+    explain: 'のどの渇きや疲れは、遊技を切り上げるきっかけになります。飲み物の場所やサービスを案内すれば、ひと息ついて遊技を続けてもらいやすくなります(案内する内容は、店舗で提供しているサービスに合わせます)。',
+    ng: '聞こえないふりをする' },
+
+  { id: 'q15', age: 'middle',
+    situation: '初めて来店したらしいお客様が、店内を見回しています。',
+    line: '「ここ、初めて来たんですけど…」',
+    model: '「ご来店ありがとうございます。わからないことがあれば、いつでもお声がけください。休憩所やお手洗いの場所もご案内しますね」',
+    points: [
+      ['来店への感謝', 'ご来店ありがとうございます/ありがとう/ようこそ'],
+      ['頼れることを伝える', 'わからないことがあれば、いつでもお声がけください/わからない/分からない/何かあれば/なにかあれば/いつでも/お声がけ/お呼び'],
+      ['店内の施設を案内する', '休憩所やお手洗いの場所もご案内しますね/案内/あんない/休憩/トイレ/お手洗い/おてあらい/場所/ばしょ']
+    ],
+    explain: '初めての店では勝手がわからず、落ち着かないまま早めに帰ってしまいがちです。頼れる店員がいて、休憩所などの場所もわかれば、安心して長く楽しんでもらえます。',
+    ng: '「そうですか」とだけ返す' },
+
+  { id: 'q16', age: 'senior',
+    situation: '耳が少し遠いお客様に、台の操作方法を説明しています。',
+    line: '「ん?何て言ったかね?」',
+    model: '(正面から、低めの声でゆっくりと)「こちらの・ボタンを・押すと・始まります。わかりにくいところは、ありますか?」',
+    points: [
+      ['具体的に短く言い直す', 'こちらのボタンを押すと始まります/ボタン/押/おす/レバー/ハンドル/こちら/ここ'],
+      ['伝わったか確認する', 'わかりにくいところはありますか/わかりにく/分かりにく/大丈夫/だいじょうぶ/よろしいですか/いかがですか/ありますか']
+    ],
+    explain: '説明が伝わらないままだと、遊技を楽しめず早めにやめてしまいます。正面から、低めの声でゆっくり、短く区切って言い直し、伝わったかを確認します(話し方は自動採点の対象外ですが、実際の接客ではとても大切です)。',
+    ng: '同じ説明を同じ早さで繰り返す/離れた場所から大声で話す' },
+
+  { id: 'q17', age: 'senior',
+    situation: '年配のお客様が、台の画面の小さな文字に目を凝らしています。',
+    line: '「字が小さくて、よく見えないねえ…」',
+    model: '「見えにくいですよね。よろしければ、表示の内容をお読みしてご説明しますね」',
+    points: [
+      ['見えにくさに共感する', '見えにくいですよね/見えにく/みえにく/見づら/みづら/小さ/ちいさ'],
+      ['読み上げ・説明を申し出る', '表示の内容をお読みしてご説明しますね/読/よみ/よん/説明/せつめい/ご案内'],
+      ASK_POINT
+    ],
+    explain: '表示が読めないと不安になり、遊技を楽しめません。読み上げて説明すれば、安心して遊技を続けてもらえます。',
+    ng: '「画面に書いてあります」とだけ言う' },
+
+  { id: 'q18', age: 'senior',
+    situation: '常連のお客様が、体の不調の話をしながらも楽しそうにしています。',
+    line: '「最近ちょっと膝が痛くてね、でもここに来るのは楽しみでね」',
+    model: '「膝、大丈夫ですか?無理なさらず、休憩しながらゆっくり楽しんでいってくださいね」',
+    points: [
+      ['体を気づかう', '膝、大丈夫ですか/大丈夫/だいじょうぶ/無理/むり/お大事/痛'],
+      ['楽しみにしてくれる気持ちを受け止める', 'ゆっくり楽しんでいってくださいね/楽しん/たのしん/ゆっくり/うれしい/嬉しい/ありがとう']
+    ],
+    explain: '体を気づかう一言と「楽しみにしてくれている」気持ちを受け止めることで、居心地のよさが生まれます。無理のない範囲で休憩を促すのも、長く楽しんでもらうための配慮です。',
+    ng: '「そうですか」とだけ返して台の説明を始める' },
+
+  { id: 'q19', age: 'senior',
+    situation: '車椅子のお客様が、通路からこちらを見上げています。',
+    line: '(座ったまま、こちらを見上げている)',
+    model: '(しゃがんで目線を合わせてから)「何かお手伝いできることはありますか?」',
+    points: [
+      ['手助けを申し出る', '何かお手伝いできることはありますか/お手伝い/おてつだい/手伝/何か/なにか'],
+      ['意向を確認する', 'お手伝いしましょうか/ありますか/いかがですか/よろしいですか/しましょうか/よろしければ']
+    ],
+    explain: '目線を合わせて手助けを申し出ることで、安心して店内を移動し、遊技を楽しんでもらえます(目線を合わせる動作は自動採点の対象外ですが、大切なポイントです)。',
+    ng: '立ったまま見下ろして話す/本人ではなく付き添いの方にだけ話す' },
+
+  { id: 'q20', age: 'senior',
+    situation: '荷物を運ぼうとしているお客様に手伝いを申し出たところ、少し強めに断られました。',
+    line: '「自分でできるから、大丈夫だよ」',
+    model: '「失礼いたしました。何かあれば、いつでもお声がけくださいね」',
+    points: [
+      ['お客様の意思を尊重する', '失礼いたしました/失礼/しつれい/かしこまりました/承知/しょうち'],
+      ['いつでも頼れることを伝える', '何かあれば、いつでもお声がけくださいね/何かあれば/なにかあれば/いつでも/お声がけ/お呼び/お申し付け']
+    ],
+    explain: '手伝いを断られたときは、本人の意思を尊重して引き下がりつつ、「いつでも頼れる」と伝えます。押しつけない気配りが居心地のよさにつながり、気持ちよく遊技を続けてもらえます。',
+    ng: '「危ないので私がやります」と強引に手伝う' },
+
+  { id: 'q21', age: 'senior',
+    situation: '顔なじみの年配のお客様が、家族の話を始めました。',
+    line: '「今度、孫が遊びに来るんだよ」',
+    model: '「それは楽しみですね!お孫さんは、おいくつなんですか?」',
+    points: [
+      ['喜びに共感する', 'それは楽しみですね/楽しみ/たのしみ/いいですね/良いですね/うれしい/嬉しい/よかった'],
+      ['質問で話を広げる', 'お孫さんはおいくつなんですか/おいくつ/何歳/なんさい/どちら/どんな/いつ']
+    ],
+    explain: '家族の話を楽しそうに聞いてくれる店員がいる店は、年配のお客様にとって居心地のよい場所になります。居心地のよさが、ゆっくり過ごしてもらうことにつながります。',
+    ng: '「そうですか」とだけ返す/作業をしながら聞き流す' }
 ];
 
-// ---- シート初期化 ----
+// ---- スプレッドシート ----
 // SpreadsheetApp.getActiveSpreadsheet() は呼び出しごとに実コストがかかるため、
 // 1回の実行(1リクエスト)の中では使い回す。
 var activeSpreadsheet_ = null;
@@ -227,39 +342,85 @@ function getSpreadsheet_() {
   return activeSpreadsheet_;
 }
 
+// doPost で書き込み用のロックを取得済みかどうか(同じ実行内で二重に取らないため)
+var scriptLockHeld_ = false;
+function withScriptLock_(fn) {
+  if (scriptLockHeld_) return fn();
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  scriptLockHeld_ = true;
+  try {
+    return fn();
+  } finally {
+    scriptLockHeld_ = false;
+    lock.releaseLock();
+  }
+}
+
 function ensureSheet_(name, headers) {
   var ss = getSpreadsheet_();
   var sheet = ss.getSheetByName(name);
   if (!sheet) {
     sheet = ss.insertSheet(name);
-    sheet.appendRow(headers);
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
     sheet.setFrozenRows(1);
   }
   return sheet;
 }
 
-function ensureQuestionsSheet_() {
-  var sheet = ensureSheet_(SHEET_QUESTIONS, QUESTION_HEADERS);
-  if (sheet.getLastRow() < 2) {
-    DEFAULT_QUESTIONS.forEach(function (q) {
-      var row = [
-        '',
-        AGE_BAND_LABEL_JA[q.ageBand],
-        q.situation,
-        q.line
-      ];
-      q.choices.forEach(function (c) {
-        row.push(c[0], c[1] ? '○' : '', c[2]);
-      });
-      sheet.appendRow(row);
-    });
+// 列を後から追加した場合に、見出し行だけ最新にする
+function ensureHeaders_(sheet, headers) {
+  if (sheet.getLastColumn() < headers.length) {
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
   }
+}
+
+function isNewQuestionFormat_(sheet) {
+  var header = sheet.getRange(1, 1, 1, QUESTION_COLS).getValues()[0];
+  return String(header[5]).indexOf('確認ポイント') === 0;
+}
+
+function defaultQuestionRows_() {
+  return DEFAULT_QUESTIONS.map(function (q) {
+    var row = [q.id, AGE_BAND_LABEL_JA[q.age], q.situation, q.line, q.model];
+    for (var i = 0; i < 3; i++) {
+      var p = q.points[i];
+      row.push(p ? p[0] : '', p ? p[1] : '');
+    }
+    row.push(q.explain, q.ng);
+    return row;
+  });
+}
+
+function createQuestionsSheet_(ss) {
+  var sheet = ss.insertSheet(SHEET_QUESTIONS);
+  var rows = defaultQuestionRows_();
+  sheet.getRange(1, 1, 1, QUESTION_COLS).setValues([QUESTION_HEADERS]);
+  sheet.getRange(2, 1, rows.length, QUESTION_COLS).setValues(rows);
+  sheet.setFrozenRows(1);
   return sheet;
 }
 
-// 各アクションが実際に使うシートだけにアクセスするよう、遅延読み込みにしている。
-// (例えば status アクションは staff と completions しか使わないのに、
-//  毎回4シート全部にアクセスしていたのが応答の遅さの一因だったため)
+// 「問題」シートがない、または以前の形式なら、新しい形式で作り直す(以前のシートは残す)
+function ensureQuestionsSheet_() {
+  var ss = getSpreadsheet_();
+  var sheet = ss.getSheetByName(SHEET_QUESTIONS);
+  if (sheet && isNewQuestionFormat_(sheet)) return sheet;
+  return withScriptLock_(function () {
+    var current = ss.getSheetByName(SHEET_QUESTIONS);
+    if (current && isNewQuestionFormat_(current)) return current;
+    if (current) {
+      var backupName = SHEET_QUESTIONS_OLD;
+      if (ss.getSheetByName(backupName)) {
+        backupName += ' ' + Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyyMMdd-HHmm');
+      }
+      current.setName(backupName);
+    }
+    return createQuestionsSheet_(ss);
+  });
+}
+
+// 各アクションが実際に使うシートだけにアクセスするよう、遅延読み込みにしている
 function sheets_() {
   var cache = {};
   function lazy(key, factory) {
@@ -275,44 +436,57 @@ function sheets_() {
   }
   lazy('staff', function () { return ensureSheet_(SHEET_STAFF, STAFF_HEADERS); });
   lazy('completions', function () { return ensureSheet_(SHEET_COMPLETIONS, COMPLETION_HEADERS); });
+  lazy('sessions', function () { return ensureSheet_(SHEET_SESSIONS, SESSION_HEADERS); });
   lazy('redemptions', function () { return ensureSheet_(SHEET_REDEMPTIONS, REDEMPTION_HEADERS); });
   lazy('questions', function () { return ensureQuestionsSheet_(); });
   return cache;
 }
 
 // ---- 問題データの読み取り ----
+function splitPhrases_(value) {
+  return String(value || '')
+    .split(/[\/／、,，\n]/)
+    .map(function (s) { return s.trim(); })
+    .filter(function (s) { return s !== ''; });
+}
+
 function getQuestionsFromSheet_() {
   var sheet = sheets_().questions;
-  var data = sheet.getDataRange().getValues();
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) return [];
+  var data = sheet.getRange(2, 1, lastRow - 1, QUESTION_COLS).getValues();
   var questions = [];
-  for (var i = 1; i < data.length; i++) {
+  var usedIds = {};
+  for (var i = 0; i < data.length; i++) {
     var row = data[i];
-    var ageBandJa = String(row[1] || '').trim();
-    var ageBand = AGE_BAND_FROM_JA[ageBandJa];
+    var ageBand = AGE_BAND_FROM_JA[String(row[1] || '').trim()];
     var situation = String(row[2] || '').trim();
     var line = String(row[3] || '').trim();
-    if (!ageBand || !situation) continue;
+    var model = String(row[4] || '').trim();
+    if (!ageBand || !situation || !model) continue;
 
-    var id = String(row[0] || '').trim() || ('q' + (i + 1));
-    var choices = [];
-    var slots = [
-      { label: row[4], best: row[5], fb: row[6], id: 'a' },
-      { label: row[7], best: row[8], fb: row[9], id: 'b' },
-      { label: row[10], best: row[11], fb: row[12], id: 'c' }
-    ];
-    slots.forEach(function (s) {
-      var label = String(s.label || '').trim();
-      if (!label) return;
-      choices.push({
-        id: s.id,
-        label: label,
-        isBest: String(s.best || '').trim() !== '',
-        feedback: String(s.fb || '').trim()
-      });
+    // IDが空欄の行は行番号から作る(行を並べ替えると変わるため、IDは入れておくのがおすすめ)
+    var id = String(row[0] || '').trim() || ('row' + (i + 2));
+    if (usedIds[id]) id = id + '_' + (i + 2);
+    usedIds[id] = true;
+
+    var checkpoints = [];
+    for (var p = 0; p < 3; p++) {
+      var label = String(row[5 + p * 2] || '').trim();
+      var phrases = splitPhrases_(row[6 + p * 2]);
+      if (label && phrases.length > 0) checkpoints.push({ label: label, phrases: phrases });
+    }
+
+    questions.push({
+      id: id,
+      ageBand: ageBand,
+      situation: situation,
+      customerLine: line,
+      modelAnswer: model,
+      checkpoints: checkpoints,
+      explanation: String(row[11] || '').trim(),
+      ngExample: String(row[12] || '').trim()
     });
-    if (choices.length === 0) continue;
-
-    questions.push({ id: id, ageBand: ageBand, situation: situation, customerLine: line, choices: choices });
   }
   return questions;
 }
@@ -321,7 +495,7 @@ function getQuestionsFromSheet_() {
 // 氏名は「山田 太郎」「山田太郎」「山田　太郎」のようにスペースの有無・全角半角が
 // 違っても同じ人として扱う(別の端末で登録し直したときにポイントが分かれないようにするため)
 function nameKey_(name) {
-  return String(name || '').replace(/[\s\u3000]/g, '');
+  return String(name || '').replace(/[\s　]/g, '');
 }
 
 function isSameStaff_(rowStoreId, rowStaffId, storeId, staffId) {
@@ -343,34 +517,76 @@ function dayKeyJst_(date) {
   return Utilities.formatDate(date, 'Asia/Tokyo', 'yyyy-MM-dd');
 }
 
-// このスタッフが今日(日本時間)すでにポイントを獲得済みかどうか。
-// 「完了記録」シートは日付順に追記されていくため、末尾から少しずつ読み、
-// 今日より前の日付の行に到達した時点で打ち切る。こうすることで、記録が
-// 何万行に増えても読み込む量は「今日の分」だけで済み、通信が遅くならない。
-var COMPLETION_SCAN_CHUNK_ = 200;
-function hasCompletedToday_(completionsSheet, storeId, staffId) {
-  var todayKey = dayKeyJst_(new Date());
-  var lastRow = completionsSheet.getLastRow();
+function formatJst_(date) {
+  return date instanceof Date ? Utilities.formatDate(date, 'Asia/Tokyo', 'yyyy/MM/dd HH:mm') : '';
+}
+
+// 記録用シートは日付順に追記されていくため、末尾から少しずつ読み、
+// visit が true を返すか、読む範囲の上限に達したら打ち切る。
+// こうすることで、記録が何万行に増えても読み込む量が増えず、通信が遅くならない。
+var SCAN_CHUNK_ = 200;
+function scanFromBottom_(sheet, numCols, maxRows, visit) {
+  var lastRow = sheet.getLastRow();
   var end = lastRow;
-  while (end >= 2) {
-    var start = Math.max(2, end - COMPLETION_SCAN_CHUNK_ + 1);
-    var rows = completionsSheet.getRange(start, 1, end - start + 1, 6).getValues();
+  var scanned = 0;
+  while (end >= 2 && scanned < maxRows) {
+    var start = Math.max(2, end - SCAN_CHUNK_ + 1);
+    var rows = sheet.getRange(start, 1, end - start + 1, numCols).getValues();
     for (var i = rows.length - 1; i >= 0; i--) {
-      var completedAt = rows[i][5];
-      if (!(completedAt instanceof Date)) continue;
-      var key = dayKeyJst_(completedAt);
-      if (key < todayKey) return false;
-      if (key === todayKey && isSameStaff_(rows[i][0], rows[i][1], storeId, staffId)) return true;
+      if (visit(rows[i], start + i)) return;
     }
+    scanned += rows.length;
     end = start - 1;
   }
-  return false;
+}
+
+// このスタッフが今日(日本時間)すでにポイントを獲得済みかどうか
+function hasCompletedToday_(completionsSheet, storeId, staffId) {
+  var todayKey = dayKeyJst_(new Date());
+  var found = false;
+  scanFromBottom_(completionsSheet, 6, 100000, function (row) {
+    var completedAt = row[5];
+    if (!(completedAt instanceof Date)) return false;
+    var key = dayKeyJst_(completedAt);
+    if (key < todayKey) return true;
+    if (key === todayKey && isSameStaff_(row[0], row[1], storeId, staffId)) {
+      found = true;
+      return true;
+    }
+    return false;
+  });
+  return found;
+}
+
+// 「取り組み状況」シートから、セッションIDの行を探す(最近の行から)
+function findSession_(sessionsSheet, sessionId) {
+  var result = null;
+  scanFromBottom_(sessionsSheet, SESSION_HEADERS.length, 5000, function (row, rowIndex) {
+    if (row[0] === sessionId) {
+      result = { rowIndex: rowIndex, values: row };
+      return true;
+    }
+    return false;
+  });
+  return result;
 }
 
 function sanitizeText_(value, maxLen) {
   if (typeof value !== 'string') return '';
   var trimmed = value.trim().replace(/\s+/g, ' ');
   return trimmed.slice(0, maxLen || 100);
+}
+
+function sanitizeIdList_(list, maxItems) {
+  if (!Array.isArray(list)) return [];
+  return list.slice(0, maxItems).map(function (v) { return sanitizeText_(String(v), 40); })
+    .filter(function (v) { return v !== ''; });
+}
+
+function answersSummary_(answers) {
+  return sanitizeText_(answers.map(function (a) {
+    return a.quizId + ': ' + a.transcript;
+  }).join(' / '), 3000);
 }
 
 function jsonResponse_(obj) {
@@ -381,9 +597,8 @@ function jsonResponse_(obj) {
 
 // ---- 入り口 ----
 // スプレッドシートへの「書き込み」を行うアクションだけ排他ロックをかける。
-// status・listQuestions・adminList のような読み取り専用アクションまで同じ
-// ロックで直列化すると、書き込み処理の完了を待たされて無駄に遅くなるため。
-var WRITE_ACTIONS_ = { register: true, complete: true, adminRedeem: true };
+// 読み取り専用のアクションまでロックで順番待ちにすると、無駄に遅くなるため。
+var WRITE_ACTIONS_ = { register: true, progress: true, complete: true, adminRedeem: true };
 
 function doPost(e) {
   var body = {};
@@ -399,11 +614,14 @@ function doPost(e) {
     if (!lock.tryLock(15000)) {
       return jsonResponse_({ error: '混み合っています。少し時間をおいてもう一度お試しください。' });
     }
+    scriptLockHeld_ = true;
   }
   try {
     switch (body.action) {
       case 'register':
         return jsonResponse_(handleRegister_(body));
+      case 'progress':
+        return jsonResponse_(handleProgress_(body));
       case 'complete':
         return jsonResponse_(handleComplete_(body));
       case 'status':
@@ -412,6 +630,8 @@ function doPost(e) {
         return jsonResponse_(handleListQuestions_(body));
       case 'adminList':
         return jsonResponse_(handleAdminList_(body));
+      case 'adminSessions':
+        return jsonResponse_(handleAdminSessions_(body));
       case 'adminRedeem':
         return jsonResponse_(handleAdminRedeem_(body));
       default:
@@ -422,7 +642,10 @@ function doPost(e) {
     console.error(err);
     return jsonResponse_({ error: 'サーバーでエラーが発生しました。もう一度お試しください。' });
   } finally {
-    if (lock) lock.releaseLock();
+    if (lock) {
+      scriptLockHeld_ = false;
+      lock.releaseLock();
+    }
   }
 }
 
@@ -460,65 +683,140 @@ function handleListQuestions_(body) {
   return { questions: getQuestionsFromSheet_() };
 }
 
-var QUESTIONS_PER_CHALLENGE = 5;
+function readAnswers_(body) {
+  var list = Array.isArray(body.answers) ? body.answers.slice(0, 10) : [];
+  return list.map(function (a) {
+    a = a || {};
+    return {
+      quizId: sanitizeText_(String(a.quizId || ''), 40),
+      transcript: sanitizeText_(a.transcript, 300),
+      passed: a.passed === true,
+      contentScore: typeof a.contentScore === 'number' ? a.contentScore : null,
+      voiceScore: typeof a.voiceScore === 'number' ? a.voiceScore : null
+    };
+  });
+}
+
+// 研修の開始時と、1問答えるごとにアプリから送られてくる途中経過を記録する。
+// 1回の研修(セッション)につき「取り組み状況」シートの1行を上書きしていく。
+function handleProgress_(body) {
+  var sessionId = sanitizeText_(body.sessionId, 60);
+  var storeId = sanitizeText_(body.storeId, 50);
+  var storeName = sanitizeText_(body.storeName, 100);
+  var displayName = sanitizeText_(body.displayName || body.staffId, 100);
+  var quizIds = sanitizeIdList_(body.quizIds, 10);
+  if (!sessionId || !storeId || !displayName) return { error: 'invalid request' };
+
+  var answers = readAnswers_(body).filter(function (a) {
+    return a.transcript.length >= MIN_ANSWER_LENGTH;
+  });
+  var sheet = sheets_().sessions;
+  var now = new Date();
+  var session = findSession_(sheet, sessionId);
+  if (session) {
+    if (session.values[8] === '完了') return { ok: true };
+    sheet.getRange(session.rowIndex, 7, 1, 5).setValues([[
+      answers.length, now, '途中', '', answersSummary_(answers)
+    ]]);
+  } else {
+    sheet.appendRow([
+      sessionId, storeId, storeName || storeId, displayName, now, quizIds.join(','),
+      answers.length, now, '途中', '', answersSummary_(answers)
+    ]);
+  }
+  return { ok: true };
+}
 
 function handleComplete_(body) {
+  var sessionId = sanitizeText_(body.sessionId, 60);
   var storeId = sanitizeText_(body.storeId, 50);
   var storeName = sanitizeText_(body.storeName, 100);
   var staffId = sanitizeText_(body.staffId, 100);
   var displayName = sanitizeText_(body.displayName, 100);
-  var answers = Array.isArray(body.answers) ? body.answers : [];
+  var answers = readAnswers_(body);
 
-  // 送られてきた回答に重複がないかも確認する(同じ問題を2回答えて
-  // 水増しすることを防ぐ)。
+  if (!storeId || !staffId) return { error: 'invalid request' };
+
+  // 出題された5問すべてに、空欄でない回答があることを確認する
   var uniqueQuizIds = [];
   answers.forEach(function (a) {
-    if (uniqueQuizIds.indexOf(a.quizId) === -1) uniqueQuizIds.push(a.quizId);
+    if (a.quizId && uniqueQuizIds.indexOf(a.quizId) === -1) uniqueQuizIds.push(a.quizId);
   });
-  if (uniqueQuizIds.length !== QUESTIONS_PER_CHALLENGE) {
+  if (uniqueQuizIds.length !== QUESTIONS_PER_CHALLENGE || answers.length !== QUESTIONS_PER_CHALLENGE) {
     return { error: QUESTIONS_PER_CHALLENGE + '問分の回答が必要です' };
   }
-
-  // 採点はスタッフの端末(ブラウザ)側で行っており、サーバー側では回答内容を検証
-  // できないため、各問題の合否(passed)はクライアントの計算結果をそのまま記録する。
-  // ポイントは合否に関係なく付与するので、合否を偽ってもポイントは増えない。
-  // (同じ理由で、問題IDが「問題」シートに存在するかの照合も省略して通信を速くしている)
-  var correctCount = 0;
-  var contentScores = [];
-  var voiceScores = [];
-  var transcriptParts = [];
-  answers.forEach(function (a) {
-    if (a.passed === true) correctCount++;
-    if (typeof a.contentScore === 'number') contentScores.push(a.contentScore);
-    if (typeof a.voiceScore === 'number') voiceScores.push(a.voiceScore);
-    var t = sanitizeText_(a.transcript, 200);
-    if (t) transcriptParts.push(t);
-  });
-  var total = QUESTIONS_PER_CHALLENGE;
-
-  function avg_(arr) {
-    if (arr.length === 0) return '';
-    var sum = 0;
-    for (var i = 0; i < arr.length; i++) sum += arr[i];
-    return Math.round(sum / arr.length);
+  var emptyAnswer = answers.some(function (a) { return a.transcript.length < MIN_ANSWER_LENGTH; });
+  if (emptyAnswer) {
+    return { error: '回答が空欄の問題があります。すべての問題に回答してから送信してください。' };
   }
-  var avgContent = avg_(contentScores);
-  var avgVoice = avg_(voiceScores);
-  var transcriptSummary = sanitizeText_(transcriptParts.join(' / '), 2000);
 
-  // ポイントは「5問に回答したこと」自体で付与する(合格数は目安として記録・表示するのみ)。
   var sheetSet = sheets_();
+  var session = sessionId ? findSession_(sheetSet.sessions, sessionId) : null;
+  if (session) {
+    // 通信が途切れて同じ内容が2回送られた場合は、1回目の結果をそのまま返す
+    if (session.values[8] === '完了') {
+      var rowIdx = findRowIndex_(sheetSet.staff, 0, 2, storeId, staffId);
+      return {
+        success: true,
+        alreadyCompleted: true,
+        pointsAwarded: 0,
+        correctCount: answers.filter(function (a) { return a.passed; }).length,
+        total: QUESTIONS_PER_CHALLENGE,
+        totalPoints: rowIdx === -1 ? 0 : Number(sheetSet.staff.getRange(rowIdx, 5).getValue()) || 0
+      };
+    }
+    var issued = String(session.values[5] || '').split(',').filter(function (v) { return v !== ''; });
+    var sameSet = issued.length === uniqueQuizIds.length && uniqueQuizIds.every(function (id) {
+      return issued.indexOf(id) !== -1;
+    });
+    if (!sameSet) {
+      return { error: '出題された問題と回答が一致しません。研修をやり直してください。' };
+    }
+  } else {
+    // 開始時の記録が届いていなかった場合は、問題シートに存在する問題かを確認する
+    var known = {};
+    getQuestionsFromSheet_().forEach(function (q) { known[q.id] = true; });
+    var unknown = uniqueQuizIds.some(function (id) { return !known[id]; });
+    if (unknown) {
+      return { error: '出題された問題と回答が一致しません。研修をやり直してください。' };
+    }
+  }
+
+  // 採点は端末(ブラウザ)側で行っており、サーバーでは点数を検証できないため、
+  // 合否・スコアは参考情報として記録する(ポイントは点数に関係なく付与するので、
+  // 点数を偽ってもポイントは増えない)。
+  var correctCount = answers.filter(function (a) { return a.passed; }).length;
+  function avg_(key) {
+    var values = answers.map(function (a) { return a[key]; })
+      .filter(function (v) { return typeof v === 'number'; });
+    if (values.length === 0) return '';
+    var sum = 0;
+    for (var i = 0; i < values.length; i++) sum += values[i];
+    return Math.round(sum / values.length);
+  }
   var now = new Date();
-  var quizIdsLabel = uniqueQuizIds.join(',');
+  var summary = answersSummary_(answers);
 
   // 1日1人1ptが上限。今日すでにポイントを獲得済みかどうかを判定する。
   var alreadyAwardedToday = hasCompletedToday_(sheetSet.completions, storeId, staffId);
 
   // 完了したこと自体は(ポイントの有無にかかわらず)毎回記録に残す。
+  ensureHeaders_(sheetSet.completions, COMPLETION_HEADERS);
   sheetSet.completions.appendRow([
-    storeId, staffId, quizIdsLabel, correctCount, total, now,
-    avgContent, avgVoice, transcriptSummary
+    storeId, staffId, uniqueQuizIds.join(','), correctCount, QUESTIONS_PER_CHALLENGE, now,
+    avg_('contentScore'), avg_('voiceScore'), summary, sessionId
   ]);
+
+  if (session) {
+    sheetSet.sessions.getRange(session.rowIndex, 7, 1, 5).setValues([[
+      QUESTIONS_PER_CHALLENGE, now, '完了', now, summary
+    ]]);
+  } else if (sessionId) {
+    sheetSet.sessions.appendRow([
+      sessionId, storeId, storeName || storeId, displayName || staffId, now, uniqueQuizIds.join(','),
+      QUESTIONS_PER_CHALLENGE, now, '完了', now, summary
+    ]);
+  }
 
   var staffRowIndex = findRowIndex_(sheetSet.staff, 0, 2, storeId, staffId);
   var totalPoints;
@@ -545,7 +843,7 @@ function handleComplete_(body) {
     alreadyCompleted: alreadyAwardedToday,
     pointsAwarded: alreadyAwardedToday ? 0 : 1,
     correctCount: correctCount,
-    total: total,
+    total: QUESTIONS_PER_CHALLENGE,
     totalPoints: totalPoints
   };
 }
@@ -560,9 +858,7 @@ function handleStatus_(body) {
   if (staffRowIndex !== -1) {
     points = Number(sheetSet.staff.getRange(staffRowIndex, 5).getValue()) || 0;
   }
-
   var awardedToday = hasCompletedToday_(sheetSet.completions, storeId, staffId);
-
   return { points: points, awardedToday: awardedToday };
 }
 
@@ -590,6 +886,33 @@ function handleAdminList_(body) {
     return b.points - a.points;
   });
   return { staff: staff };
+}
+
+// 直近7日間の研修の取り組み状況(途中でやめた人も含む)
+var ADMIN_SESSION_DAYS = 7;
+function handleAdminSessions_(body) {
+  if (!checkAdminKey_(body)) {
+    return { error: 'unauthorized' };
+  }
+  var since = new Date(Date.now() - ADMIN_SESSION_DAYS * 24 * 60 * 60 * 1000);
+  var sessions = [];
+  scanFromBottom_(sheets_().sessions, SESSION_HEADERS.length, 3000, function (row) {
+    var startedAt = row[4];
+    if (startedAt instanceof Date && startedAt < since) return true;
+    var issued = String(row[5] || '').split(',').filter(function (v) { return v !== ''; });
+    sessions.push({
+      storeId: row[1],
+      storeName: row[2],
+      displayName: row[3],
+      startedAt: formatJst_(startedAt),
+      answered: Number(row[6]) || 0,
+      total: issued.length || QUESTIONS_PER_CHALLENGE,
+      updatedAt: formatJst_(row[7]),
+      status: row[8] === '完了' ? '完了' : '途中'
+    });
+    return false;
+  });
+  return { sessions: sessions };
 }
 
 function handleAdminRedeem_(body) {

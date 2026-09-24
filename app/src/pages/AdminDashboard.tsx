@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   clearAdminKey,
+  fetchSessions,
   fetchStaffList,
   loadAdminKey,
   redeemPoints,
 } from '../admin'
-import type { AdminStaffRow } from '../admin'
+import type { AdminSessionRow, AdminStaffRow } from '../admin'
 
 function toCsv(rows: AdminStaffRow[]): string {
   const header = ['store_id', 'store_name', 'staff_id', 'display_name', 'points']
@@ -26,14 +27,23 @@ export default function AdminDashboard() {
   const [redeemState, setRedeemState] = useState<Record<string, string>>({})
   const [busyKey, setBusyKey] = useState<string | null>(null)
   const [storeFilter, setStoreFilter] = useState('')
+  const [sessions, setSessions] = useState<AdminSessionRow[]>([])
 
   const adminKey = loadAdminKey()
-  const storeNames = [...new Set(rows.map((r) => r.storeName))].sort((a, b) => a.localeCompare(b, 'ja'))
+  const storeNames = [...new Set([...rows, ...sessions].map((r) => r.storeName))].sort((a, b) =>
+    a.localeCompare(b, 'ja'),
+  )
   const visibleRows = storeFilter ? rows.filter((r) => r.storeName === storeFilter) : rows
+  const visibleSessions = storeFilter ? sessions.filter((s) => s.storeName === storeFilter) : sessions
+  const unfinishedCount = visibleSessions.filter((s) => s.status === '途中').length
 
   function load() {
     setLoading(true)
     setError('')
+    // 取り組み状況は補助的な情報なので、取得に失敗してもポイント一覧は表示する
+    fetchSessions(adminKey)
+      .then(setSessions)
+      .catch(() => setSessions([]))
     fetchStaffList(adminKey)
       .then(setRows)
       .catch((e) => {
@@ -181,6 +191,48 @@ export default function AdminDashboard() {
           </tbody>
         </table>
         </div>
+
+        <h2 className="section-title">取り組み状況(直近7日)</h2>
+        <p className="daily-note" style={{ margin: '0 0 0.75rem' }}>
+          研修を始めた記録です。「途中」は、始めたものの5問を終えていない研修です
+          {unfinishedCount > 0 ? `(${unfinishedCount}件)` : ''}。スタッフは同じ日のうちなら続きから再開できます。
+        </p>
+        {visibleSessions.length === 0 ? (
+          <p className="daily-note" style={{ margin: 0 }}>まだ記録がありません。</p>
+        ) : (
+          <div className="table-scroll">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>開始日時</th>
+                  <th>店舗</th>
+                  <th>氏名</th>
+                  <th>回答数</th>
+                  <th>状態</th>
+                  <th>最終更新</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visibleSessions.map((s, i) => (
+                  <tr key={`${s.startedAt}-${s.displayName}-${i}`}>
+                    <td>{s.startedAt}</td>
+                    <td>{s.storeName}</td>
+                    <td>{s.displayName}</td>
+                    <td>
+                      {s.answered} / {s.total}
+                    </td>
+                    <td>
+                      <span className={s.status === '完了' ? 'status-chip done' : 'status-chip open'}>
+                        {s.status}
+                      </span>
+                    </td>
+                    <td>{s.updatedAt}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
         </>
       )}
     </div>

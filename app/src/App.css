@@ -490,3 +490,95 @@ button:disabled {
   margin-top: 0;
   box-shadow: none;
 }
+
+.review-tag {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.1rem 0.55rem;
+  border-radius: 999px;
+  background: var(--gold-soft);
+  border: 1px solid var(--gold);
+  color: var(--gold-dark);
+  font-size: 0.78rem;
+}
+
+.point-list.caution {
+  background: var(--bad-soft);
+  border: 1px solid var(--bad);
+}
+
+.point-list.caution .point-list-title {
+  color: var(--bad);
+}
+
+.point-list.model {
+  background: #fffaf6;
+  border: 1px solid #ffe1d1;
+}
+
+.point-text {
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: var(--text);
+  margin: 0 0 0.35rem;
+}
+
+.point-text:last-child {
+  margin-bottom: 0;
+}
+
+.point-text.muted,
+.point-note,
+.voice-note {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  line-height: 1.55;
+}
+
+.point-note {
+  margin: 0.4rem 0 0;
+}
+
+.voice-note {
+  margin: 0;
+}
+
+.review-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.review-toggle input {
+  width: 1.15rem;
+  height: 1.15rem;
+  accent-color: var(--accent-solid);
+}
+
+.section-title {
+  color: var(--accent-solid);
+  font-size: 1.1rem;
+  margin: 2rem 0 0.5rem;
+}
+
+.status-chip {
+  display: inline-block;
+  padding: 0.1rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.status-chip.done {
+  background: var(--good-soft);
+  color: var(--good);
+}
+
+.status-chip.open {
+  background: var(--gold-soft);
+  color: var(--gold-dark);
+}
