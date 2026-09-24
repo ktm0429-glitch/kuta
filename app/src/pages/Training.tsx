@@ -26,7 +26,7 @@ const QUESTIONS_PER_CHALLENGE = 5
 const QUESTIONS_CACHE_KEY = 'questions'
 const MAX_RECORD_MS = 30000
 const MIN_RECORD_MS = 3000
-const MIN_TEXT_LENGTH = 2
+const MIN_TEXT_LENGTH = 4
 
 type Phase = 'intro' | 'permission-error' | 'recording' | 'confirm' | 'result'
 type AnswerMode = 'voice' | 'text'
@@ -70,6 +70,7 @@ export default function Training() {
   const [textAnswer, setTextAnswer] = useState('')
   const [textError, setTextError] = useState('')
   const [recognizedEmpty, setRecognizedEmpty] = useState(false)
+  const [stopping, setStopping] = useState(false)
 
   const [submitting, setSubmitting] = useState(false)
   const [result, setResult] = useState<CompleteTrainingResponse | null>(null)
@@ -86,6 +87,8 @@ export default function Training() {
   const poolRef = useRef<QuizQuestion[]>([])
   const sessionQuestionIdsRef = useRef<string[]>([])
   const answeredCountRef = useRef(0)
+  const resumedRef = useRef(false)
+  const finishingRef = useRef(false)
 
   // 新しい研修(5問)を始める。途中経過はリセットする
   function beginNewSession(pool: QuizQuestion[]) {
@@ -99,6 +102,7 @@ export default function Training() {
     const sessionId = newSessionId()
     sessionQuestionIdsRef.current = picked.questions.map((q) => q.id)
     answeredCountRef.current = 0
+    resumedRef.current = false
     setSession({ sessionId, questions: picked.questions, reviewId: picked.reviewId, resumed: false })
     setStepIndex(0)
     setScores({})
@@ -123,56 +127,71 @@ export default function Training() {
   useEffect(() => {
     if (!profile) return
 
-    function startSession(pool: QuizQuestion[]) {
-      poolRef.current = pool
-      if (sessionStartedRef.current) return
-      sessionStartedRef.current = true
-      const { storeId, staffId } = profile!
+    // 同じ日の途中の研修が残っていれば、開始時に保存しておいた5問のまま続きから再開する
+    function resumeSaved(pool: QuizQuestion[]): boolean {
+      const saved = loadProgress(profile!.storeId, profile!.staffId)
+      if (!saved) return false
+      const questions =
+        saved.questions?.length === QUESTIONS_PER_CHALLENGE
+          ? saved.questions
+          : saved.questionIds.map((id) => pool.find((q) => q.id === id))
+      if (questions.length !== QUESTIONS_PER_CHALLENGE || !questions.every((q) => q)) return false
+      const list = questions as QuizQuestion[]
+      sessionQuestionIdsRef.current = saved.questionIds
+      answeredCountRef.current = Object.keys(saved.scores).length
+      resumedRef.current = true
+      setSession({ sessionId: saved.sessionId, questions: list, reviewId: saved.reviewId, resumed: true })
+      setStepIndex(saved.stepIndex)
+      setScores(saved.scores)
+      setReviewMarks(saved.reviewMarks)
+      setPhase(saved.scores[list[saved.stepIndex].id] ? 'result' : 'intro')
+      return true
+    }
 
-      // 同じ日の途中の研修が残っていれば、続きから再開する
-      const saved = loadProgress(storeId, staffId)
-      const savedQuestions = saved?.questionIds.map((id) => pool.find((q) => q.id === id))
-      if (saved && savedQuestions && savedQuestions.every((q) => q)) {
-        const questions = savedQuestions as QuizQuestion[]
-        sessionQuestionIdsRef.current = saved.questionIds
-        answeredCountRef.current = Object.keys(saved.scores).length
-        setSession({ sessionId: saved.sessionId, questions, reviewId: saved.reviewId, resumed: true })
-        setStepIndex(saved.stepIndex)
-        setScores(saved.scores)
-        setReviewMarks(saved.reviewMarks)
-        setPhase(saved.scores[questions[saved.stepIndex].id] ? 'result' : 'intro')
+    function startSession(pool: QuizQuestion[]) {
+      if (pool.length >= QUESTIONS_PER_CHALLENGE) poolRef.current = pool
+      if (sessionStartedRef.current) return
+      if (resumeSaved(pool)) {
+        sessionStartedRef.current = true
         return
       }
-
+      if (pool.length < QUESTIONS_PER_CHALLENGE) return
+      sessionStartedRef.current = true
       beginNewSession(pool)
     }
 
-    // 前回取得した問題一覧がキャッシュにあれば、通信を待たずにすぐ始める。
-    // 裏側では常に最新の問題一覧を取得し、次回のためにキャッシュを更新する。
-    const cached = normalizeQuestions(readCache<unknown[]>(QUESTIONS_CACHE_KEY))
-    const hasCache = cached.length >= QUESTIONS_PER_CHALLENGE
-    if (hasCache) startSession(cached)
+    // 待ち時間を減らすため、前回取得した問題一覧(または途中の研修)があれば通信を待たずにすぐ始める。
+    // 裏側では常に最新の問題一覧を取得し、まだ答えていない問題は最新の内容に差し替える。
+    const usable = (list: unknown) => normalizeQuestions(list).filter((q) => q.checkpoints.length > 0)
+    startSession(usable(readCache<unknown[]>(QUESTIONS_CACHE_KEY)))
     listQuestions()
       .then((res) => {
-        const fresh = normalizeQuestions(res.questions)
+        const fresh = usable(res.questions)
         if (fresh.length < QUESTIONS_PER_CHALLENGE) {
-          if (!hasCache) setLoadError('出題できる問題数が足りません。問題を追加してから再度お試しください。')
+          if (!sessionStartedRef.current) setLoadError('出題できる問題数が足りません。本社にご連絡ください。')
           return
         }
         writeCache(QUESTIONS_CACHE_KEY, res.questions)
-        // 端末に残っていた古い問題一覧で始めていて、その問題が最新の一覧にもうない場合
-        // (問題シートの入れ替え直後など)は、まだ1問も答えていなければ最新の問題で始め直す
-        const freshIds = new Set(fresh.map((q) => q.id))
-        const outdated = sessionQuestionIdsRef.current.some((id) => !freshIds.has(id))
-        if (sessionStartedRef.current && outdated && answeredCountRef.current === 0) {
-          poolRef.current = fresh
+        if (!sessionStartedRef.current) {
+          startSession(fresh)
+          return
+        }
+        poolRef.current = fresh
+        // 途中から再開した研修は、開始時の5問のまま続ける
+        if (resumedRef.current || answeredCountRef.current > 0) return
+        // 古い問題一覧で始めていた場合: 問題がもう無ければ最新の問題で始め直し、
+        // 残っていれば内容だけ最新にする(問題シートの修正をすぐ反映するため)
+        const byId = new Map(fresh.map((q) => [q.id, q]))
+        if (sessionQuestionIdsRef.current.some((id) => !byId.has(id))) {
           beginNewSession(fresh)
           return
         }
-        startSession(fresh)
+        setSession((prev) =>
+          prev ? { ...prev, questions: prev.questions.map((q) => byId.get(q.id) ?? q) } : prev,
+        )
       })
       .catch(() => {
-        if (!hasCache) setLoadError('研修問題の取得に失敗しました。通信環境を確認してもう一度お試しください。')
+        if (!sessionStartedRef.current) setLoadError('問題を取得できませんでした。通信を確認して再度お試しください。')
       })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -184,6 +203,7 @@ export default function Training() {
       sessionId: session.sessionId,
       day: todayJst(),
       questionIds: session.questions.map((q) => q.id),
+      questions: session.questions,
       reviewId: session.reviewId,
       stepIndex,
       scores,
@@ -298,10 +318,17 @@ export default function Training() {
     }, MAX_RECORD_MS)
   }
 
-  // 録音を終えたら、すぐに採点せず、認識された文章を確認・修正してもらう
-  function finishRecording() {
-    const transcript = speechRef.current?.stop() ?? ''
+  // 録音を終えたら、すぐに採点せず、認識された文章を確認・修正してもらう。
+  // 音声認識は止めてから最後の言葉が届くまで少し時間がかかるため、それを待ってから表示する。
+  async function finishRecording() {
+    if (finishingRef.current) return
+    finishingRef.current = true
+    setStopping(true)
+    if (maxTimerRef.current !== null) window.clearTimeout(maxTimerRef.current)
     voiceStatsRef.current = voiceRef.current?.stop()
+    const transcript = (await speechRef.current?.stop()) ?? ''
+    finishingRef.current = false
+    setStopping(false)
     stopMediaTracks()
     setTextAnswer(transcript)
     setRecognizedEmpty(transcript.trim().length === 0)
@@ -328,7 +355,7 @@ export default function Training() {
     const nextScores = { ...scores, [currentQuestion.id]: score }
     answeredCountRef.current = Object.keys(nextScores).length
     setScores(nextScores)
-    setReviewMarks((prev) => ({ ...prev, [currentQuestion.id]: !score.passed }))
+    setReviewMarks((prev) => ({ ...prev, [currentQuestion.id]: prev[currentQuestion.id] ?? false }))
     setTextError('')
     setPhase('result')
     sendProgress({
@@ -443,7 +470,10 @@ export default function Training() {
       )}
 
       <div className="quiz-card">
-        <p className="situation">{currentQuestion.situation}</p>
+        <p className="situation">
+          <span className="review-tag category-tag">{currentQuestion.category || '遊技延長'}</span>{' '}
+          {currentQuestion.situation}
+        </p>
         <p className="customer-line">
           お客様
           {/[「(（]/.test(currentQuestion.customerLine)
@@ -515,8 +545,14 @@ export default function Training() {
               ● 録音中です。話し終えたら下のボタンを押してください({Math.floor(elapsedMs / 1000)}秒経過)
             </p>
             {liveTranscript && <p className="live-transcript">聞き取り中: {liveTranscript}</p>}
-            <button className="button" onClick={handleStopRecording} disabled={elapsedMs < MIN_RECORD_MS}>
-              {elapsedMs < MIN_RECORD_MS
+            <button
+              className="button"
+              onClick={handleStopRecording}
+              disabled={stopping || elapsedMs < MIN_RECORD_MS}
+            >
+              {stopping
+                ? '聞き取り中...'
+                : elapsedMs < MIN_RECORD_MS
                 ? `もう少しお待ちください(あと${Math.ceil((MIN_RECORD_MS - elapsedMs) / 1000)}秒)`
                 : '話し終えた'}
             </button>

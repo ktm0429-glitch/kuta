@@ -9,6 +9,7 @@ export interface Checkpoint {
 export interface QuizQuestion {
   id: string
   ageBand: AgeBand
+  category?: '遊技延長' | '判断の境界'
   situation: string
   customerLine: string
   modelAnswer: string

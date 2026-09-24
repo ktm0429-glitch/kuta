@@ -7,6 +7,7 @@ export interface SavedProgress {
   sessionId: string
   day: string
   questionIds: string[]
+  questions?: QuizQuestion[]
   reviewId: string | null
   stepIndex: number
   scores: Record<string, AnswerScore>
@@ -108,13 +109,15 @@ export function pickQuestions(
 ): { questions: QuizQuestion[]; reviewId: string | null } {
   const reviewId = loadReviewList(storeId, staffId).find((id) => pool.some((q) => q.id === id)) ?? null
   const recent = loadRecent(storeId, staffId)
-  const rest = pool.filter((q) => q.id !== reviewId)
-  const fresh = shuffle(rest.filter((q) => !recent.includes(q.id)))
-  const seen = shuffle(rest.filter((q) => recent.includes(q.id)))
   const reviewQuestion = pool.find((q) => q.id === reviewId)
-  const others = [...fresh, ...seen].slice(0, reviewQuestion ? count - 1 : count)
-  return {
-    questions: reviewQuestion ? [reviewQuestion, ...others] : others,
-    reviewId: reviewQuestion ? reviewQuestion.id : null,
+  const rest = shuffle(pool.filter(q=>q.id!==reviewId && !recent.includes(q.id)))
+     .concat(shuffle(pool.filter(q=>q.id!==reviewId && recent.includes(q.id))))
+  const selected:QuizQuestion[]=reviewQuestion?[reviewQuestion]:[]
+  const coreCount=selected.filter(q=>q.category!=='判断の境界').length
+  selected.push(...rest.filter(q=>q.category!=='判断の境界').slice(0,Math.max(0,4-coreCount)))
+  if(!selected.some(q=>q.category==='判断の境界')){
+   const boundary=rest.find(q=>q.category==='判断の境界');if(boundary)selected.push(boundary)
   }
+  for(const q of rest)if(selected.length<count&&!selected.some(s=>s.id===q.id))selected.push(q)
+  return {questions:selected.slice(0,count),reviewId:reviewQuestion?.id??null}
 }

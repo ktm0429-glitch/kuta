@@ -86,8 +86,9 @@ export class SpeechToText {
     }
   }
 
-  stop(): string {
+  async stop(): Promise<string> {
     this.stopped = true
+    const recognition = this.recognition
     if (this.recognition && !this.restarting) {
       try {
         this.recognition.stop()
@@ -95,6 +96,7 @@ export class SpeechToText {
         // ignore
       }
     }
+    if (recognition) await new Promise<void>(resolve=>{const old=recognition.onend;recognition.onend=()=>{old?.();resolve()};setTimeout(resolve,1200)})
     return (this.finalText + this.interimText).trim()
   }
 

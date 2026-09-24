@@ -13,35 +13,30 @@ export function normalizeText(text: string): string {
 // 法令や業界ルール(のめり込み防止を含む)上問題になるおそれがあるため、
 // 回答に含まれていたら注意を出し、合格の目安にしない。
 export const NG_PHRASES = [
+  // 出玉・当たり・設定を期待させる
   '出ます', '出る台', '出そう', '出やすい', 'よく出', '当たります', '当たりそう', '当たりやすい',
   'あたります', 'あたりそう', 'よく当', '次は当', 'もうすぐ当', 'よく動', '高設定', '設定がいい',
-  '設定が良', '設定入', 'まだいけ', 'まだ行け', '取り返', 'とりかえせ', '爆発',
+  '設定が良', '設定入', 'まだいけ', 'まだ行け', '爆発', '必ず勝てます', '絶対勝てます',
+  // 負けを取り返すようあおる
+  '取り返', 'とりかえせ', '取り戻せ',
+  // 遊技を続けるよう直接すすめる・引き止める
   'もう少し遊んで', 'もうちょっと遊んで', 'もう少し打って', 'もうちょっと打って', 'もう少し続け',
   'まだ帰らないで', 'やめないで', '帰らないで',
+  // 確約できない約束
+  '空けておきます', '確保しておきます',
 ]
-
-// ---- 確認ポイントが登録されていない問題用の予備の採点 ----
-// (文字2つずつの組の重なり具合で、模範解答との近さを見る簡易的な方法)
-function bigrams(text: string): Set<string> {
-  const grams = new Set<string>()
-  for (let i = 0; i < text.length - 1; i++) grams.add(text.slice(i, i + 2))
-  return grams
-}
-
-function diceSimilarity(a: string, b: string): number {
-  const setA = bigrams(normalizeText(a))
-  const setB = bigrams(normalizeText(b))
-  if (setA.size === 0 || setB.size === 0) return 0
-  let overlap = 0
-  setA.forEach((g) => {
-    if (setB.has(g)) overlap++
-  })
-  return (2 * overlap) / (setA.size + setB.size)
-}
-
-function similarityToModel(text: string, modelAnswer: string): number {
-  const spoken = [...modelAnswer.matchAll(/「([^」]+)」/g)].map((m) => m[1])
-  return Math.max(...[modelAnswer, ...spoken].map((r) => diceSimilarity(text, r)))
+function phrasePresent(text:string,phrase:string):boolean {
+ const key=normalizeText(phrase)
+ if(!key)return false
+ return String(text).split(/[。！？!?\n]/).some(sentence=>{
+  const s=normalizeText(sentence);let from=0
+  while(from<=s.length){const pos=s.indexOf(key,from);if(pos<0)return false
+   const tail=s.slice(pos+key.length,pos+key.length+14)
+   if(!/^(?:は|を|も|が|に)?(?:いたしません|しません|できません|出来ません|しない|できない|出来ない|不要|お断り)/.test(tail))return true
+   from=pos+key.length
+  }
+  return false
+ })
 }
 
 export interface VoiceStats {
@@ -61,8 +56,8 @@ export function scoreVoice(stats: VoiceStats): number {
   return Math.max(0, Math.min(100, Math.round(score)))
 }
 
-// 確認ポイントが3つなら2つ以上、2つなら2つとも確認できれば合格の目安
-export const PASS_THRESHOLD = 60
+// 2番目の確認ポイント（解決・提案）を40点、他を各30点とする
+export const PASS_THRESHOLD = 70
 const NG_SCORE_CAP = 30
 
 export function scoreAnswer(
@@ -71,26 +66,23 @@ export function scoreAnswer(
   mode: 'voice' | 'text',
   voiceStats?: VoiceStats,
 ): AnswerScore {
-  const normalized = normalizeText(text)
   const matched: string[] = []
   const missing: { label: string; example: string }[] = []
 
   let contentScore: number
   if (question.checkpoints.length > 0) {
     for (const cp of question.checkpoints) {
-      const hit = cp.phrases.some((p) => {
-        const np = normalizeText(p)
-        return np !== '' && normalized.includes(np)
-      })
+      const hit = cp.phrases.some((p) => phrasePresent(text,p))
       if (hit) matched.push(cp.label)
       else missing.push({ label: cp.label, example: cp.phrases[0] ?? '' })
     }
-    contentScore = Math.round((100 * matched.length) / question.checkpoints.length)
+    const weight = question.checkpoints.map((_,i)=>i===1?40:30)
+    contentScore = Math.round(100*question.checkpoints.reduce((sum,cp,i)=>sum+(matched.includes(cp.label)?weight[i]:0),0)/weight.reduce((x,y)=>x+y,0))
   } else {
-    contentScore = Math.min(100, Math.round(similarityToModel(text, question.modelAnswer) * 200))
+    contentScore = 0 // 基準のない問題は自動採点しない。問題シートで設定する
   }
 
-  const ngHits = NG_PHRASES.filter((p) => normalized.includes(normalizeText(p)))
+  const ngHits = NG_PHRASES.filter((p) => phrasePresent(text,p))
   if (ngHits.length > 0) contentScore = Math.min(contentScore, NG_SCORE_CAP)
 
   return {

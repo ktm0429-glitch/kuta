@@ -582,3 +582,10 @@ button:disabled {
   background: var(--gold-soft);
   color: var(--gold-dark);
 }
+
+.category-tag {
+  margin-left: 0;
+  background: #e8f1fb;
+  border-color: #9cc2ea;
+  color: #1d5a96;
+}

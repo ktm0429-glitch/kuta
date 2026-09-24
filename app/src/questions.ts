@@ -19,6 +19,7 @@ export function normalizeQuestion(raw: unknown): QuizQuestion | null {
     id,
     ageBand: (q.ageBand as AgeBand) ?? 'middle',
     situation,
+    category: q.category === '判断の境界' ? '判断の境界' as const : '遊技延長' as const,
     customerLine: typeof q.customerLine === 'string' ? q.customerLine : '',
   }
 
