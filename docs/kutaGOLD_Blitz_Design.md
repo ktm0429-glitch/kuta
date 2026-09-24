@@ -1,6 +1,7 @@
 # kutaGOLD Blitz v1.0 — XAUUSD 短期特化EA 設計書
 
-ファイル: `MQL5/Experts/kutaGOLD/kutaGOLD_Blitz.mq5`（単体完結・外部依存なし）
+ファイル: `MQL5/Experts/kutaGOLD_Blitz.mq5`（単体完結・外部依存なし）
+配置先(PC): `C:\Users\ktm04\AppData\Roaming\MetaQuotes\Terminal\30CF3465B87D17D00E7FD8366A68D7C6\MQL5\Experts\kutaGOLD_Blitz.mq5`
 Magic: `5100001`（51=Blitz v1 / 00=環境 / 01=XAUUSD）
 
 ---
