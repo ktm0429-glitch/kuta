@@ -8,21 +8,28 @@ async function callApi<TResponse>(
   action: string,
   payload: object,
 ): Promise<TResponse> {
-  const res = await fetch(API_URL, {
-    method: 'POST',
-    // text/plain にすることで、ブラウザの事前確認通信(CORS preflight)が
-    // 発生せず、Google Apps Script 側でもそのままJSONとして受け取れる。
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({ action, ...payload }),
-  })
-  if (!res.ok) {
-    throw new Error(`通信に失敗しました(status: ${res.status})`)
+  // 回線が途切れたままでも無期限に読み込み中にならないようにする。
+  const controller = new AbortController()
+  const timeout = window.setTimeout(() => controller.abort(), action === 'complete' ? 30000 : 10000)
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      // text/plain にすることでCORSの事前確認通信を増やさない。
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action, ...payload }),
+      signal: controller.signal,
+    })
+    if (!res.ok) {
+      throw new Error(`通信に失敗しました(status: ${res.status})`)
+    }
+    const data = (await res.json()) as TResponse & ApiErrorBody
+    if (data && typeof data === 'object' && data.error) {
+      throw new Error(data.error)
+    }
+    return data
+  } finally {
+    window.clearTimeout(timeout)
   }
-  const data = (await res.json()) as TResponse & ApiErrorBody
-  if (data && typeof data === 'object' && data.error) {
-    throw new Error(data.error)
-  }
-  return data
 }
 
 export interface RegisterStaffRequest {
@@ -82,7 +89,7 @@ export interface ProgressRequest {
   answers: { quizId: string; transcript: string }[]
 }
 
-// 研修の開始時と1問ごとに、途中経過をサーバーに記録する。
+// 研修開始時と3問回答時に、途中経過をサーバーに記録する。
 // 画面の操作を待たせないよう、結果は待たずに送りっぱなしにする(失敗しても研修は続けられる)。
 export function sendProgress(req: ProgressRequest): void {
   callApi('progress', req).catch(() => {})

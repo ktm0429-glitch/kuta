@@ -9,7 +9,8 @@ import { loadProgress } from '../trainingStore'
 
 export default function ModuleList() {
   const navigate = useNavigate()
-  const profile = loadProfile()
+  // 再描画のたびに別オブジェクトを作ると、下の通信エフェクトが繰り返し実行される。
+  const [profile] = useState(() => loadProfile())
   // 前回表示したポイント状況がキャッシュにあれば、通信を待たずにすぐ表示する。
   // 裏側では常に最新の状況を取得し、届き次第画面を静かに更新する。
   const cacheKey = profile ? statusCacheKey(profile.storeId, profile.staffId) : null
@@ -36,7 +37,7 @@ export default function ModuleList() {
         if (cacheKey) writeCache(cacheKey, { points: res.points, awardedToday: res.awardedToday })
       })
       .catch(() => {
-        if (!cached) setLoadError('現在のポイント状況を取得できませんでした。ネットワーク環境をご確認ください。')
+        if (!cached) setLoadError('ポイントは通信回復後に確認できます。研修は始められます。')
       })
       .finally(() => setLoading(false))
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -65,7 +66,7 @@ export default function ModuleList() {
       </div>
 
       <div className="points-badge">
-        {loading ? '読み込み中...' : loadError ? loadError : `現在の保有ポイント: ${points} pt`}
+        {loading ? 'ポイントを確認中（研修は始められます）' : loadError ? loadError : `現在の保有ポイント: ${points} pt`}
       </div>
       {!loading && !loadError && (
         <p className="daily-note">

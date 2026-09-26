@@ -9,6 +9,7 @@ import type { VoiceStats } from '../scoring'
 import { normalizeQuestions } from '../questions'
 import { readCache, statusCacheKey, writeCache } from '../cache'
 import type { CachedStatus } from '../cache'
+import { defaultQuestions } from '../defaultQuestions'
 import {
   clearProgress,
   loadProgress,
@@ -160,10 +161,11 @@ export default function Training() {
       beginNewSession(pool)
     }
 
-    // 待ち時間を減らすため、前回取得した問題一覧(または途中の研修)があれば通信を待たずにすぐ始める。
-    // 裏側では常に最新の問題一覧を取得し、まだ答えていない問題は最新の内容に差し替える。
+    // 通信を待たずにすぐ始める。前回取得した問題一覧(なければ画面に同梱の問題)を使い、
+    // 裏側で最新の問題一覧を取得して、まだ答えていない問題は最新の内容に差し替える。
     const usable = (list: unknown) => normalizeQuestions(list).filter((q) => q.checkpoints.length > 0)
-    startSession(usable(readCache<unknown[]>(QUESTIONS_CACHE_KEY)))
+    const cached = usable(readCache<unknown[]>(QUESTIONS_CACHE_KEY))
+    startSession(cached.length >= QUESTIONS_PER_CHALLENGE ? cached : defaultQuestions)
     listQuestions()
       .then((res) => {
         const fresh = usable(res.questions)
@@ -358,6 +360,8 @@ export default function Training() {
     setReviewMarks((prev) => ({ ...prev, [currentQuestion.id]: prev[currentQuestion.id] ?? false }))
     setTextError('')
     setPhase('result')
+    // 通信の回数を減らすため、途中経過は開始時と3問目の回答時だけ送る(完了時に5問分をまとめて送る)
+    if (answeredCountRef.current !== 3) return
     sendProgress({
       sessionId: session!.sessionId,
       storeId: profile!.storeId,

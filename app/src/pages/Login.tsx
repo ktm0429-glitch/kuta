@@ -10,7 +10,6 @@ export default function Login() {
   const [storeId, setStoreId] = useState('')
   const [fullName, setFullName] = useState('')
   const [error, setError] = useState('')
-  const [submitting, setSubmitting] = useState(false)
 
   // 一度登録したスタッフは、次回以降はログイン画面を出さず
   // 研修メニューに直接進む(端末に登録情報が残っている間のみ)。
@@ -20,7 +19,7 @@ export default function Login() {
     }
   }, [navigate])
 
-  async function handleSubmit(e: FormEvent) {
+  function handleSubmit(e: FormEvent) {
     e.preventDefault()
     if (!storeId) {
       setError('店舗を選択してください。')
@@ -32,22 +31,15 @@ export default function Login() {
       return
     }
     setError('')
-    setSubmitting(true)
     try {
       const store = stores.find((s) => s.id === storeId)
       const storeName = store?.name ?? storeId
-      await registerStaff({
-        storeId,
-        storeName,
-        staffId: trimmedName,
-        displayName: trimmedName,
-      })
       saveProfile({ storeId, storeName, staffId: trimmedName, displayName: trimmedName })
+      // 台帳(スタッフシート)への登録は裏側で送り、通信を待たずにメニューへ進む
+      registerStaff({ storeId, storeName, staffId: trimmedName, displayName: trimmedName }).catch(() => {})
       navigate('/modules')
     } catch {
-      setError('登録に失敗しました。通信環境を確認してもう一度お試しください。')
-    } finally {
-      setSubmitting(false)
+      setError('この端末に名前を保存できませんでした。ブラウザの設定をご確認ください。')
     }
   }
 
@@ -93,9 +85,7 @@ export default function Login() {
           これまでのポイントがそのまま引き継がれます。
         </p>
         {error && <p className="error">{error}</p>}
-        <button type="submit" disabled={submitting}>
-          {submitting ? '登録中...' : 'はじめる'}
-        </button>
+        <button type="submit">はじめる</button>
       </form>
     </div>
   )
