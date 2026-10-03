@@ -2,6 +2,7 @@
 //| kutaGOLD_PivotSR_EA.mq5                                          |
 //| Pivot + auto horizontal-line (confluence) EA, M15                |
 //| Presets: XAUUSD / USDJPY / EURUSD / BTCUSD (AUTO by symbol name) |
+//| Default hours assume TitanFX server time (GMT+2/+3): London = 10:00 |
 //| Modules: zone bounce (range) / zone breakout (trend) /           |
 //|          session range breakout (Asian range -> London)         |
 //+------------------------------------------------------------------+
@@ -73,8 +74,8 @@ input double M_BreakSLATR    = 1.00;
 input double M_TPFallbackATR = 2.00;
 input double M_MinRisk       = 1.5;     // min SL distance in price units
 input bool   M_UseSession    = false;
-input int    M_RangeStartHr  = 1;       // server hour
-input int    M_RangeEndHr    = 9;
+input int    M_RangeStartHr  = 2;       // server hour
+input int    M_RangeEndHr    = 10;
 input int    M_TradeEndHr    = 19;
 input bool   M_NoWeekend     = false;
 input int    M_FridayStopHr  = 21;      // no new entries on Friday after this hour (24 = off)
@@ -138,28 +139,28 @@ void SetPreset(const ENUM_PRESET p)
          g_presetName = "XAUUSD";
          g_p.roundStep = 10.0;   g_p.maxSpread = 50;   g_p.zoneATR = 0.30; g_p.adxTrend = 25;
          g_p.slBufATR = 0.5;     g_p.breakSLATR = 1.0; g_p.tpFallbackATR = 2.0; g_p.minRisk = 1.5;
-         g_p.useSession = false; g_p.rangeStartHr = 1; g_p.rangeEndHr = 9; g_p.tradeEndHr = 19;
+         g_p.useSession = false; g_p.rangeStartHr = 2; g_p.rangeEndHr = 10; g_p.tradeEndHr = 19;
          g_p.noWeekend = false;  g_p.fridayStopHr = 21;
          break;
       case PRESET_USDJPY:
          g_presetName = "USDJPY";
          g_p.roundStep = 1.0;    g_p.maxSpread = 30;   g_p.zoneATR = 0.30; g_p.adxTrend = 25;
          g_p.slBufATR = 0.5;     g_p.breakSLATR = 1.0; g_p.tpFallbackATR = 2.0; g_p.minRisk = 0.15;
-         g_p.useSession = true;  g_p.rangeStartHr = 1; g_p.rangeEndHr = 9; g_p.tradeEndHr = 19;
+         g_p.useSession = true;  g_p.rangeStartHr = 2; g_p.rangeEndHr = 10; g_p.tradeEndHr = 19;
          g_p.noWeekend = false;  g_p.fridayStopHr = 20;
          break;
       case PRESET_EURUSD:
          g_presetName = "EURUSD";
          g_p.roundStep = 0.0050; g_p.maxSpread = 30;   g_p.zoneATR = 0.30; g_p.adxTrend = 25;
          g_p.slBufATR = 0.5;     g_p.breakSLATR = 1.0; g_p.tpFallbackATR = 2.0; g_p.minRisk = 0.0012;
-         g_p.useSession = true;  g_p.rangeStartHr = 1; g_p.rangeEndHr = 9; g_p.tradeEndHr = 19;
+         g_p.useSession = true;  g_p.rangeStartHr = 2; g_p.rangeEndHr = 10; g_p.tradeEndHr = 19;
          g_p.noWeekend = false;  g_p.fridayStopHr = 20;
          break;
       case PRESET_BTCUSD:
          g_presetName = "BTCUSD";
          g_p.roundStep = 1000.0; g_p.maxSpread = 6000; g_p.zoneATR = 0.30; g_p.adxTrend = 25;
          g_p.slBufATR = 0.5;     g_p.breakSLATR = 1.5; g_p.tpFallbackATR = 2.5; g_p.minRisk = 150.0;
-         g_p.useSession = false; g_p.rangeStartHr = 1; g_p.rangeEndHr = 9; g_p.tradeEndHr = 19;
+         g_p.useSession = false; g_p.rangeStartHr = 2; g_p.rangeEndHr = 10; g_p.tradeEndHr = 19;
          g_p.noWeekend = true;   g_p.fridayStopHr = 24;
          break;
       default:
