@@ -1,12 +1,15 @@
 //+------------------------------------------------------------------+
 //| kutaGOLD_PivotSR_EA.mq5                                          |
-//| Pivot + auto horizontal-line (confluence) EA for XAUUSD / M15    |
+//| Pivot + auto horizontal-line (confluence) EA, M15                |
+//| Presets: XAUUSD / USDJPY / EURUSD / BTCUSD (AUTO by symbol name) |
+//| Modules: zone bounce (range) / zone breakout (trend) /           |
+//|          session range breakout (Asian range -> London)         |
 //+------------------------------------------------------------------+
 #property copyright "kuta"
-#property version   "0.10"
+#property version   "0.20"
 #property description "Daily pivot + prev H/L + round numbers + swing clusters."
-#property description "Zones where >= InpMinSources sources overlap are drawn as H-lines and traded."
-#property description "Range (ADX low) = bounce / Trend (ADX high) = breakout."
+#property description "Zones where >= MinSources overlap are drawn as H-lines and traded."
+#property description "Session breakout uses the pre-London range. Hours are SERVER time."
 
 #include <Trade/Trade.mqh>
 
@@ -17,25 +20,33 @@
 #define SRC_SWING  8
 #define SRC_MULTI  16   // swing zone touched 2+ times
 
+enum ENUM_PRESET
+  {
+   PRESET_AUTO = 0,    // detect from symbol name
+   PRESET_XAUUSD,
+   PRESET_USDJPY,
+   PRESET_EURUSD,
+   PRESET_BTCUSD,
+   PRESET_MANUAL       // use the manual values below
+  };
+
 //--- inputs
 input group "=== General ===";
+input ENUM_PRESET InpPreset  = PRESET_AUTO;
 input long   InpMagic        = 20251002;
-input double InpLots         = 0.10;
-input int    InpMaxSpread    = 50;      // points
+input double InpLots         = 0.10;    // fixed lots (used when InpRiskPct = 0)
+input double InpRiskPct      = 0.5;     // risk per trade, % of equity (0 = fixed lots)
 input int    InpCooldownSec  = 60;
 input int    InpDeviation    = 30;      // points
 
 input group "=== Indicators ===";
 input int    InpATRPeriod    = 14;
 input int    InpADXPeriod    = 14;
-input double InpADXTrend     = 25.0;    // ADX >= : breakout mode, else bounce mode
 
 input group "=== Levels ===";
-input double InpRoundStep    = 10.0;    // round number step (price units)
-input int    InpRoundCount   = 4;       // steps above/below price
+input int    InpRoundCount   = 4;       // round-number steps above/below price
 input int    InpSwingBars    = 400;     // M15 bars scanned for swings
 input int    InpSwingStrength= 5;       // bars each side for a swing point
-input double InpZoneATR      = 0.30;    // cluster width = ATR * this
 input int    InpMinSources   = 2;       // distinct sources needed for a valid zone
 input bool   InpUsePivot     = true;
 input bool   InpUsePrevHL    = true;
@@ -45,16 +56,34 @@ input bool   InpUseSwing     = true;
 input group "=== Entry / Exit ===";
 input bool   InpTradeBounce  = true;
 input bool   InpTradeBreak   = true;
-input double InpSLBufATR     = 0.50;    // SL buffer beyond zone (bounce)
-input double InpBreakSLATR   = 1.00;    // SL distance from zone (breakout)
-input double InpBreakConfATR = 0.10;    // breakout close must exceed zone by ATR*this
-input double InpTPFallbackATR= 2.00;    // TP when no next zone exists
+input double InpBreakConfATR = 0.10;    // breakout close must exceed level by ATR*this
 input double InpMinRR        = 1.0;     // skip trade if reward/risk below this
+
+input group "=== Session breakout ===";
+input double InpRangeMinATR  = 0.5;     // skip day if range narrower than ATR*this
+input double InpRangeMaxATR  = 4.0;     // skip day if range wider than ATR*this
+
+input group "=== Manual values (PRESET_MANUAL only) ===";
+input double M_RoundStep     = 10.0;
+input int    M_MaxSpread     = 50;      // points
+input double M_ZoneATR       = 0.30;
+input double M_ADXTrend      = 25.0;
+input double M_SLBufATR      = 0.50;
+input double M_BreakSLATR    = 1.00;
+input double M_TPFallbackATR = 2.00;
+input double M_MinRisk       = 1.5;     // min SL distance in price units
+input bool   M_UseSession    = false;
+input int    M_RangeStartHr  = 1;       // server hour
+input int    M_RangeEndHr    = 9;
+input int    M_TradeEndHr    = 19;
+input bool   M_NoWeekend     = false;
+input int    M_FridayStopHr  = 21;      // no new entries on Friday after this hour (24 = off)
 
 input group "=== Drawing ===";
 input bool   InpDrawLines    = true;
 input color  InpColorWeak    = clrDimGray;
 input color  InpColorStrong  = clrGold;
+input color  InpColorRange   = clrDodgerBlue;
 
 //--- types
 struct SLevel
@@ -65,19 +94,108 @@ struct SLevel
    int    swingCount;
   };
 
+struct SPreset
+  {
+   double roundStep;
+   int    maxSpread;
+   double zoneATR;
+   double adxTrend;
+   double slBufATR;
+   double breakSLATR;
+   double tpFallbackATR;
+   double minRisk;
+   bool   useSession;
+   int    rangeStartHr;
+   int    rangeEndHr;
+   int    tradeEndHr;
+   bool   noWeekend;
+   int    fridayStopHr;
+  };
+
 //--- globals
 CTrade   g_trade;
+SPreset  g_p;
+string   g_presetName = "";
 int      g_atrHandle = INVALID_HANDLE;
 int      g_adxHandle = INVALID_HANDLE;
 datetime g_lastBar   = 0;
 datetime g_lastEntry = 0;
+datetime g_sessionDay = 0;     // day on which a session trade was already taken
+double   g_rangeHi = 0, g_rangeLo = 0;
+bool     g_rangeValid = false;
 SLevel   g_raw[];
 SLevel   g_zones[];
 string   g_prefix    = "kPSR_";
 
 //+------------------------------------------------------------------+
+//| Presets                                                          |
+//+------------------------------------------------------------------+
+void SetPreset(const ENUM_PRESET p)
+  {
+   switch(p)
+     {
+      case PRESET_XAUUSD:
+         g_presetName = "XAUUSD";
+         g_p.roundStep = 10.0;   g_p.maxSpread = 50;   g_p.zoneATR = 0.30; g_p.adxTrend = 25;
+         g_p.slBufATR = 0.5;     g_p.breakSLATR = 1.0; g_p.tpFallbackATR = 2.0; g_p.minRisk = 1.5;
+         g_p.useSession = false; g_p.rangeStartHr = 1; g_p.rangeEndHr = 9; g_p.tradeEndHr = 19;
+         g_p.noWeekend = false;  g_p.fridayStopHr = 21;
+         break;
+      case PRESET_USDJPY:
+         g_presetName = "USDJPY";
+         g_p.roundStep = 1.0;    g_p.maxSpread = 30;   g_p.zoneATR = 0.30; g_p.adxTrend = 25;
+         g_p.slBufATR = 0.5;     g_p.breakSLATR = 1.0; g_p.tpFallbackATR = 2.0; g_p.minRisk = 0.15;
+         g_p.useSession = true;  g_p.rangeStartHr = 1; g_p.rangeEndHr = 9; g_p.tradeEndHr = 19;
+         g_p.noWeekend = false;  g_p.fridayStopHr = 20;
+         break;
+      case PRESET_EURUSD:
+         g_presetName = "EURUSD";
+         g_p.roundStep = 0.0050; g_p.maxSpread = 30;   g_p.zoneATR = 0.30; g_p.adxTrend = 25;
+         g_p.slBufATR = 0.5;     g_p.breakSLATR = 1.0; g_p.tpFallbackATR = 2.0; g_p.minRisk = 0.0012;
+         g_p.useSession = true;  g_p.rangeStartHr = 1; g_p.rangeEndHr = 9; g_p.tradeEndHr = 19;
+         g_p.noWeekend = false;  g_p.fridayStopHr = 20;
+         break;
+      case PRESET_BTCUSD:
+         g_presetName = "BTCUSD";
+         g_p.roundStep = 1000.0; g_p.maxSpread = 6000; g_p.zoneATR = 0.30; g_p.adxTrend = 25;
+         g_p.slBufATR = 0.5;     g_p.breakSLATR = 1.5; g_p.tpFallbackATR = 2.5; g_p.minRisk = 150.0;
+         g_p.useSession = false; g_p.rangeStartHr = 1; g_p.rangeEndHr = 9; g_p.tradeEndHr = 19;
+         g_p.noWeekend = true;   g_p.fridayStopHr = 24;
+         break;
+      default:
+         g_presetName = "MANUAL";
+         g_p.roundStep = M_RoundStep;   g_p.maxSpread = M_MaxSpread;   g_p.zoneATR = M_ZoneATR;
+         g_p.adxTrend = M_ADXTrend;     g_p.slBufATR = M_SLBufATR;     g_p.breakSLATR = M_BreakSLATR;
+         g_p.tpFallbackATR = M_TPFallbackATR; g_p.minRisk = M_MinRisk;
+         g_p.useSession = M_UseSession; g_p.rangeStartHr = M_RangeStartHr;
+         g_p.rangeEndHr = M_RangeEndHr; g_p.tradeEndHr = M_TradeEndHr;
+         g_p.noWeekend = M_NoWeekend;   g_p.fridayStopHr = M_FridayStopHr;
+         break;
+     }
+  }
+
+ENUM_PRESET DetectPreset()
+  {
+   string s = _Symbol;
+   StringToUpper(s);
+   if(StringFind(s, "XAU") >= 0)    return PRESET_XAUUSD;
+   if(StringFind(s, "USDJPY") >= 0) return PRESET_USDJPY;
+   if(StringFind(s, "EURUSD") >= 0) return PRESET_EURUSD;
+   if(StringFind(s, "BTC") >= 0)    return PRESET_BTCUSD;
+   return PRESET_MANUAL;
+  }
+
+//+------------------------------------------------------------------+
 int OnInit()
   {
+   ENUM_PRESET p = (InpPreset == PRESET_AUTO) ? DetectPreset() : InpPreset;
+   SetPreset(p);
+   if(InpPreset == PRESET_AUTO && p == PRESET_MANUAL)
+      Print("Symbol not recognised for AUTO preset; using MANUAL values.");
+   PrintFormat("Preset: %s (roundStep=%g maxSpread=%d minRisk=%g session=%s)",
+               g_presetName, g_p.roundStep, g_p.maxSpread, g_p.minRisk,
+               g_p.useSession ? "on" : "off");
+
    g_atrHandle = iATR(_Symbol, _Period, InpATRPeriod);
    g_adxHandle = iADX(_Symbol, _Period, InpADXPeriod);
    if(g_atrHandle == INVALID_HANDLE || g_adxHandle == INVALID_HANDLE)
@@ -136,11 +254,11 @@ void CollectPivots()
 
 void CollectRound(const double price)
   {
-   if(!InpUseRound || InpRoundStep <= 0)
+   if(!InpUseRound || g_p.roundStep <= 0)
       return;
-   double base = MathFloor(price / InpRoundStep) * InpRoundStep;
+   double base = MathFloor(price / g_p.roundStep) * g_p.roundStep;
    for(int i = -InpRoundCount; i <= InpRoundCount + 1; i++)
-      AddRaw(base + i * InpRoundStep, 0.8, SRC_ROUND);
+      AddRaw(base + i * g_p.roundStep, 0.8, SRC_ROUND);
   }
 
 void CollectSwings()
@@ -225,34 +343,49 @@ void BuildZones(const double tol)
      }
   }
 
-void DrawZones()
+//+------------------------------------------------------------------+
+//| Drawing                                                          |
+//+------------------------------------------------------------------+
+void DrawLine(const string name, const double price, const color clr,
+              const ENUM_LINE_STYLE style, const string txt)
+  {
+   if(!ObjectCreate(0, name, OBJ_HLINE, 0, 0, price))
+      return;
+   ObjectSetInteger(0, name, OBJPROP_COLOR, clr);
+   ObjectSetInteger(0, name, OBJPROP_STYLE, style);
+   ObjectSetInteger(0, name, OBJPROP_WIDTH, 1);
+   ObjectSetInteger(0, name, OBJPROP_BACK, true);
+   ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
+   ObjectSetString(0, name, OBJPROP_TEXT, txt);
+  }
+
+void DrawAll()
   {
    ObjectsDeleteAll(0, g_prefix);
    if(!InpDrawLines)
       return;
    for(int i = 0; i < ArraySize(g_zones); i++)
      {
-      string name = g_prefix + IntegerToString(i);
-      if(!ObjectCreate(0, name, OBJ_HLINE, 0, 0, g_zones[i].price))
-         continue;
       bool strong = (PopCount(g_zones[i].mask) >= 3);
-      ObjectSetInteger(0, name, OBJPROP_COLOR, strong ? InpColorStrong : InpColorWeak);
-      ObjectSetInteger(0, name, OBJPROP_STYLE, strong ? STYLE_SOLID : STYLE_DOT);
-      ObjectSetInteger(0, name, OBJPROP_WIDTH, 1);
-      ObjectSetInteger(0, name, OBJPROP_BACK, true);
-      ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
       string txt = "";
       if((g_zones[i].mask & SRC_PIVOT)  != 0) txt += "P ";
       if((g_zones[i].mask & SRC_PREVHL) != 0) txt += "HL ";
       if((g_zones[i].mask & SRC_ROUND)  != 0) txt += "RN ";
       if((g_zones[i].mask & SRC_SWING)  != 0) txt += "SW ";
-      ObjectSetString(0, name, OBJPROP_TEXT, txt);
+      DrawLine(g_prefix + IntegerToString(i), g_zones[i].price,
+               strong ? InpColorStrong : InpColorWeak,
+               strong ? STYLE_SOLID : STYLE_DOT, txt);
+     }
+   if(g_p.useSession && g_rangeValid)
+     {
+      DrawLine(g_prefix + "RangeHi", g_rangeHi, InpColorRange, STYLE_DASH, "Range Hi");
+      DrawLine(g_prefix + "RangeLo", g_rangeLo, InpColorRange, STYLE_DASH, "Range Lo");
      }
    ChartRedraw();
   }
 
 //+------------------------------------------------------------------+
-//| Trading helpers                                                  |
+//| Safety / time filters                                            |
 //+------------------------------------------------------------------+
 bool HasPosition()
   {
@@ -267,17 +400,33 @@ bool HasPosition()
    return false;
   }
 
+bool TimeAllowed()
+  {
+   MqlDateTime t;
+   TimeToStruct(TimeCurrent(), t);
+   if(g_p.noWeekend && (t.day_of_week == 0 || t.day_of_week == 6))
+      return false;
+   if(t.day_of_week == 5 && t.hour >= g_p.fridayStopHr)
+      return false;
+   return true;
+  }
+
 bool SafetyOK()
   {
-   if(SymbolInfoInteger(_Symbol, SYMBOL_SPREAD) > InpMaxSpread)
+   if(SymbolInfoInteger(_Symbol, SYMBOL_SPREAD) > g_p.maxSpread)
       return false;
    if(TimeCurrent() - g_lastEntry < InpCooldownSec)
+      return false;
+   if(!TimeAllowed())
       return false;
    if(HasPosition())
       return false;
    return true;
   }
 
+//+------------------------------------------------------------------+
+//| Order helpers                                                    |
+//+------------------------------------------------------------------+
 double NextZoneAbove(const double price, const double minGap)
   {
    for(int i = 0; i < ArraySize(g_zones); i++)   // sorted ascending
@@ -294,45 +443,125 @@ double NextZoneBelow(const double price, const double minGap)
    return 0.0;
   }
 
-void Execute(const bool isBuy, const double zone, const double slPrice, const double atr, const string tag)
+double CalcLots(const double riskPrice)
   {
-   double ask = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
-   double bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
-   double entry = isBuy ? ask : bid;
-   double pt = _Point;
-   double minStop = MathMax((double)SymbolInfoInteger(_Symbol, SYMBOL_TRADE_STOPS_LEVEL),
-                            (double)SymbolInfoInteger(_Symbol, SYMBOL_TRADE_FREEZE_LEVEL)) * pt;
+   double lots = InpLots;
+   double tickV = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE);
+   double tickS = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_SIZE);
+   if(InpRiskPct > 0 && tickV > 0 && tickS > 0 && riskPrice > 0)
+     {
+      double money = AccountInfoDouble(ACCOUNT_EQUITY) * InpRiskPct / 100.0;
+      double perLot = riskPrice / tickS * tickV;
+      if(perLot > 0)
+         lots = money / perLot;
+     }
+   double step = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_STEP);
+   double vmin = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN);
+   double vmax = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MAX);
+   if(step > 0) lots = MathFloor(lots / step) * step;
+   return MathMax(vmin, MathMin(vmax, lots));
+  }
 
-   double sl = NormalizeDouble(slPrice, _Digits);
-   double risk = isBuy ? entry - sl : sl - entry;
-   if(risk <= 0 || risk < minStop)
-      return;
+bool Execute(const bool isBuy, const double slPrice, const double atr, const string tag)
+  {
+   double entry = SymbolInfoDouble(_Symbol, isBuy ? SYMBOL_ASK : SYMBOL_BID);
+   double minStop = MathMax((double)SymbolInfoInteger(_Symbol, SYMBOL_TRADE_STOPS_LEVEL),
+                            (double)SymbolInfoInteger(_Symbol, SYMBOL_TRADE_FREEZE_LEVEL)) * _Point;
+
+   // enforce minimum SL distance (price units, per preset)
+   double risk = isBuy ? entry - slPrice : slPrice - entry;
+   double floorRisk = MathMax(g_p.minRisk, minStop);
+   if(risk < floorRisk)
+      risk = floorRisk;
+   double sl = NormalizeDouble(isBuy ? entry - risk : entry + risk, _Digits);
 
    double buf = 0.10 * atr;
    double tp = isBuy ? NextZoneAbove(entry, minStop + buf) : NextZoneBelow(entry, minStop + buf);
    if(tp > 0)
       tp = isBuy ? tp - buf : tp + buf;
    else
-      tp = isBuy ? entry + InpTPFallbackATR * atr : entry - InpTPFallbackATR * atr;
+      tp = isBuy ? entry + g_p.tpFallbackATR * atr : entry - g_p.tpFallbackATR * atr;
    tp = NormalizeDouble(tp, _Digits);
 
    double reward = isBuy ? tp - entry : entry - tp;
    if(reward < minStop || reward < risk * InpMinRR)
-      return;
+      return false;
 
-   double lots = InpLots;
-   double step = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_STEP);
-   double vmin = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN);
-   double vmax = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MAX);
-   if(step > 0) lots = MathFloor(lots / step) * step;
-   lots = MathMax(vmin, MathMin(vmax, lots));
-
+   double lots = CalcLots(risk);
    bool ok = isBuy ? g_trade.Buy(lots, _Symbol, 0.0, sl, tp, tag)
                    : g_trade.Sell(lots, _Symbol, 0.0, sl, tp, tag);
    if(ok)
       g_lastEntry = TimeCurrent();
    else
       PrintFormat("Order failed: %d %s", g_trade.ResultRetcode(), g_trade.ResultRetcodeDescription());
+   return ok;
+  }
+
+//+------------------------------------------------------------------+
+//| Session range breakout                                           |
+//+------------------------------------------------------------------+
+//--- compute today's pre-session range from closed M15 bars (server time)
+void UpdateSessionRange()
+  {
+   g_rangeValid = false;
+   if(!g_p.useSession || g_p.rangeStartHr >= g_p.rangeEndHr)
+      return;
+   MqlRates r[];
+   ArraySetAsSeries(r, true);
+   if(CopyRates(_Symbol, _Period, 0, 200, r) < 10)
+      return;
+   datetime today = r[0].time - (r[0].time % 86400);
+   double hi = 0, lo = 0;
+   int cnt = 0;
+   for(int i = 1; i < ArraySize(r); i++)
+     {
+      if(r[i].time < today)
+         break;
+      MqlDateTime t;
+      TimeToStruct(r[i].time, t);
+      if(t.hour < g_p.rangeStartHr || t.hour >= g_p.rangeEndHr)
+         continue;
+      if(cnt == 0 || r[i].high > hi) hi = r[i].high;
+      if(cnt == 0 || r[i].low  < lo) lo = r[i].low;
+      cnt++;
+     }
+   if(cnt < 4)
+      return;
+   g_rangeHi = hi;
+   g_rangeLo = lo;
+   g_rangeValid = true;
+  }
+
+bool EvaluateSession(const double atr, const MqlRates &r[], const double pdi, const double mdi)
+  {
+   if(!g_p.useSession || !g_rangeValid)
+      return false;
+   MqlDateTime now;
+   TimeToStruct(TimeCurrent(), now);
+   if(now.hour < g_p.rangeEndHr || now.hour >= g_p.tradeEndHr)
+      return false;
+   datetime today = TimeCurrent() - (TimeCurrent() % 86400);
+   if(g_sessionDay == today)
+      return false;
+   double width = g_rangeHi - g_rangeLo;
+   if(width < InpRangeMinATR * atr || width > InpRangeMaxATR * atr)
+      return false;
+
+   double conf = InpBreakConfATR * atr;
+   double c1 = r[1].close, c2 = r[2].close;
+   if(c2 <= g_rangeHi && c1 > g_rangeHi + conf && pdi > mdi)
+     {
+      if(Execute(true, g_rangeHi - g_p.breakSLATR * atr, atr, "PSR session"))
+         g_sessionDay = today;
+      return true;
+     }
+   if(c2 >= g_rangeLo && c1 < g_rangeLo - conf && mdi > pdi)
+     {
+      if(Execute(false, g_rangeLo + g_p.breakSLATR * atr, atr, "PSR session"))
+         g_sessionDay = today;
+      return true;
+     }
+   return false;
   }
 
 //+------------------------------------------------------------------+
@@ -352,8 +581,11 @@ void EvaluateSignals(const double atr)
       CopyBuffer(g_adxHandle, 2, 1, 1, mdi) < 1)
       return;
 
-   double tol = atr * InpZoneATR;
-   bool trending = (adx[0] >= InpADXTrend);
+   if(EvaluateSession(atr, r, pdi[0], mdi[0]))
+      return;
+
+   double tol = atr * g_p.zoneATR;
+   bool trending = (adx[0] >= g_p.adxTrend);
    double c1 = r[1].close, o1 = r[1].open, h1 = r[1].high, l1 = r[1].low, c2 = r[2].close;
 
    for(int i = 0; i < ArraySize(g_zones); i++)
@@ -365,13 +597,13 @@ void EvaluateSignals(const double atr)
          // bullish rejection of a zone from above
          if(l1 <= p + tol && l1 >= p - tol && c1 > p && c1 > o1)
            {
-            Execute(true, p, MathMin(l1, p - tol) - InpSLBufATR * atr, atr, "PSR bounce");
+            Execute(true, MathMin(l1, p - tol) - g_p.slBufATR * atr, atr, "PSR bounce");
             return;
            }
          // bearish rejection of a zone from below
          if(h1 >= p - tol && h1 <= p + tol && c1 < p && c1 < o1)
            {
-            Execute(false, p, MathMax(h1, p + tol) + InpSLBufATR * atr, atr, "PSR bounce");
+            Execute(false, MathMax(h1, p + tol) + g_p.slBufATR * atr, atr, "PSR bounce");
             return;
            }
         }
@@ -381,12 +613,12 @@ void EvaluateSignals(const double atr)
          double conf = InpBreakConfATR * atr;
          if(c2 <= p && c1 > p + conf && pdi[0] > mdi[0])
            {
-            Execute(true, p, p - InpBreakSLATR * atr, atr, "PSR break");
+            Execute(true, p - g_p.breakSLATR * atr, atr, "PSR break");
             return;
            }
          if(c2 >= p && c1 < p - conf && mdi[0] > pdi[0])
            {
-            Execute(false, p, p + InpBreakSLATR * atr, atr, "PSR break");
+            Execute(false, p + g_p.breakSLATR * atr, atr, "PSR break");
             return;
            }
         }
@@ -412,8 +644,9 @@ void OnTick()
    CollectPivots();
    CollectRound(iClose(_Symbol, _Period, 1));
    CollectSwings();
-   BuildZones(atr * InpZoneATR);
-   DrawZones();
+   BuildZones(atr * g_p.zoneATR);
+   UpdateSessionRange();
+   DrawAll();
 
    if(!SafetyOK())
       return;
