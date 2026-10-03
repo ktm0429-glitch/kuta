@@ -23,6 +23,11 @@ class RiskConfig(BaseModel):
     max_consecutive_errors: int = Field(gt=0)
     kelly_fraction_cap: float = Field(gt=0, le=0.25)
 
+    @property
+    def timeframe_seconds(self) -> int:
+        units = {"M": 60, "H": 3600, "D": 86400}
+        return int(self.timeframe[1:]) * units[self.timeframe[0]]
+
 
 class Settings(BaseModel):
     model_config = ConfigDict(frozen=True)
