@@ -1,0 +1,12 @@
+# Hard limits. Enforced in code by xbot.risk; no model can override them.
+symbol: XAUUSD
+timeframe: M5
+max_position_lots: 0.10
+max_open_positions: 1
+daily_loss_limit_pct: 2.0
+max_drawdown_pct: 10.0
+approval_threshold_lots: 0.05
+max_spread_points: 60
+stale_data_candles: 2
+max_consecutive_errors: 3
+kelly_fraction_cap: 0.25
