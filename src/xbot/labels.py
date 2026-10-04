@@ -56,26 +56,27 @@ def _short_wins(bars: list[Candle], dist: float, r: float) -> int:
     return 0
 
 
-def build_labels(candles: list[Candle], snaps: list[Snapshot | None], spec: LabelSpec) -> list[dict | None]:
+def label_at(candles: list[Candle], i: int, s: Snapshot | None, spec: LabelSpec) -> dict | None:
+    """Label for the decision at the close of bar i; None if the full horizon is not yet available."""
     n, h = len(candles), spec.horizon
-    out: list[dict | None] = [None] * n
-    for i in range(n):
-        s = snaps[i]
-        if s is None or i + h >= n:
-            continue
-        scale = s.realized_vol * s.price * math.sqrt(h)
-        fwd = candles[i + h].close - candles[i].close
-        thr = spec.move_vol_mult * scale
-        direction = 0 if fwd > thr else 1 if fwd < -thr else 2  # up, down, none (DIRECTIONS order)
-        pressure = None
-        if s.flow != 0:
-            pressure = int(_sign(fwd) == _sign(s.flow) and abs(fwd) > 0.5 * scale)
-        dist = max(spec.stop_vol_mult * s.realized_vol * s.price, spec.min_stop_points * POINT)
-        window = candles[i + 1: i + h + 1]
-        out[i] = {
-            "direction": direction,
-            "pressure": pressure,
-            "quality_up": _long_wins(window, dist, spec.r_multiple),
-            "quality_down": _short_wins(window, dist, spec.r_multiple),
-        }
-    return out
+    if s is None or i + h >= n:
+        return None
+    scale = s.realized_vol * s.price * math.sqrt(h)
+    fwd = candles[i + h].close - candles[i].close
+    thr = spec.move_vol_mult * scale
+    direction = 0 if fwd > thr else 1 if fwd < -thr else 2  # up, down, none (DIRECTIONS order)
+    pressure = None
+    if s.flow != 0:
+        pressure = int(_sign(fwd) == _sign(s.flow) and abs(fwd) > 0.5 * scale)
+    dist = max(spec.stop_vol_mult * s.realized_vol * s.price, spec.min_stop_points * POINT)
+    window = candles[i + 1: i + h + 1]
+    return {
+        "direction": direction,
+        "pressure": pressure,
+        "quality_up": _long_wins(window, dist, spec.r_multiple),
+        "quality_down": _short_wins(window, dist, spec.r_multiple),
+    }
+
+
+def build_labels(candles: list[Candle], snaps: list[Snapshot | None], spec: LabelSpec) -> list[dict | None]:
+    return [label_at(candles, i, snaps[i], spec) for i in range(len(candles))]
