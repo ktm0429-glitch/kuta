@@ -15,6 +15,7 @@ class RiskConfig(BaseModel):
     timeframe: str
     max_position_lots: float = Field(gt=0)
     max_open_positions: int = Field(gt=0)
+    max_risk_per_trade_pct: float = Field(gt=0, le=100)
     daily_loss_limit_pct: float = Field(gt=0, le=100)
     max_drawdown_pct: float = Field(gt=0, le=100)
     approval_threshold_lots: float = Field(gt=0)

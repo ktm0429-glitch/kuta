@@ -23,7 +23,7 @@ def test_risk_config_rejects_nonpositive_limits():
     with pytest.raises(ValidationError):
         RiskConfig(
             symbol="XAUUSD", timeframe="M5", max_position_lots=0,
-            max_open_positions=1, daily_loss_limit_pct=2, max_drawdown_pct=10,
+            max_open_positions=1, max_risk_per_trade_pct=1.0, daily_loss_limit_pct=2, max_drawdown_pct=10,
             approval_threshold_lots=0.05, max_spread_points=60,
             stale_data_candles=2, max_consecutive_errors=3,
             kelly_fraction_cap=0.25,
@@ -34,7 +34,7 @@ def test_kelly_cap_cannot_exceed_one_quarter():
     with pytest.raises(ValidationError):
         RiskConfig(
             symbol="XAUUSD", timeframe="M5", max_position_lots=0.1,
-            max_open_positions=1, daily_loss_limit_pct=2, max_drawdown_pct=10,
+            max_open_positions=1, max_risk_per_trade_pct=1.0, daily_loss_limit_pct=2, max_drawdown_pct=10,
             approval_threshold_lots=0.05, max_spread_points=60,
             stale_data_candles=2, max_consecutive_errors=3,
             kelly_fraction_cap=0.5,

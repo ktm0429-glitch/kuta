@@ -3,6 +3,7 @@ symbol: XAUUSD
 timeframe: M5
 max_position_lots: 0.10
 max_open_positions: 1
+max_risk_per_trade_pct: 1.0   # entry-to-stop loss as % of equity
 daily_loss_limit_pct: 2.0
 max_drawdown_pct: 10.0
 approval_threshold_lots: 0.05

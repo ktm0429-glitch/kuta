@@ -127,3 +127,13 @@ def test_buy_with_stops_on_wrong_side_vetoed(gate, now, kw):
 def test_sell_with_stops_on_wrong_side_vetoed(gate, now, kw):
     base = dict(side=__import__("xbot.models", fromlist=["Side"]).Side.SELL, sl=2010.0, tp=1990.0)
     assert ev(gate, now, order=make_order(**{**base, **kw})).kind is VerdictKind.VETO
+
+
+def test_risk_per_trade_above_cap_vetoed(gate, now):
+    # 0.05 lots, stop 40.2 away = $201 = 2.01% of 10k > 1%
+    assert ev(gate, now, order=make_order(lots=0.05, sl=1960.0)).kind is VerdictKind.VETO
+
+
+def test_risk_per_trade_within_cap_allowed(gate, now):
+    # 0.02 lots, stop 10.2 away = $20.4 = 0.2%
+    assert ev(gate, now, order=make_order(lots=0.02, sl=1990.0)).kind is VerdictKind.ALLOW

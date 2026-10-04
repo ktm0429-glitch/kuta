@@ -6,6 +6,7 @@ dependencies = ["pydantic>=2", "pyyaml"]
 
 [project.optional-dependencies]
 dev = ["pytest"]
+train = ["numpy"]
 
 [build-system]
 requires = ["setuptools>=68"]

@@ -157,6 +157,9 @@ class RiskGate:
             return Verdict(VerdictKind.VETO, "stop loss on wrong side of market")
         if order.tp is not None and ((order.tp <= ref) if long_ else (order.tp >= ref)):
             return Verdict(VerdictKind.VETO, "take profit on wrong side of market")
+        risk_pct = abs(ref - order.sl) * order.lots * 100 / account.equity * 100  # 100 oz per lot
+        if risk_pct > c.max_risk_per_trade_pct:
+            return Verdict(VerdictKind.VETO, f"risk per trade {risk_pct:.2f}% > {c.max_risk_per_trade_pct}%")
         if open_positions >= c.max_open_positions:
             return Verdict(VerdictKind.VETO, "max open positions reached")
         age = (now - market.last_candle_ts).total_seconds()

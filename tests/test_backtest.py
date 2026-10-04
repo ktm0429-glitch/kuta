@@ -124,7 +124,8 @@ def test_daily_loss_trips_kill_switch_and_halts_trading(cfg):
     def always(snap, ctx):
         return OrderRequest(Side.BUY, 0.05, 1900.0, 2100.0, "again")
 
-    r = run_backtest(cs, always, cfg, 10_000.0, CostModel(0))
+    wide = cfg.model_copy(update={"max_risk_per_trade_pct": 10.0})  # this test is about the daily-loss limit
+    r = run_backtest(cs, always, wide, 10_000.0, CostModel(0))
     assert r.halted_at is not None and "daily loss" in r.halt_reason
     assert len(r.trades) == 1 and r.trades[0].exit_reason == "flatten"
 
