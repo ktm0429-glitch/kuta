@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import bisect
 import csv
+import gzip
 import math
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -36,7 +37,9 @@ class CsvSource:
 
     def __init__(self, path: str | Path, timeframe_seconds: int):
         self._candles: list[Candle] = []
-        with open(path, newline="", encoding="utf-8") as f:
+        opener = gzip.open(path, "rt", newline="", encoding="utf-8") if str(path).endswith(".gz") \
+            else open(path, newline="", encoding="utf-8")
+        with opener as f:
             reader = csv.DictReader(f)
             if reader.fieldnames is None or any(col not in reader.fieldnames for col in REQUIRED):
                 raise DataError(f"CSV must have columns {REQUIRED}")
