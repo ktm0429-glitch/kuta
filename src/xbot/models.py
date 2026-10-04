@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import Enum
 
 
@@ -55,3 +55,21 @@ class MarketState:
     @property
     def spread_points(self) -> float:
         return (self.ask - self.bid) / self.point
+
+
+@dataclass(frozen=True)
+class Candle:
+    """OHLC bar. ts is the OPEN time (UTC). The bar is only knowable at close_ts."""
+
+    ts: datetime
+    open: float
+    high: float
+    low: float
+    close: float
+    tick_volume: float
+    spread_points: float
+    duration_s: int = 300
+
+    @property
+    def close_ts(self) -> datetime:
+        return self.ts + timedelta(seconds=self.duration_s)
