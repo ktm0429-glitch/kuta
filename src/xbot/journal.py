@@ -8,8 +8,10 @@ from pathlib import Path
 
 
 class Journal:
-    def __init__(self, path: str | Path):
+    def __init__(self, path: str | Path, fast: bool = False):
+        """fast=True skips fsync (backtests only; live keeps full durability)."""
         self._path = str(path)
+        self._fast = fast
         with self._conn() as c:
             c.execute(
                 "CREATE TABLE IF NOT EXISTS events ("
@@ -18,7 +20,10 @@ class Journal:
             )
 
     def _conn(self) -> sqlite3.Connection:
-        return sqlite3.connect(self._path)
+        c = sqlite3.connect(self._path)
+        if self._fast:
+            c.execute("PRAGMA synchronous=OFF")
+        return c
 
     def log(self, type_: str, payload: dict, ts: datetime) -> None:
         with self._conn() as c:

@@ -12,7 +12,7 @@ from enum import Enum
 from pathlib import Path
 
 from .config import RiskConfig
-from .models import AccountState, MarketState, OrderRequest
+from .models import AccountState, MarketState, OrderRequest, Side
 
 _GATE_TOKEN = object()
 
@@ -79,34 +79,32 @@ class KillSwitch:
 
 
 class EquityTracker:
-    """Tracks day-start and peak equity, persisted across restarts."""
+    """Tracks day-start and peak equity, persisted across restarts (cached in memory)."""
 
     def __init__(self, path: str | Path):
         self._file = _JsonFile(path)
-
-    def _state(self) -> dict | None:
-        return self._file.read()
+        self._s: dict | None = self._file.read()
 
     @property
     def peak_equity(self) -> float | None:
-        s = self._state()
-        return s["peak"] if s else None
+        return self._s["peak"] if self._s else None
 
     @property
     def day_start_equity(self) -> float | None:
-        s = self._state()
-        return s["day_start"] if s else None
+        return self._s["day_start"] if self._s else None
 
     def update(self, equity: float, now: datetime) -> None:
         day = now.date().isoformat()
-        s = self._state()
+        s = dict(self._s) if self._s else None
         if s is None:
             s = {"day": day, "day_start": equity, "peak": equity}
         else:
             if s["day"] != day:
                 s["day"], s["day_start"] = day, equity
             s["peak"] = max(s["peak"], equity)
-        self._file.write(s)
+        if s != self._s:
+            self._s = s
+            self._file.write(s)
 
 
 class RiskGate:
@@ -153,6 +151,12 @@ class RiskGate:
             return Verdict(VerdictKind.VETO, f"lots {order.lots} > max {c.max_position_lots}")
         if order.sl is None:
             return Verdict(VerdictKind.VETO, "stop loss required")
+        ref = market.ask if order.side is Side.BUY else market.bid
+        long_ = order.side is Side.BUY
+        if (order.sl >= ref) if long_ else (order.sl <= ref):
+            return Verdict(VerdictKind.VETO, "stop loss on wrong side of market")
+        if order.tp is not None and ((order.tp <= ref) if long_ else (order.tp >= ref)):
+            return Verdict(VerdictKind.VETO, "take profit on wrong side of market")
         if open_positions >= c.max_open_positions:
             return Verdict(VerdictKind.VETO, "max open positions reached")
         age = (now - market.last_candle_ts).total_seconds()

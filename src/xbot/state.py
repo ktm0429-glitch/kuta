@@ -7,7 +7,6 @@ are used instead: close-location-value (imbalance) and signed tick volume (flow)
 from __future__ import annotations
 
 import math
-import statistics
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -63,7 +62,8 @@ class StateEngine:
         last = candles[-1]
         closes = [c.close for c in candles[-(VOL_N + 1):]]
         rets = [math.log(b / a) for a, b in zip(closes, closes[1:])]
-        vol = statistics.stdev(rets)
+        mean_r = sum(rets) / len(rets)
+        vol = math.sqrt(sum((x - mean_r) ** 2 for x in rets) / (len(rets) - 1))
 
         ys = [c.close - candles[-TREND_N].close for c in candles[-TREND_N:]]
         xm = (TREND_N - 1) / 2

@@ -116,3 +116,14 @@ def test_approved_order_cannot_be_forged():
 def test_gate_mints_approved_order(gate):
     a = gate.mint(make_order())
     assert isinstance(a, ApprovedOrder)
+
+
+@pytest.mark.parametrize("kw", [dict(sl=2005.0), dict(tp=1995.0)])
+def test_buy_with_stops_on_wrong_side_vetoed(gate, now, kw):
+    assert ev(gate, now, order=make_order(**kw)).kind is VerdictKind.VETO
+
+
+@pytest.mark.parametrize("kw", [dict(sl=1995.0), dict(tp=2005.0)])
+def test_sell_with_stops_on_wrong_side_vetoed(gate, now, kw):
+    base = dict(side=__import__("xbot.models", fromlist=["Side"]).Side.SELL, sl=2010.0, tp=1990.0)
+    assert ev(gate, now, order=make_order(**{**base, **kw})).kind is VerdictKind.VETO

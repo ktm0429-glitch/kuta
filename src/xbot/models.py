@@ -27,6 +27,16 @@ class Position:
     entry: float
     sl: float | None
     tp: float | None
+    opened_at: datetime | None = None
+
+
+@dataclass(frozen=True)
+class ClosedPosition:
+    position: Position
+    exit: float
+    exit_ts: datetime
+    pnl: float
+    reason: str
 
 
 @dataclass(frozen=True)
@@ -49,7 +59,7 @@ class MarketState:
     ts: datetime
     bid: float
     ask: float
-    last_candle_ts: datetime
+    last_candle_ts: datetime  # CLOSE time of the newest closed candle (data freshness)
     point: float = 0.01
 
     @property
