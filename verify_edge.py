@@ -70,11 +70,12 @@ def load_trades(path):
     return df.sort_values(["candidate", "open_time"]).reset_index(drop=True)
 
 
-def add_pnl(df):
-    """BUYはAsk約定→Bid決済、SELLはBid約定→Ask決済。スワップ・手数料を足す。"""
+def add_pnl(df, extra_cost=0.0):
+    """BUYはAsk約定→Bid決済、SELLはBid約定→Ask決済。スワップ・手数料を足す。
+    extra_cost: 1往復あたりの追加コスト（価格単位）。実口座がテストより不利な場合の上乗せ。"""
     buy = df["dir"] == 1
     df["net"] = np.where(buy, df["close_bid"] - df["open_ask"],
-                         df["open_bid"] - df["close_ask"]) + df["swap"] + df["commission"]
+                         df["open_bid"] - df["close_ask"]) + df["swap"] + df["commission"] - extra_cost
     mid_o = (df["open_bid"] + df["open_ask"]) / 2
     mid_c = (df["close_bid"] + df["close_ask"]) / 2
     df["gross"] = df["dir"] * (mid_c - mid_o)          # コスト無し（参考値）
@@ -138,9 +139,9 @@ def eval_candidate(g, n_cand):
     return out
 
 
-def prepare(path):
+def prepare(path, extra_cost=0.0):
     raw = load_trades(path)
-    raw = add_pnl(raw)
+    raw = add_pnl(raw, extra_cost)
     before = raw.groupby("candidate").size()
     th = thin(raw)
     after = th.groupby("candidate").size()
@@ -150,12 +151,16 @@ def prepare(path):
 def cmd_select(a):
     out = Path(a.outdir)
     out.mkdir(parents=True, exist_ok=True)
-    raw, th, before, after = prepare(a.trades)
+    if a.extra_cost < 0:
+        sys.exit("--extra-cost は0以上（コストの上乗せ）で指定してください")
+    raw, th, before, after = prepare(a.trades, a.extra_cost)
     n_cand = th["candidate"].nunique()
     split = pd.Timestamp(a.split)
     sel = detrend(th[th["open_time"] < split])
     val_n = int((th["open_time"] >= split).sum())
     print(f"候補総数 N = {n_cand}（Bonferroni補正の係数）")
+    if a.extra_cost:
+        print(f"追加コスト: 1往復あたり {a.extra_cost}（価格単位）を損益から差し引く。validate でも同じ値を使う")
     print(f"選択期間: {sel['open_time'].min().date()} 〜 {split.date()} 未満 / 検証期間: {split.date()} 以降（{val_n}件、まだ見ない）")
     print("注意: 候補を追加・削除したらNが変わるため、最初からやり直すこと。\n")
 
@@ -182,7 +187,7 @@ def cmd_select(a):
             print(f"\n[{r['candidate']}] 選択期間の年別損益(ATR正規化・年平均控除後・合計): {r['year_table']}")
 
     state = {"data_sha256": file_hash(a.trades), "split": str(split), "n_candidates": n_cand,
-             "survivors": survivors, "validated": False}
+             "survivors": survivors, "extra_cost": a.extra_cost, "validated": False}
     (out / "state.json").write_text(json.dumps(state, ensure_ascii=False, indent=2))
     print(f"\n選択期間を通過: {len(survivors)}/{n_cand}")
     if not survivors:
@@ -204,7 +209,8 @@ def cmd_validate(a):
     if not state["survivors"]:
         sys.exit("通過候補がありません。判定: REJECTED（撤退を勧める）")
 
-    raw, th, before, after = prepare(a.trades)
+    extra = state.get("extra_cost", 0.0)               # select時の値を引き継ぐ（検証期間を見てから変えない）
+    raw, th, before, after = prepare(a.trades, extra)
     split = pd.Timestamp(state["split"])
     n_cand = state["n_candidates"]
     val = detrend(th[th["open_time"] >= split])
@@ -249,6 +255,8 @@ def cmd_validate(a):
 
     order = ["APPROVED", "CONDITIONAL", "REJECTED"]
     best = min((r["verdict"] for r in verdicts), key=order.index)
+    if extra:
+        print(f"\n（追加コスト 1往復あたり {extra} を差し引いた結果）")
     print(f"\n最終判定: {best}")
     if best == "REJECTED":
         print("エッジは確認できませんでした。パラメータを足す改善ではなく、この仮説からの撤退を勧めます。")
@@ -260,6 +268,8 @@ def main():
     s = sub.add_parser("select", help="選択期間で候補を絞る（検証期間は見ない）")
     s.add_argument("trades")
     s.add_argument("--split", required=True, help="選択期間と検証期間の境界日 (YYYY-MM-DD)")
+    s.add_argument("--extra-cost", type=float, default=0.0,
+                   help="1往復あたりの追加コスト（価格単位。例: XAUUSDで0.20、USDJPYで0.02）。validateにも引き継がれる")
     s.add_argument("--outdir", default="out")
     s.set_defaults(f=cmd_select)
     v = sub.add_parser("validate", help="検証期間を1回だけ評価して判定")
