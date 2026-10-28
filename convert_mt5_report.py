@@ -33,7 +33,7 @@ ALIASES = {
     "deal": ["deal", "ディール", "約定", "約定番号"],
     "symbol": ["symbol", "シンボル", "銘柄"],
     "type": ["type", "タイプ", "種類"],
-    "direction": ["direction", "方向"],
+    "direction": ["direction", "方向", "新規・決済", "新規/決済"],
     "volume": ["volume", "数量", "ボリューム", "ロット"],
     "price": ["price", "価格"],
     "commission": ["commission", "手数料"],
@@ -71,14 +71,14 @@ def read_table(path):
 
 
 def _promote_header(raw):
-    need = {"time", "price", "type"}
+    need = {"time", "price", "type", "direction"}   # 注文表（方向列なし）と区別する
     for i in range(min(len(raw), 200)):
         names = {_canon(str(v)) for v in raw.iloc[i].tolist()}
         if need <= names:
             df = raw.iloc[i + 1:].copy()
             df.columns = [str(v) for v in raw.iloc[i].tolist()]
             return df.reset_index(drop=True)
-    sys.exit("ディール表の見出し行（時間/タイプ/価格）が見つかりません")
+    sys.exit("ディール表の見出し行（時間/タイプ/新規・決済/価格）が見つかりません")
 
 
 def _canon(name):
